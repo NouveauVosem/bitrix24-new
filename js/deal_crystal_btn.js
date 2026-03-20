@@ -243,10 +243,49 @@ BX.ready(function () {
             });
         });
 
+        var rabenBtn = document.createElement('button');
+        rabenBtn.id = 'crystal-raben-btn';
+        rabenBtn.className = 'ui-btn ui-btn-danger ui-btn-sm';
+        rabenBtn.style.cssText = 'margin-top:4px; width:100%;';
+        rabenBtn.textContent = 'Рассчитать Raben';
+        rabenBtn.addEventListener('click', function () {
+            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+            var dealId = dealMatch ? dealMatch[1] : null;
+            if (!dealId) return alert('Не удалось определить ID сделки');
+
+            rabenBtn.disabled = true;
+            rabenBtn.textContent = '⌛ Запускаю...';
+
+            var parsed = parseDeliveryData();
+            var deliveryData = {
+                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+                to: Object.assign({ company: '' }, parsed.to),
+                units: parsed.units.map(function(u) {
+                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+                })
+            };
+
+            fetch('https://alvla.services/api/rabenquat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function() {
+                rabenBtn.textContent = '✅ Запущено — результат придёт в сделку';
+            })
+            .catch(function(err) {
+                rabenBtn.textContent = '❌ Ошибка запроса';
+                rabenBtn.disabled = false;
+                console.error('Raben request error:', err);
+            });
+        });
+
         wrapper.appendChild(btn);
         wrapper.appendChild(feedback);
         wrapper.appendChild(rhenusBtn);
         wrapper.appendChild(schenkerBtn);
+        wrapper.appendChild(rabenBtn);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         updateFeedback();

@@ -21,6 +21,7 @@ $field  = $data['field'] ?? 'UF_CRM_1774000644830'; // по умолчанию R
 $allowedFields = [
     'UF_CRM_1774000644830', // Rhenus
     'UF_CRM_1774000685589', // Schenker
+    'UF_CRM_1774000702384', // Raben
 ];
 if (!in_array($field, $allowedFields, true)) {
     echo json_encode(['status' => 'error', 'message' => 'Invalid field']);
