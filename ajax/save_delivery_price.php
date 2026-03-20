@@ -29,7 +29,7 @@ if (!$dealId || $price === null) {
     exit;
 }
 
-$fields = ['UF_CRM_1773321438101' => $price];
+$fields = ['UF_CRM_1774000644830' => $price];
 $deal = new \CCrmDeal(false);
 $result = $deal->Update($dealId, $fields);
 
