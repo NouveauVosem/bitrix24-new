@@ -96,18 +96,18 @@ BX.ready(function () {
 
         // Адрес
         lines.push('<b>Адрес:</b>');
-        if (data.to.street)  lines.push('&nbsp; Улица: ' + data.to.street);
-        if (data.to.zipcode) lines.push('&nbsp; Индекс: ' + data.to.zipcode);
-        if (data.to.city)    lines.push('&nbsp; Город: ' + data.to.city);
-        if (data.to.country) lines.push('&nbsp; Страна: ' + data.to.country);
+        lines.push('&nbsp; Улица: '  + (data.to.street  || '-'));
+        lines.push('&nbsp; Индекс: ' + (data.to.zipcode || '-'));
+        lines.push('&nbsp; Город: '  + (data.to.city    || '-'));
+        lines.push('&nbsp; Страна: ' + (data.to.country || '-'));
 
         // Юниты
         if (data.units.length > 0) {
             lines.push('<b>Груз:</b>');
             data.units.forEach(function(u, i) {
                 var desc = 'Юнит ' + (i + 1) + ': ' + u.quantity + ' шт';
-                if (u.length && u.width) desc += ', ' + u.length + 'x' + u.width + (u.height ? 'x' + u.height : '') + ' см';
-                if (u.weight) desc += ', ' + u.weight + ' кг';
+                desc += ', ' + (u.length && u.width ? u.length + 'x' + u.width + (u.height ? 'x' + u.height : '') + ' см' : '-');
+                desc += ', ' + (u.weight ? u.weight + ' кг' : '-');
                 lines.push('&nbsp; ' + desc);
             });
         }
