@@ -227,7 +227,7 @@ BX.ready(function () {
                 })
             };
 
-            fetch('https://alvla.services/schenkerquat', {
+            fetch('https://alvla.services/api/schenkerquat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
