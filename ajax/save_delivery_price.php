@@ -33,6 +33,9 @@ $fields = ['UF_CRM_1774000644830' => $price];
 $deal = new \CCrmDeal(false);
 $result = $deal->Update($dealId, $fields);
 
+$log = date('Y-m-d H:i:s') . " dealId=$dealId price=$price result=" . ($result ? 'true' : 'false') . " errors=" . implode('; ', $deal->LAST_ERROR ?? []) . "\n";
+file_put_contents(__DIR__ . '/save_delivery_log.txt', $log, FILE_APPEND);
+
 if ($result) {
     echo json_encode(['status' => 'success', 'message' => 'Saved']);
 } else {
