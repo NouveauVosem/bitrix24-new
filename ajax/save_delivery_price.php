@@ -16,6 +16,16 @@ $data   = json_decode(file_get_contents('php://input'), true);
 $dealId = intval($data['dealId'] ?? 0);
 $price  = $data['price'] ?? null;
 $secret = $data['secret'] ?? '';
+$field  = $data['field'] ?? 'UF_CRM_1774000644830'; // по умолчанию Rhenus
+
+$allowedFields = [
+    'UF_CRM_1774000644830', // Rhenus
+    'UF_CRM_1774000685589', // Schenker
+];
+if (!in_array($field, $allowedFields, true)) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid field']);
+    exit;
+}
 
 // Проверяем секретный ключ — только alvla.services может сюда писать
 $expectedSecret = 'crm_alvla_secret_2026';
@@ -29,7 +39,7 @@ if (!$dealId || $price === null) {
     exit;
 }
 
-$fields = ['UF_CRM_1774000644830' => $price];
+$fields = [$field => $price];
 $deal = new \CCrmDeal(false);
 $result = $deal->Update($dealId, $fields);
 

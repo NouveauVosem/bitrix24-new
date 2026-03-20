@@ -205,9 +205,48 @@ BX.ready(function () {
             });
         });
 
+        var schenkerBtn = document.createElement('button');
+        schenkerBtn.id = 'crystal-schenker-btn';
+        schenkerBtn.className = 'ui-btn ui-btn-warning ui-btn-sm';
+        schenkerBtn.style.cssText = 'margin-top:4px; width:100%;';
+        schenkerBtn.textContent = 'Рассчитать Schenker';
+        schenkerBtn.addEventListener('click', function () {
+            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+            var dealId = dealMatch ? dealMatch[1] : null;
+            if (!dealId) return alert('Не удалось определить ID сделки');
+
+            schenkerBtn.disabled = true;
+            schenkerBtn.textContent = '⌛ Запускаю...';
+
+            var parsed = parseDeliveryData();
+            var deliveryData = {
+                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+                to: Object.assign({ company: '' }, parsed.to),
+                units: parsed.units.map(function(u) {
+                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+                })
+            };
+
+            fetch('https://alvla.services/schenkerquat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function() {
+                schenkerBtn.textContent = '✅ Запущено — результат придёт в сделку';
+            })
+            .catch(function(err) {
+                schenkerBtn.textContent = '❌ Ошибка запроса';
+                schenkerBtn.disabled = false;
+                console.error('Schenker request error:', err);
+            });
+        });
+
         wrapper.appendChild(btn);
         wrapper.appendChild(feedback);
         wrapper.appendChild(rhenusBtn);
+        wrapper.appendChild(schenkerBtn);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         updateFeedback();
