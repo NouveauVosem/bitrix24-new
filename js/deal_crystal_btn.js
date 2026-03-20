@@ -32,7 +32,7 @@ BX.ready(function () {
             to.country   = parts.pop();
             var zipCity  = parts.pop();
             to.street    = parts.join(', ');
-            var m = zipCity.match(/^(\d{3}\s\d{2}|\d{4,6})\s+(.+)$/);
+            var m = zipCity.match(/^(\d{3}\s\d{2}|\d{2}-\d{3}|\d{4,6})\s+(.+)$/);
             if (m) { to.zipcode = m[1]; to.city = m[2]; }
             else   { to.city = zipCity; }
         } else {
