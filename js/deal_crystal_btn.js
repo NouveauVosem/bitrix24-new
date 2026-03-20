@@ -92,7 +92,7 @@ BX.ready(function () {
         }
 
         var lines = [];
-        lines.push('<div style="font-size:12px; color:#535c69; line-height:1.6; margin-top:8px; padding:8px 10px; background:#f5f7fa; border-radius:6px;">');
+        lines.push('<div class="crystal-feedback-body">');
 
         // Адрес
         lines.push('<b>Адрес:</b>');
@@ -137,7 +137,6 @@ BX.ready(function () {
 
         var wrapper = document.createElement('div');
         wrapper.id = BUTTON_ID;
-        wrapper.style.cssText = 'padding: 10px 15px 5px;';
 
         /* Crystal — калькулятор (отключено, можно вернуть)
         var btn = document.createElement('a');
@@ -168,9 +167,9 @@ BX.ready(function () {
         */
 
         var hint = document.createElement('details');
-        hint.style.cssText = 'margin-bottom:6px; font-size:12px; color:#535c69;';
-        hint.innerHTML = '<summary style="cursor:pointer; color:#2066b0; font-size:12px;">Формат адреса доставки</summary>'
-            + '<div style="margin-top:6px; padding:8px 10px; background:#f5f7fa; border-radius:6px; line-height:1.7;">'
+        hint.id = 'crystal-delivery-hint';
+        hint.innerHTML = '<summary>Формат адреса доставки</summary>'
+            + '<div class="crystal-hint-body">'
             + '<b>Формат:</b> Улица, Индекс Город, Страна<br>'
             + '<b>Примеры:</b><br>'
             + '&nbsp;Průmyslová 12, 271 01 Nové Strašecí, CZ<br>'
@@ -189,7 +188,6 @@ BX.ready(function () {
         var rhenusBtn = document.createElement('button');
         rhenusBtn.id = 'crystal-rhenus-btn';
         rhenusBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
-        rhenusBtn.style.cssText = 'margin-top:6px; margin-left:0; width:100%;';
         rhenusBtn.textContent = 'Рассчитать Rhenus';
         rhenusBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -227,7 +225,6 @@ BX.ready(function () {
         var schenkerBtn = document.createElement('button');
         schenkerBtn.id = 'crystal-schenker-btn';
         schenkerBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        schenkerBtn.style.cssText = 'margin-top:4px; margin-left:0; width:100%;';
         schenkerBtn.textContent = 'Рассчитать Schenker';
         schenkerBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -265,7 +262,6 @@ BX.ready(function () {
         var rabenBtn = document.createElement('button');
         rabenBtn.id = 'crystal-raben-btn';
         rabenBtn.className = 'ui-btn ui-btn-danger ui-btn-sm';
-        rabenBtn.style.cssText = 'margin-top:4px; margin-left:0; width:100%;';
         rabenBtn.textContent = 'Рассчитать Raben';
         rabenBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);

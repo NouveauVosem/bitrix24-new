@@ -25,6 +25,7 @@ function addCustomAssets() {
 	
 	$asset->addJs("/local/grid_documents/menu.js");
 	$asset->addJs("/local/js/deal_crystal_btn.js");
+	$asset->addCss("/local/js/deal_crystal_btn.css");
 
 }
 
