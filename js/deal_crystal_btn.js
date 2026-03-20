@@ -138,6 +138,7 @@ BX.ready(function () {
         var wrapper = document.createElement('div');
         wrapper.style.cssText = 'padding: 10px 15px 5px;';
 
+        /* Crystal — калькулятор (отключено, можно вернуть)
         var btn = document.createElement('a');
         btn.id = BUTTON_ID;
         btn.href = '#';
@@ -163,14 +164,15 @@ BX.ready(function () {
             var data = btoa(unescape(encodeURIComponent(JSON.stringify(row))));
             window.open('https://alvla.services/calculator.html?data=' + data, '_blank');
         });
+        */
 
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
 
         var rhenusBtn = document.createElement('button');
         rhenusBtn.id = 'crystal-rhenus-btn';
-        rhenusBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        rhenusBtn.style.cssText = 'margin-top:6px; width:100%;';
+        rhenusBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
+        rhenusBtn.style.cssText = 'margin-top:6px; margin-left:0; width:100%;';
         rhenusBtn.textContent = 'Рассчитать Rhenus';
         rhenusBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -207,8 +209,8 @@ BX.ready(function () {
 
         var schenkerBtn = document.createElement('button');
         schenkerBtn.id = 'crystal-schenker-btn';
-        schenkerBtn.className = 'ui-btn ui-btn-warning ui-btn-sm';
-        schenkerBtn.style.cssText = 'margin-top:4px; width:100%;';
+        schenkerBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
+        schenkerBtn.style.cssText = 'margin-top:4px; margin-left:0; width:100%;';
         schenkerBtn.textContent = 'Рассчитать Schenker';
         schenkerBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -246,7 +248,7 @@ BX.ready(function () {
         var rabenBtn = document.createElement('button');
         rabenBtn.id = 'crystal-raben-btn';
         rabenBtn.className = 'ui-btn ui-btn-danger ui-btn-sm';
-        rabenBtn.style.cssText = 'margin-top:4px; width:100%;';
+        rabenBtn.style.cssText = 'margin-top:4px; margin-left:0; width:100%;';
         rabenBtn.textContent = 'Рассчитать Raben';
         rabenBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -281,7 +283,6 @@ BX.ready(function () {
             });
         });
 
-        wrapper.appendChild(btn);
         wrapper.appendChild(feedback);
         wrapper.appendChild(rhenusBtn);
         wrapper.appendChild(schenkerBtn);
