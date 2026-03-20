@@ -167,6 +167,22 @@ BX.ready(function () {
         });
         */
 
+        var hint = document.createElement('details');
+        hint.style.cssText = 'margin-bottom:6px; font-size:12px; color:#535c69;';
+        hint.innerHTML = '<summary style="cursor:pointer; color:#2066b0; font-size:12px;">Формат адреса доставки</summary>'
+            + '<div style="margin-top:6px; padding:8px 10px; background:#f5f7fa; border-radius:6px; line-height:1.7;">'
+            + '<b>Формат:</b> Улица, Индекс Город, Страна<br>'
+            + '<b>Примеры:</b><br>'
+            + '&nbsp;Průmyslová 12, 271 01 Nové Strašecí, CZ<br>'
+            + '&nbsp;Karla Marxe 5, 10115 Berlin, DE<br>'
+            + '<b>Правила:</b><br>'
+            + '&nbsp;• Части разделяются <b>запятой</b><br>'
+            + '&nbsp;• Индекс пишется <b>перед городом</b> через пробел<br>'
+            + '&nbsp;• Форматы индекса: <code>271 01</code> или <code>10115</code><br>'
+            + '&nbsp;• Последняя часть — страна<br>'
+            + '&nbsp;• Минимум: Город, Страна'
+            + '</div>';
+
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
 
@@ -284,6 +300,7 @@ BX.ready(function () {
             });
         });
 
+        wrapper.appendChild(hint);
         wrapper.appendChild(feedback);
         wrapper.appendChild(rhenusBtn);
         wrapper.appendChild(schenkerBtn);
