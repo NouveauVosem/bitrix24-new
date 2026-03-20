@@ -125,7 +125,7 @@ BX.ready(function () {
         prices.forEach(function(p) {
             var el = document.querySelector('[data-cid="' + p.cid + '"] .field-item');
             var val = el ? el.textContent.trim() : '';
-            if (val) priceLines.push('&nbsp; ' + p.label + ': <b>' + val + '</b>');
+            if (val && val.length <= 10) priceLines.push('&nbsp; ' + p.label + ': <b>' + val + '</b>');
         });
         if (priceLines.length > 0) {
             lines.push('<b>Цены доставки:</b>');
