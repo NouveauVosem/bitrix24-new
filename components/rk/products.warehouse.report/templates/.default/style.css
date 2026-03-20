@@ -1,0 +1,40 @@
+#filter .main-ui-filter-search {
+    width: 50%;
+    margin: 0 0 10px 0;
+    border: 1px solid grey;
+}
+
+#report-container {
+    margin: 15px;
+}
+
+.filter-hint {
+    font-size: 13px;
+    color: grey;
+    margin-bottom: 10px;
+    display: block;
+}
+.export-container {
+   text-align: right;
+}
+
+/*body .main-grid-table thead th {*/
+/*    position: sticky;*/
+/*    top: 0;*/
+/*    background: white; !* або інший фон, який пасує до дизайну *!*/
+/*    z-index: 10; !* щоб не перекривався вмістом *!*/
+/*}*/
+
+/*body .main-grid-container {*/
+/*    height: 900px;*/
+/*    overflow-y: auto;*/
+/*}*/
+
+body .main-grid-head-title {
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+body .main-grid-cell-inner, body th.main-grid-cell-head {
+    max-width: 180px;
+}

@@ -1,0 +1,403 @@
+<?php
+
+use Bitrix\Main\Loader;
+use Bitrix\Sale;
+use Bitrix\Crm\Binding\OrderEntityTable;
+use Bitrix\Sale\OrderTable;
+use Bitrix\Catalog\StoreDocumentElementTable;
+use Bitrix\Catalog\StoreDocumentTable;
+use Bitrix\Crm\ProductRowTable;
+use Bitrix\Sale\Internals\ShipmentTable;
+
+Loader::includeModule('crm');
+Loader::includeModule('catalog');
+Loader::includeModule('sale');
+Loader::includeModule('im');
+
+
+class CCrmHandler
+{
+    const DEAL_STAGE_ID_IN_WAY = "UC_WR1KV9";
+    const OFFERS_IBLOCK_ID = 15;
+    const PRODUCT_IBLOCK_ID = 14;
+
+    public static function productReserve(&$arFieldsDeal)
+    {
+        $arDeal = CCrmDeal::GetListEx(
+            array(),
+            array("ID" => $arFieldsDeal["ID"]),
+            false,
+            false,
+            array(
+                "ID", 
+                "CATEGORY_ID", 
+                "STAGE_ID",
+                "UF_CRM_1741189617279", 
+                "UF_CRM_1755237715110", 
+                "UF_ACCOUNT_NUMBER",
+                "UF_CRM_1728403359608",
+                'UF_CRM_1717096950839',
+                'UF_CRM_1738587359094',
+                'UF_CRM_1738142772006',
+                'UF_CRM_1760724756',
+                'UF_CRM_1760724869',
+            )
+        )->fetch();
+        
+
+        // UC_TB1B18 - ZV (под заказ)
+        // UC_L8JVGQ - сборка
+        // UC_3S4WFS - выписка инвойса
+        // UC_KPW8X6 - заказ транспорта
+        // UC_WR1KV9 - в пути
+        // C1:UC_GI474N - ZV (под заказ) (категория 1)
+        // C1:PREPARATION - сборка (категория 1)
+        // C1:UC_3M0L0N - выписка инвойса (категория 1)
+        // C1:UC_XELH19 - заказ транспорта (категория 1)
+        // C1:UC_2DPXDX - в пути (категория 1)
+
+        if (
+            /*($arDeal["CATEGORY_ID"] == 0 && $arFieldsDeal["STAGE_ID"] == self::DEAL_STAGE_ID_IN_WAY)
+            || ($arDeal["CATEGORY_ID"] == 1 && $arFieldsDeal["STAGE_ID"] == "C1:UC_2DPXDX")*/
+            empty($arDeal["UF_CRM_1755237715110"]) && !empty($arFieldsDeal["UF_CRM_1755237715110"])
+        ) {
+            
+            //if ($arFieldsDeal["STAGE_ID"] != $arDeal["STAGE_ID"]) {
+            //if ($arFieldsDeal["UF_CRM_1755237715110"] != $arDeal["UF_CRM_1755237715110"]) {
+            if (($arDeal["CATEGORY_ID"] == 0 && ($arFieldsDeal['STAGE_ID']=='UC_L8JVGQ' || $arFieldsDeal['STAGE_ID']=='UC_3S4WFS' || $arFieldsDeal['STAGE_ID']=='UC_KPW8X6' || $arFieldsDeal["STAGE_ID"]=="UC_WR1KV9")) || 
+		        ($arDeal["CATEGORY_ID"] == 1 && ($arFieldsDeal['STAGE_ID']=='C1:PREPARATION' || $arFieldsDeal['STAGE_ID']=='C1:UC_3M0L0N' || $arFieldsDeal['STAGE_ID']=='C1:UC_XELH19' || $arFieldsDeal["STAGE_ID"]=="C1:UC_2DPXDX"))) 
+            {
+
+
+                //if ($arFieldsDeal["STAGE_ID"] != $arDeal["STAGE_ID"]) {
+
+
+                    // $ID = $arDeal["ID"];
+                    // $factory = Bitrix\Crm\Service\Container::getInstance()->getFactory(\CCrmOwnerType::Deal);
+
+                    // $itemBeforeSave = $factory->getItem($ID);
+                    // $itemAfterSave = $factory->getItem($ID);
+
+                    // global $SHIP_DEAL_ID;
+                    // $SHIP_DEAL_ID = $ID;
+
+                    // $entity = new Bitrix\Crm\Reservation\Component\InventoryManagement($itemBeforeSave, $itemAfterSave);
+
+                    // $processInventoryManagementResult = $entity->ship();
+
+                    // if ($processInventoryManagementResult->isSuccess()) {
+                        
+                    //     $entity->unReserve();
+
+                    // } else {
+                    //     $errors = $processInventoryManagementResult->getErrorMessages();
+                    //     if (!empty($errors)) {
+                    //         $errorStr = implode(";", $errors);
+                    //         $arFieldsDeal['RESULT_MESSAGE'] = $errorStr;
+
+                    //         global $USER;
+                    //         CIMMessenger::Add([
+                    //             'TO_USER_ID' => $USER->GetId(),
+                    //             'FROM_USER_ID' => 1,
+                    //             'MESSAGE' => 'Помилка при оновленні угоди: ' . $errorStr,
+                    //             'MESSAGE_TYPE' => IM_MESSAGE_SYSTEM,
+
+                    //         ]);
+                    //         return false;
+                    //     }
+                    // }
+
+                    // if (empty($arDeal["UF_ACCOUNT_NUMBER"])) {
+
+                    //     $result = OrderEntityTable::getList([
+                    //         'filter' => [
+                    //             'OWNER_ID' => intval($ID),
+                    //             'OWNER_TYPE_ID' => 2, // 4
+                    //         ],
+                    //         'select' => ['ORDER_ID', 'OWNER_ID', 'OWNER_TYPE_ID']
+                    //     ]);
+
+                    //     global $USER_FIELD_MANAGER;
+
+                    //     while ($row = $result->fetch()) {
+                    //         $arSaleDocs = ShipmentTable::getList([
+                    //             'filter' => [
+                    //                 'ORDER_ID' => $row['ORDER_ID'],
+                    //                 'DEDUCTED' => 'Y'
+                    //             ],
+                    //             'select' => ['*']
+                    //         ])->fetchAll();
+
+                    //         foreach ($arSaleDocs as $doc) {
+                    //             if ($doc["ID"] > 0) {
+                    //                 $USER_FIELD_MANAGER->Update('CRM_DEAL', $ID, array("UF_DOC" => $doc["ID"])); 
+                    //                 $USER_FIELD_MANAGER->Update('CRM_DEAL', $ID, array("UF_ORDER_ID" => $doc["ORDER_ID"])); 
+                    //                 $USER_FIELD_MANAGER->Update('CRM_DEAL', $ID, array("UF_ACCOUNT_NUMBER" => $doc["ACCOUNT_NUMBER"])); 
+                    //             }
+                    //         }
+                                
+                    //     }
+                    // }
+
+                //}
+
+            //}
+            }
+        }
+        /*elseif ($arDeal["UF_CRM_1755237715110"] != "") {
+            //self::createShipment($arDeal["ID"]);
+            if ($arFieldsDeal["STAGE_ID"] != $arDeal["STAGE_ID"]) {
+                $ID = $arDeal["ID"];
+                $factory = Bitrix\Crm\Service\Container::getInstance()->getFactory(\CCrmOwnerType::Deal);
+
+                $itemBeforeSave = $factory->getItem($ID);
+                $itemAfterSave = $factory->getItem($ID);
+
+                global $SHIP_DEAL_ID;
+                $SHIP_DEAL_ID = $ID;
+
+                $entity = new Bitrix\Crm\Reservation\Component\InventoryManagement($itemBeforeSave, $itemAfterSave);
+
+
+                $processInventoryManagementResult = $entity->ship();
+
+                if ($processInventoryManagementResult->isSuccess()) {
+                        
+                    $entity->unReserve();
+                } else {
+                    $errors = $processInventoryManagementResult->getErrorMessages();
+                    if (!empty($errors)) {
+                        $errorStr = implode(";", $errors);
+                        $arFieldsDeal['RESULT_MESSAGE'] = $errorStr;
+
+                        global $USER;
+                        CIMMessenger::Add([
+                            'TO_USER_ID' => $USER->GetId(),
+                            'FROM_USER_ID' => 1,
+                            'MESSAGE' => 'Помилка при оновленні угоди: ' . $errorStr,
+                            'MESSAGE_TYPE' => IM_MESSAGE_SYSTEM,
+
+                        ]);
+                        return false;
+                    }
+                }
+            }
+        }
+        elseif ($arDeal["UF_CRM_1755237715110"] == "") {
+            // no action
+        }*/
+        elseif($arFieldsDeal["UF_CRM_1741189617279"])
+            {
+			
+			$new = MakeTimeStamp($arFieldsDeal["UF_CRM_1741189617279"]);
+			$old = MakeTimeStamp($arDeal["UF_CRM_1741189617279"]);
+		
+			if($new!=$old){
+				
+				global $DB;
+				$sql = "
+					SELECT d.*
+					FROM b_crm_order_entity d
+					WHERE d.OWNER_TYPE_ID = '2'
+					  AND d.OWNER_ID = '".intval($arFieldsDeal["ID"])."'
+				";
+ 
+				$row = $DB->Query($sql)->Fetch();
+				
+				if($row["ORDER_ID"]>0){
+					global $DB;
+					
+					$date = date("Y-m-d 09:00:00",$new);
+				 
+					$DB->Query("
+						UPDATE b_sale_order_delivery 
+						SET DATE_DEDUCTED = '".$DB->ForSql($date)."'
+						WHERE ORDER_ID = ".$row["ORDER_ID"]
+					);
+				}
+				 
+			}
+			 
+		}
+
+        $arFieldsDeal['UF_CRM_1760724756'] = self::checkDealToWork($arFieldsDeal, $arDeal);
+
+        $arFieldsDeal['UF_CRM_1760724869'] = self::checkDealToShip($arFieldsDeal, $arDeal);
+
+        //die();
+		
+    }
+
+    public static function checkDealToWork($dealData, $arDeal)
+    {
+        global $USER_FIELD_MANAGER;
+
+        $totalWithVAT = (float)($dealData['UF_CRM_1728403359608'] ?? 0); // Общая сумма с НДС 47510
+        $prepaymentPercent = (float)($dealData['UF_CRM_1717096950839'] ?? 0); // % предоплаты 40 - 
+        $remainingToPay = (float)($dealData['UF_CRM_1738587359094'] ?? 0); // Осталось оплатить 28506
+
+        $prepaymentSum = $totalWithVAT * $prepaymentPercent / 100;
+        $calculatedRemaining = $totalWithVAT - $prepaymentSum;
+
+        // Допуск 0.01 для float-сравнения
+        $canBeTaken = ($remainingToPay <= $calculatedRemaining && $totalWithVAT > 0) ? 1 : 0;
+
+        ?>
+        <pre>
+            <? var_dump('totalWithVAT', $totalWithVAT) ?>
+            <? var_dump('prepaymentPercent', $prepaymentPercent) ?>
+            <? var_dump('remainingToPay', $remainingToPay) ?>
+
+            <? var_dump('prepaymentSum', $prepaymentSum) ?>
+
+            <? var_dump('calculatedRemaining', $calculatedRemaining) ?>
+            <? var_dump('canBeTaken', $canBeTaken) ?>
+        </pre>
+        <?
+
+        /*$updateResult = $USER_FIELD_MANAGER->Update('CRM_DEAL', $arDeal['ID'], [
+            'UF_CRM_1760724756' => $canBeTaken
+        ]);*/
+        /*?>
+            <pre>
+        <?php
+        var_dump([
+            'totalWithVAT' => $totalWithVAT,
+            'prepaymentPercent' => $prepaymentPercent,
+            'prepaymentSum' => $prepaymentSum,
+            'calculatedRemaining' => $calculatedRemaining,
+            'remainingToPay' => $remainingToPay,
+            'difference' => $calculatedRemaining - $remainingToPay,
+            'canBeTaken' => $canBeTaken,
+            'currentFieldValue' => $arDeal['UF_CRM_1760724756'] ?? null,
+            'updateResult' => $updateResult
+        ]);
+        ?>
+        </pre>abs($calculatedRemaining)
+        <?php*/
+
+        return $canBeTaken;
+    }
+
+    public static function checkDealToShip($dealData, $arDeal)
+    {
+        global $USER_FIELD_MANAGER;
+
+        $totalWithVAT = (float)($dealData['UF_CRM_1728403359608'] ?? 0); // Общая сумма с НДС 47510
+        $prepaymentPercent = (float)($dealData['UF_CRM_1717096950839'] ?? 0); // % предоплаты 40
+        $additionalPaymentPercent = (float)($dealData['UF_CRM_1738142772006'] ?? 0); // % доплаты 0
+        $remainingToPay = (float)($dealData['UF_CRM_1738587359094'] ?? 0); // Осталось оплатить 0
+        //
+
+        $prepaymentSum = $totalWithVAT * $prepaymentPercent / 100;
+        $additionalPaymentSum = $totalWithVAT * $additionalPaymentPercent / 100;
+        $totalPaymentSum = $prepaymentSum + $additionalPaymentSum;
+        $calculatedRemaining = $totalWithVAT - $totalPaymentSum;
+
+        $canBeShipped = ($remainingToPay <= $calculatedRemaining && $totalWithVAT > 0) ? 1 : 0;
+
+        ?>
+        <pre>
+            <? var_dump('totalWithVAT', $totalWithVAT) ?>
+            <? var_dump('prepaymentPercent', $prepaymentPercent) ?>
+            <? var_dump('additionalPaymentPercent', $additionalPaymentPercent) ?>
+            <? var_dump('prepaymentSum', $prepaymentSum) ?>
+            <? var_dump('additionalPaymentSum', $additionalPaymentSum) ?>
+            <? var_dump('totalPaymentSum', $totalPaymentSum) ?>
+
+            <? var_dump('remainingToPay', $remainingToPay) ?>
+            <? var_dump('calculatedRemaining', $calculatedRemaining) ?>
+            <? var_dump('canBeTaken', $canBeShipped) ?>
+        </pre>
+        <?
+
+        /*$updateResult = $USER_FIELD_MANAGER->Update('CRM_DEAL', $arDeal['ID'], [
+            'UF_CRM_1760724869' => $canBeShipped
+        ]);*/
+        /*?>
+            <pre>
+        <?php
+        var_dump([
+            'totalWithVAT' => $totalWithVAT,
+            'prepaymentPercent' => $prepaymentPercent,
+            'prepaymentSum' => $prepaymentSum,
+            'calculatedRemaining' => $calculatedRemaining,
+            'remainingToPay' => $remainingToPay,
+            'difference' => $calculatedRemaining - $remainingToPay,
+            'canBeTaken' => $canBeShipped,
+            'currentFieldValue' => $arDeal['UF_CRM_1760724756'] ?? null,
+            'updateResult' => $updateResult
+        ]);
+        ?>
+        </pre>
+        <?php*/
+
+        return $canBeShipped;
+    }
+
+
+    public static function OnAfterCrmDealProductRowsSave($dealId, $arProducts): void
+    {
+        self::setProductStrToDeal($dealId);
+    }
+
+    public static function setProductStrToDeal($dealId): void
+    {
+        $arDealProducts = CCrmDeal::LoadProductRows($dealId);
+        if (!empty($arDealProducts)) {
+            $arProductData = [];
+            $arProductIds = array_column($arDealProducts, "PRODUCT_ID");
+            $obProducts = CIBlockElement::GetList(
+                [],
+                ["ID" => $arProductIds],
+                false,
+                false,
+                [
+                    'ID',
+                    'NAME',
+                    'IBLOCK_ID',
+                    'PROPERTY_CML2_LINK.PROPERTY__I5VOOK',
+                    'PROPERTY__I5VOOK',
+                    'PROPERTY_SKLADRAZRABOTKA_IPC880',
+                    'PROPERTY_CML2_LINK.PROPERTY_SKLADRAZRABOTKA_IPC880'
+                ]
+            );
+            while ($arProduct = $obProducts->Fetch()) {
+                $arProductData[$arProduct['ID']]['Норма товара'] =
+                    $arProduct['PROPERTY__I5VOOK_VALUE'] ?: $arProduct['PROPERTY_CML2_LINK_PROPERTY__I5VOOK_VALUE'];
+                $arProductData[$arProduct['ID']]['Название'] = $arProduct['NAME'];
+                foreach ($arDealProducts as $arDealProduct) {
+                    if ($arDealProduct['PRODUCT_ID'] == $arProduct['ID']) {
+                        $arProductData[$arProduct['ID']]['К-во'] = $arDealProduct['QUANTITY'];
+                        break;
+                    }
+                }
+                $arProductData[$arProduct['ID']]['Склад'] =
+                    $arProduct['PROPERTY_SKLADRAZRABOTKA_IPC880_VALUE'] ?: $arProduct['PROPERTY_CML2_LINK_PROPERTY_SKLADRAZRABOTKA_IPC880_VALUE'];
+            }
+
+            $productStr = '';
+            foreach ($arProductData as $productId => $arProduct) {
+                foreach ($arProduct as $codeProperty => $valueProperty) {
+                    if ($codeProperty != 'Название' && $codeProperty != 'Склад') {
+                        $productStr .= "$codeProperty: $valueProperty\n";
+                    } else {
+                        $productStr .= $valueProperty . "\n";
+                    }
+                }
+                $productStr .= "\n";
+            }
+            \Helpers\CrmDeal::updateDealUserFields(
+                intval($dealId),
+                ['UF_CRM_1728470026470' => $productStr]
+            );
+        } else {
+            \Helpers\CrmDeal::updateDealUserFields(
+                intval($dealId),
+                ['UF_CRM_1728470026470' => '']
+            );
+        }
+    }
+
+
+}

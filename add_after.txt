@@ -1,0 +1,91 @@
+\bitrix\components\bitrix\tasks.templates.list\class.php
+class TasksTemplatesListComponent extends TasksBaseComponent
+	implements \Bitrix\Main\Errorable, \Bitrix\Main\Engine\Contract\Controllerable
+{
+	private const FILTER_ID = 'TASKS_TEMPLATES_FILTER_ID';
+	private const DEFAULT_LIMIT = 30;//30 замість 10
+
+
+
+
+/bitrix/modules/tasks/lib/helper/filter.php
+
+private function postProcessMainFilter(array $filter): array
+закоментувати
+// '::SUBFILTER-2' => [
+//     'WITH_COMMENT_COUNTERS' => 'Y',
+//     'REAL_STATUS' => \CTasks::STATE_COMPLETED
+// ],
+
+unset($filter[$searchKey][$key]);
+}
+
+if (
+isset($filter[$statusKey])
+&& (int) $this->getUserId() === (int) User::getId()
+)
+{
+$filter[$statusKey] = [
+  '::LOGIC' => 'OR',
+  '::SUBFILTER-1' => $filter[$statusKey],
+  // '::SUBFILTER-2' => [
+  //     'WITH_COMMENT_COUNTERS' => 'Y',
+  //     'REAL_STATUS' => \CTasks::STATE_COMPLETED
+  // ],
+];
+}
+
+return $filter;
+}
+
+
+C:\notepad_cache\home\bitrix\www\bitrix\modules\crm\lib\Reservation\Component\InventoryManagementChecker.php
+
+public function checkBeforeUpdate(array $entityFields): Main\Result
+	{
+		$result = new Main\Result();
+		$result->setData($entityFields);
+
+		if (!$this->isProcessInventoryManagementAvailable())
+		{
+			return $result;
+		}
+
+		$currentStageId = $entityFields[Crm\Item::FIELD_NAME_STAGE_ID] ?? null;
+		if (!$currentStageId)
+		{
+			return $result;
+		}
+
+		$currentSemanticId = $this->factory->getStageSemantics($currentStageId);
+		$previousStageId = $this->getCurrentStage();
+
+		//add user
+		if($currentStageId=="WON"){
+			return $result;
+		}
+		//end user
+
+
+home/bitrix/www/bitrix/modules/crm/lib/Reservation/Component/InventoryManagement.php
+Зробити методи ship, unReserve публічними
+
+
+home/bitrix/ext_www/bitrix.avilon.in.ua/bitrix/js/ui/viewer/dist/viewer.bundle.js
+loadData() {
+            const promise = new BXPromise();
+            if (this._pdfSrc) {
+                this.loadLibrary().then(() => {
+                    promise.fulfill(this);
+                });
+                return promise;
+            }
+            //custom fix pdf
+            if (this.src && this.src.toLowerCase().split('?')[0].endsWith('.pdf')) {
+                this._pdfSrc = this.src;
+                this.loadLibrary().then(() => {
+                    promise.fulfill(this);
+                });
+                return promise;
+            }
+            //
