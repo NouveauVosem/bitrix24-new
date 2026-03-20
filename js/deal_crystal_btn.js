@@ -116,6 +116,22 @@ BX.ready(function () {
             lines.push('<b>Общий вес:</b> ' + data.totalWeight + ' кг');
         }
 
+        var prices = [
+            { label: 'Rhenus',   cid: 'UF_CRM_1774000644830' },
+            { label: 'Schenker', cid: 'UF_CRM_1774000685589' },
+            { label: 'Raben',    cid: 'UF_CRM_1774000702384' },
+        ];
+        var priceLines = [];
+        prices.forEach(function(p) {
+            var el = document.querySelector('[data-cid="' + p.cid + '"] .field-item');
+            var val = el ? el.textContent.trim() : '';
+            if (val) priceLines.push('&nbsp; ' + p.label + ': <b>' + val + '</b>');
+        });
+        if (priceLines.length > 0) {
+            lines.push('<b>Цены доставки:</b>');
+            priceLines.forEach(function(l) { lines.push(l); });
+        }
+
         lines.push('</div>');
 
         var newHTML = lines.join('<br>');
