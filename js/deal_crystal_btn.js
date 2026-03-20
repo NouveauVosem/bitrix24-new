@@ -136,6 +136,7 @@ BX.ready(function () {
         if (!sidebar) return;
 
         var wrapper = document.createElement('div');
+        wrapper.id = BUTTON_ID;
         wrapper.style.cssText = 'padding: 10px 15px 5px;';
 
         /* Crystal — калькулятор (отключено, можно вернуть)
