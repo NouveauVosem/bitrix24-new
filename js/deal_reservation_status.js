@@ -6,7 +6,7 @@ BX.ready(function () {
     }
 
     var PANEL_ID  = 'crystal-reservation-panel';
-    var API_URL   = 'https://crystal.alvla.tools/api/getRootProductsSummaryByArticles';
+    var API_URL   = 'https://crystal.alvla.tools/api/units/getRootProductsSummaryByArticles';
     var FIELD_CID = 'UF_CRM_1728470026470';
 
     // ===== ПАРСИНГ ПОЛЯ =====
