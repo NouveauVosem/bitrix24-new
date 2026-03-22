@@ -8,6 +8,7 @@ BX.ready(function () {
     var PANEL_ID    = 'crystal-reservation-panel';
     var API_URL     = 'https://crystal.alvla.tools/api/units/getRootProductsSummaryByArticles';
     var RESERVE_URL = 'https://crystal.alvla.tools/api/reservation/createReservation/';
+    var SUMMARY_URL = 'https://crystal.alvla.tools/api/reservation/getReservationSummaryByDeal/';
     var FIELD_CID   = 'UF_CRM_1728470026470';
 
     var dealMatch = url.match(/crm\/deal\/details\/(\d+)/);
@@ -86,7 +87,7 @@ BX.ready(function () {
         });
     }
 
-    function renderPanel(items, quantities) {
+    function renderPanel(items, quantities, reservedMap) {
         var panel = document.getElementById(PANEL_ID);
         if (!panel) return;
 
@@ -138,16 +139,24 @@ BX.ready(function () {
             var footer = document.createElement('div');
             footer.style.cssText = 'margin-top:5px;';
 
-            var reserveQty = needed !== null ? needed : inStockFree;
+            var alreadyReserved = reservedMap && reservedMap[normId] != null ? reservedMap[normId] : null;
 
-            var btn = document.createElement('button');
-            btn.style.cssText = 'font-size:11px;padding:2px 8px;cursor:pointer;border:1px solid #3c8dbc;background:#3c8dbc;color:#fff;border-radius:3px;';
-            btn.textContent = 'Зарезервировать' + (needed !== null ? ' (' + needed + ' шт)' : '');
-            btn.addEventListener('click', function () {
-                createReservation(normId, reserveQty, btn);
-            });
+            if (alreadyReserved !== null) {
+                var badge = document.createElement('span');
+                badge.style.cssText = 'font-size:11px;padding:2px 8px;border-radius:3px;background:#e6f4ea;color:#2c9e4b;border:1px solid #2c9e4b;';
+                badge.textContent = '✓ Зарезервировано: ' + alreadyReserved + ' шт';
+                footer.appendChild(badge);
+            } else {
+                var reserveQty = needed !== null ? needed : inStockFree;
 
-            footer.appendChild(btn);
+                var btn = document.createElement('button');
+                btn.style.cssText = 'font-size:11px;padding:2px 8px;cursor:pointer;border:1px solid #3c8dbc;background:#3c8dbc;color:#fff;border-radius:3px;';
+                btn.textContent = 'Зарезервировать' + (needed !== null ? ' (' + needed + ' шт)' : '');
+                btn.addEventListener('click', function () {
+                    createReservation(normId, reserveQty, btn);
+                });
+                footer.appendChild(btn);
+            }
             card.appendChild(artDiv);
             card.appendChild(nameDiv);
             card.appendChild(stockDiv);
@@ -174,15 +183,33 @@ BX.ready(function () {
 
         panel.innerHTML = '<div style="color:#888;font-size:12px;">Загрузка…</div>';
 
-        fetch(API_URL, {
+        var stockFetch = fetch(API_URL, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ articles: articles })
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
+        }).then(function (res) { return res.json(); });
+
+        var summaryFetch = DEAL_ID
+            ? fetch(SUMMARY_URL + DEAL_ID).then(function (res) { return res.json(); })
+            : Promise.resolve(null);
+
+        Promise.all([stockFetch, summaryFetch])
+        .then(function (results) {
+            var data    = results[0];
+            var summary = results[1];
+
+            // строим map: parentNormId -> totalReservedKits
+            var reservedMap = {};
+            if (summary && Array.isArray(summary.products)) {
+                summary.products.forEach(function (p) {
+                    if (p.parentNorm && p.parentNorm.id != null) {
+                        reservedMap[p.parentNorm.id] = p.totalReservedKits;
+                    }
+                });
+            }
+
             var quantities = parseQuantities(text);
-            renderPanel(Array.isArray(data) ? data : [], quantities);
+            renderPanel(Array.isArray(data) ? data : [], quantities, reservedMap);
         })
         .catch(function (err) {
             var p = document.getElementById(PANEL_ID);
