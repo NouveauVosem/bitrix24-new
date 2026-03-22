@@ -160,7 +160,7 @@ BX.ready(function () {
 
         wrapper.appendChild(header);
         wrapper.appendChild(panel);
-        sidebar.appendChild(wrapper);
+        sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         loadReservation();
     }
