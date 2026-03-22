@@ -5,9 +5,13 @@ BX.ready(function () {
         return;
     }
 
-    var PANEL_ID  = 'crystal-reservation-panel';
-    var API_URL   = 'https://crystal.alvla.tools/api/units/getRootProductsSummaryByArticles';
-    var FIELD_CID = 'UF_CRM_1728470026470';
+    var PANEL_ID    = 'crystal-reservation-panel';
+    var API_URL     = 'https://crystal.alvla.tools/api/units/getRootProductsSummaryByArticles';
+    var RESERVE_URL = 'https://crystal.alvla.tools/api/reservation/createReservation/';
+    var FIELD_CID   = 'UF_CRM_1728470026470';
+
+    var dealMatch = url.match(/crm\/deal\/details\/(\d+)/);
+    var DEAL_ID   = dealMatch ? dealMatch[1] : null;
 
     // ===== ПАРСИНГ ПОЛЯ =====
 
@@ -51,20 +55,55 @@ BX.ready(function () {
             .replace(/"/g, '&quot;');
     }
 
+    function createReservation(parentNormId, reserveQty, btn) {
+        if (!DEAL_ID) {
+            btn.textContent = '❌ Нет ID сделки';
+            return;
+        }
+        btn.disabled = true;
+        btn.textContent = '⌛ Резервирую…';
+
+        fetch(RESERVE_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                parentNormId:    parentNormId,
+                dealId:          DEAL_ID,
+                reservationList: [{ reserveQty: reserveQty, statusCode: 'inStock' }]
+            })
+        })
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function () {
+            btn.textContent = '✅ Зарезервировано';
+        })
+        .catch(function (err) {
+            btn.textContent = '❌ Ошибка';
+            btn.disabled = false;
+            console.error('[ReservationStatus] reserve error:', err);
+        });
+    }
+
     function renderPanel(items, quantities) {
         var panel = document.getElementById(PANEL_ID);
         if (!panel) return;
+
+        panel.innerHTML = '';
 
         if (!items || items.length === 0) {
             panel.innerHTML = '<div style="color:#888;font-size:12px;">Нет данных от API</div>';
             return;
         }
 
-        var html = '<div style="font-size:12px;line-height:1.6;">';
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'font-size:12px;line-height:1.6;';
 
         items.forEach(function (item) {
             var norm    = item.parentNorm || {};
             var article = norm.article || '';
+            var normId  = norm.id || '';
             var name    = (norm.name && norm.name.ru) ? norm.name.ru : article;
 
             var inStockFree = 0;
@@ -76,23 +115,47 @@ BX.ready(function () {
                 });
             }
 
-            var needed  = quantities[article] || null;
-            var enough  = needed === null || inStockFree >= needed;
-            var accent  = enough ? '#2c9e4b' : '#e53e3e';
+            var needed = quantities[article] || null;
+            var enough = needed === null || inStockFree >= needed;
+            var accent = enough ? '#2c9e4b' : '#e53e3e';
 
-            html += '<div style="margin-bottom:6px;padding:6px 8px;background:#f5f7fa;border-radius:4px;border-left:3px solid ' + accent + ';">';
-            html += '<div style="font-weight:600;color:#333;">' + escapeHtml(article) + '</div>';
-            html += '<div style="color:#555;margin-top:1px;">' + escapeHtml(name) + '</div>';
-            html += '<div style="margin-top:3px;">На складе: <b style="color:' + accent + ';">' + inStockFree + '</b>';
-            if (needed !== null) {
-                html += ' <span style="color:#888;">(нужно: ' + needed + ')</span>';
-            }
-            html += '</div>';
-            html += '</div>';
+            var card = document.createElement('div');
+            card.style.cssText = 'margin-bottom:6px;padding:6px 8px;background:#f5f7fa;border-radius:4px;border-left:3px solid ' + accent + ';';
+
+            var artDiv = document.createElement('div');
+            artDiv.style.cssText = 'font-weight:600;color:#333;';
+            artDiv.textContent = article;
+
+            var nameDiv = document.createElement('div');
+            nameDiv.style.cssText = 'color:#555;margin-top:1px;';
+            nameDiv.textContent = name;
+
+            var stockDiv = document.createElement('div');
+            stockDiv.style.cssText = 'margin-top:3px;';
+            stockDiv.innerHTML = 'На складе: <b style="color:' + accent + ';">' + inStockFree + '</b>'
+                + (needed !== null ? ' <span style="color:#888;">(нужно: ' + needed + ')</span>' : '');
+
+            var footer = document.createElement('div');
+            footer.style.cssText = 'margin-top:5px;';
+
+            var reserveQty = needed !== null ? needed : inStockFree;
+
+            var btn = document.createElement('button');
+            btn.style.cssText = 'font-size:11px;padding:2px 8px;cursor:pointer;border:1px solid #3c8dbc;background:#3c8dbc;color:#fff;border-radius:3px;';
+            btn.textContent = 'Зарезервировать' + (needed !== null ? ' (' + needed + ' шт)' : '');
+            btn.addEventListener('click', function () {
+                createReservation(normId, reserveQty, btn);
+            });
+
+            footer.appendChild(btn);
+            card.appendChild(artDiv);
+            card.appendChild(nameDiv);
+            card.appendChild(stockDiv);
+            card.appendChild(footer);
+            wrap.appendChild(card);
         });
 
-        html += '</div>';
-        panel.innerHTML = html;
+        panel.appendChild(wrap);
     }
 
     // ===== ЗАГРУЗКА =====
