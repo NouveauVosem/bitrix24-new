@@ -14,8 +14,13 @@ BX.ready(function () {
         var dimensionsEl = document.querySelector('[data-cid="UF_CRM_1720510082918"] .field-item');
         var weightEl     = document.querySelector('[data-cid="UF_CRM_1720510115556"] .field-item');
         var addressEl    = document.querySelector('[data-cid="UF_CRM_1714139787401"] .field-item');
+        var countryEl  = document.querySelector('[data-cid="UF_CRM_67BF208ADD735"] .field-item');
+        var cityEl     = document.querySelector('[data-cid="UF_CRM_1720604913416"] .field-item');
+        var zipcodeEl  = document.querySelector('[data-cid="UF_CRM_1720604926030"] .field-item');
+        var streetEl   = document.querySelector('[data-cid="UF_CRM_1720604937540"] .field-item');
+        var houseEl    = document.querySelector('[data-cid="UF_CRM_1720604951910"] .field-item');
 
-        if (!dimensionsEl && !weightEl && !addressEl) return null;
+        if (!dimensionsEl && !weightEl && !addressEl && !cityEl) return null;
 
         var dimensions = dimensionsEl ? dimensionsEl.textContent.trim().replace(/шт\s+/gi, 'шт\n') : '';
         var weight     = weightEl     ? weightEl.textContent.trim() : '';
@@ -24,27 +29,39 @@ BX.ready(function () {
             .trim();
 
         // --- Адрес куда ---
-        var toRaw = addressEl ? addressEl.textContent.trim() : '';
         var to = { street: '', city: '', zipcode: '', country: '' };
 
-        var parts = toRaw.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
-        if (parts.length >= 2) {
-            to.country   = parts.pop();
-            var zipCity  = parts.pop();
-            to.street    = parts.join(', ');
-            var m = zipCity.match(/^(\d{3}\s\d{2}|\d{2}-\d{3}|\d{4,6})\s+(.+)$/);
-            if (m) { to.zipcode = m[1]; to.city = m[2]; }
-            else   { to.city = zipCity; }
+        var cityVal = cityEl ? cityEl.textContent.trim() : '';
+        if (cityVal) {
+            // новые раздельные поля
+            var streetVal = streetEl ? streetEl.textContent.trim() : '';
+            var houseVal  = houseEl  ? houseEl.textContent.trim()  : '';
+            to.street  = streetVal + (houseVal ? ', ' + houseVal : '');
+            to.city    = cityVal;
+            to.zipcode = zipcodeEl ? zipcodeEl.textContent.trim() : '';
+            to.country = countryEl ? countryEl.textContent.trim() : '';
         } else {
-            to.city = toRaw;
+            // fallback — старое поле одной строкой
+            var toRaw = addressEl ? addressEl.textContent.trim() : '';
+            var parts = toRaw.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
+            if (parts.length >= 2) {
+                to.country  = parts.pop();
+                var zipCity = parts.pop();
+                to.street   = parts.join(', ');
+                var m = zipCity.match(/^(\d{3}\s\d{2}|\d{2}-\d{3}|\d{4,6})\s+(.+)$/);
+                if (m) { to.zipcode = m[1]; to.city = m[2]; }
+                else   { to.city = zipCity; }
+            } else {
+                to.city = toRaw;
+            }
         }
 
         // --- Паллеты ---
         var units = [];
         var lines = goodsRaw.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(Boolean);
 
-        var weightLine  = lines.find(function(l) { return /вес/i.test(l); });
-        var weightMatch = weightLine ? weightLine.match(/вес\s*-\s*([\d,.]+)/i) : null;
+        var weightLine  = lines.find(function(l) { return /[\d,.]+\s*кг/i.test(l); });
+        var weightMatch = weightLine ? weightLine.match(/([\d,.]+)\s*кг/i) : null;
         var totalWeight = weightMatch ? parseFloat(weightMatch[1].replace(',', '.')) : null;
 
         var palletLines = lines.filter(function(l) {
