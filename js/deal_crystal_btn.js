@@ -329,11 +329,52 @@ BX.ready(function () {
             });
         });
 
+        var pythonBtn = document.createElement('button');
+        pythonBtn.id = 'crystal-python-btn';
+        pythonBtn.className = 'ui-btn ui-btn-sm';
+        pythonBtn.style.cssText = 'background:#7c3aed;color:#fff;border-color:#7c3aed;';
+        pythonBtn.textContent = 'Загрузить в Python';
+        pythonBtn.addEventListener('click', function () {
+            var parsed = parseDeliveryData();
+            if (!parsed) return alert('Не удалось распарсить данные сделки');
+
+            var deliveryData = {
+                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+                to: Object.assign({ company: '' }, parsed.to),
+                units: parsed.units.map(function(u) {
+                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+                })
+            };
+
+            pythonBtn.disabled = true;
+            pythonBtn.textContent = '⌛ Отправляю...';
+
+            fetch('https://alvla.services/api/pending', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deliveryData: deliveryData })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function() {
+                pythonBtn.textContent = '✅ Данные отправлены в Python';
+                setTimeout(function() {
+                    pythonBtn.disabled = false;
+                    pythonBtn.textContent = 'Загрузить в Python';
+                }, 4000);
+            })
+            .catch(function(err) {
+                pythonBtn.textContent = '❌ Ошибка';
+                pythonBtn.disabled = false;
+                console.error('Python pending error:', err);
+            });
+        });
+
         wrapper.appendChild(hint);
         wrapper.appendChild(feedback);
         wrapper.appendChild(rhenusBtn);
         wrapper.appendChild(schenkerBtn);
         wrapper.appendChild(rabenBtn);
+        wrapper.appendChild(pythonBtn);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         updateFeedback();
