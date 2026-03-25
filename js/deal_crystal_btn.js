@@ -171,6 +171,27 @@ BX.ready(function () {
         var wrapper = document.createElement('div');
         wrapper.id = BUTTON_ID;
 
+        var STORAGE_KEY = 'crystal-panel-collapsed';
+        var isCollapsed = localStorage.getItem(STORAGE_KEY) !== 'false'; // по умолчанию свёрнуто
+
+        var toggleBtn = document.createElement('div');
+        toggleBtn.id = 'crystal-toggle-header';
+        toggleBtn.style.cssText = 'cursor:pointer;padding:6px 10px;background:#2d6cdf;color:#fff;border-radius:4px;font-size:13px;font-weight:bold;user-select:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;';
+        toggleBtn.innerHTML = '<span>Crystal Доставка</span><span id="crystal-toggle-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
+
+        var content = document.createElement('div');
+        content.id = 'crystal-panel-content';
+        content.style.display = isCollapsed ? 'none' : 'block';
+
+        toggleBtn.addEventListener('click', function () {
+            isCollapsed = !isCollapsed;
+            content.style.display = isCollapsed ? 'none' : 'block';
+            document.getElementById('crystal-toggle-arrow').textContent = isCollapsed ? '▶' : '▼';
+            localStorage.setItem(STORAGE_KEY, isCollapsed ? 'true' : 'false');
+        });
+
+        wrapper.appendChild(toggleBtn);
+
         /* Crystal — калькулятор (отключено, можно вернуть)
         var btn = document.createElement('a');
         btn.id = BUTTON_ID;
@@ -338,9 +359,20 @@ BX.ready(function () {
             var parsed = parseDeliveryData();
             if (!parsed) return alert('Не удалось распарсить данные сделки');
 
+            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+            var dealId = dealMatch ? dealMatch[1] : null;
+
+            var clientName = '';
+            var titleEl = document.querySelector('#pagetitle');
+            if (titleEl) {
+                var titleText = titleEl.textContent.trim();
+                var dashIdx = titleText.indexOf(' - ');
+                clientName = dashIdx !== -1 ? titleText.slice(dashIdx + 3).trim() : titleText;
+            }
+
             var deliveryData = {
                 from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: '' }, parsed.to),
+                to: Object.assign({ company: clientName }, parsed.to),
                 units: parsed.units.map(function(u) {
                     return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
                 })
@@ -352,7 +384,7 @@ BX.ready(function () {
             fetch('https://alvla.services/api/pending', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryData: deliveryData })
+                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
             })
             .then(function(res) { return res.json(); })
             .then(function() {
@@ -369,12 +401,13 @@ BX.ready(function () {
             });
         });
 
-        wrapper.appendChild(hint);
-        wrapper.appendChild(feedback);
-        wrapper.appendChild(rhenusBtn);
-        wrapper.appendChild(schenkerBtn);
-        wrapper.appendChild(rabenBtn);
-        wrapper.appendChild(pythonBtn);
+        content.appendChild(hint);
+        content.appendChild(feedback);
+        content.appendChild(rhenusBtn);
+        content.appendChild(schenkerBtn);
+        content.appendChild(rabenBtn);
+        content.appendChild(pythonBtn);
+        wrapper.appendChild(content);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         updateFeedback();
