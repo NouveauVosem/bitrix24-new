@@ -467,8 +467,9 @@ BX.ready(function () {
                 var quantity = qtyKey !== null && row.node.children[qtyKey]
                     ? row.node.children[qtyKey].textContent.trim() : '';
 
+                var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
                 var data = {
-                    dealId: dealId,
+                    dealId: dm ? dm[1] : null,
                     productName: productName,
                     quantity: quantity,
                     clientName: getClientName()
