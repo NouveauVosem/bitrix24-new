@@ -413,12 +413,79 @@ BX.ready(function () {
         updateFeedback();
     }
 
-    var observer = new MutationObserver(function () {
+    var sidebarObserver = new MutationObserver(function () {
         insertButton();
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    sidebarObserver.observe(document.body, { childList: true, subtree: true });
 
     insertButton();
+
+    // ===== КНОПКИ РАСЧЁТА ЦЕНЫ В СТРОКАХ ТОВАРОВ =====
+
+    function getClientName() {
+        var titleEl = document.querySelector('#pagetitle');
+        if (!titleEl) return '';
+        var titleText = titleEl.textContent.trim();
+        var dashIdx = titleText.indexOf(' - ');
+        return dashIdx !== -1 ? titleText.slice(dashIdx + 3).trim() : titleText;
+    }
+
+    function injectProductButtons() {
+        var gridNode = document.body.querySelector('[id^="CCrmEntityProductListComponent"]');
+        if (!gridNode) return;
+
+        var gridManager = BX.Main.gridManager.getById('CCrmEntityProductListComponent');
+        var grid = gridManager && gridManager.instance;
+        if (!grid) return;
+
+        var rows = grid.getRows();
+        var children = rows.getBodyChild();
+
+        var nameKey = null, qtyKey = null;
+        var firstRow = rows.rows[0];
+        if (firstRow && firstRow.node) {
+            Array.from(firstRow.node.children).forEach(function(td, key) {
+                var colName = td.getAttribute('data-name');
+                if (colName === 'PRODUCT_NAME') nameKey = key;
+                if (colName === 'QUANTITY') qtyKey = key;
+            });
+        }
+
+        children.forEach(function(row) {
+            if (row.node.querySelector('.crystal-product-calc-btn')) return;
+
+            var lastCell = row.node.cells[row.node.cells.length - 1];
+            if (!lastCell) return;
+
+            var btn = document.createElement('button');
+            btn.className = 'ui-btn ui-btn-primary ui-btn-xs crystal-product-calc-btn';
+            btn.textContent = 'Рассчитать';
+            btn.addEventListener('click', function() {
+                var productName = nameKey !== null && row.node.children[nameKey]
+                    ? row.node.children[nameKey].textContent.trim() : '';
+                var quantity = qtyKey !== null && row.node.children[qtyKey]
+                    ? row.node.children[qtyKey].textContent.trim() : '';
+
+                var data = {
+                    dealId: dealId,
+                    productName: productName,
+                    quantity: quantity,
+                    clientName: getClientName()
+                };
+                console.log('[Crystal] Расчёт цены товара:', data);
+            });
+
+            lastCell.appendChild(btn);
+        });
+    }
+
+    var productGridObserver = new MutationObserver(function() {
+        injectProductButtons();
+    });
+
+    productGridObserver.observe(document.body, { childList: true, subtree: true });
+
+    injectProductButtons();
 
 });
