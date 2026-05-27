@@ -445,14 +445,11 @@ BX.ready(function () {
         var nameKey = null, qtyKey = null;
         var firstRow = rows.rows[0];
         if (firstRow && firstRow.node) {
-            var colMap = {};
             Array.from(firstRow.node.children).forEach(function(td, key) {
                 var colName = td.getAttribute('data-name');
-                colMap[key] = colName;
                 if (colName === 'MAIN_INFO') nameKey = key;
                 if (colName === 'QUANTITY') qtyKey = key;
             });
-            console.log('[Crystal] Колонки товаров:', colMap);
         }
 
         children.forEach(function(row) {
@@ -464,7 +461,9 @@ BX.ready(function () {
             var btn = document.createElement('button');
             btn.className = 'ui-btn ui-btn-primary ui-btn-xs crystal-product-calc-btn';
             btn.textContent = 'Рассчитать';
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 var productName = '';
                 if (nameKey !== null && row.node.children[nameKey]) {
                     var nameInput = row.node.children[nameKey].querySelector('input[data-name="NAME"]');
