@@ -445,11 +445,14 @@ BX.ready(function () {
         var nameKey = null, qtyKey = null;
         var firstRow = rows.rows[0];
         if (firstRow && firstRow.node) {
+            var colMap = {};
             Array.from(firstRow.node.children).forEach(function(td, key) {
                 var colName = td.getAttribute('data-name');
+                colMap[key] = colName;
                 if (colName === 'PRODUCT_NAME') nameKey = key;
                 if (colName === 'QUANTITY') qtyKey = key;
             });
+            console.log('[Crystal] Колонки товаров:', colMap);
         }
 
         children.forEach(function(row) {
