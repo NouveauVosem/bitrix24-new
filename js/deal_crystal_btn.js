@@ -461,9 +461,14 @@ BX.ready(function () {
             var btn = document.createElement('button');
             btn.className = 'ui-btn ui-btn-primary ui-btn-xs crystal-product-calc-btn';
             btn.textContent = 'Рассчитать';
+
+            var statusDiv = document.createElement('div');
+            statusDiv.style.cssText = 'font-size:11px;color:#555;margin-top:3px;max-width:200px;word-break:break-word;';
+
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+
                 var productName = '';
                 if (nameKey !== null && row.node.children[nameKey]) {
                     var nameInput = row.node.children[nameKey].querySelector('input[data-name="NAME"]');
@@ -478,16 +483,47 @@ BX.ready(function () {
                 }
 
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
-                var data = {
-                    dealId: dm ? dm[1] : null,
-                    productName: productName,
-                    quantity: quantity,
-                    clientName: getClientName()
-                };
-                console.log('[Crystal] Расчёт цены товара:', data);
+                var dealId = dm ? dm[1] : null;
+
+                btn.disabled = true;
+                btn.textContent = '⌛ Создаю...';
+                statusDiv.textContent = '';
+
+                fetch('https://crystal.alvla.tools/api/price-calculations/crm/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Api-Key': 'legenda'
+                    },
+                    body: JSON.stringify({
+                        dealId: dealId,
+                        productName: productName,
+                        quantity: quantity,
+                        clientName: getClientName()
+                    })
+                })
+                .then(function(res) {
+                    return res.json().then(function(data) { return { ok: res.ok, data: data }; });
+                })
+                .then(function(result) {
+                    if (result.data.status === 'error') {
+                        btn.textContent = '❌ Ошибка';
+                        btn.disabled = false;
+                    } else {
+                        btn.textContent = '✅ Готово';
+                    }
+                    statusDiv.textContent = result.data.message || '';
+                })
+                .catch(function(err) {
+                    btn.textContent = '❌ Ошибка';
+                    btn.disabled = false;
+                    statusDiv.textContent = 'Ошибка запроса';
+                    console.error('[Crystal] price calc error:', err);
+                });
             });
 
             lastCell.appendChild(btn);
+            lastCell.appendChild(statusDiv);
         });
     }
 
