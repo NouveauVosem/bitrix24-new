@@ -467,9 +467,8 @@ BX.ready(function () {
             btn.addEventListener('click', function() {
                 var productName = '';
                 if (nameKey !== null && row.node.children[nameKey]) {
-                    var nameCell = row.node.children[nameKey];
-                    var nameLink = nameCell.querySelector('a');
-                    productName = nameLink ? nameLink.textContent.trim() : nameCell.textContent.trim();
+                    var nameInput = row.node.children[nameKey].querySelector('input[data-name="NAME"]');
+                    productName = nameInput ? nameInput.value.trim() : '';
                 }
 
                 var quantity = '';
