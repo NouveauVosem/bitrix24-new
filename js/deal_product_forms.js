@@ -197,6 +197,33 @@
         qtyInput.addEventListener('input', buildSlots);
         buildSlots();
 
+        // price row
+        var priceRow = document.createElement('div');
+        priceRow.style.cssText = [
+            'display:flex;align-items:center;gap:10px;',
+            'padding:12px 14px;background:#f0fdf4;',
+            'border-radius:6px;border-left:3px solid #16a34a;margin-top:10px;'
+        ].join('');
+
+        var priceLabel = document.createElement('span');
+        priceLabel.style.cssText = 'font-size:13px;font-weight:600;color:#333;flex:1;';
+        priceLabel.textContent = 'Цена за весь комплект';
+
+        var priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.min = '0';
+        priceInput.step = '0.01';
+        priceInput.placeholder = '0.00';
+        priceInput.style.cssText = 'width:100px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:right;font-size:14px;font-weight:600;flex-shrink:0;';
+
+        var priceCurrency = document.createElement('span');
+        priceCurrency.style.cssText = 'color:#666;font-size:13px;flex-shrink:0;';
+        priceCurrency.textContent = 'EUR';
+
+        priceRow.appendChild(priceLabel);
+        priceRow.appendChild(priceInput);
+        priceRow.appendChild(priceCurrency);
+
         // footer
         var footer = document.createElement('div');
         footer.style.cssText = 'border-top:1px solid #e5e7eb;padding-top:16px;margin-top:4px;';
@@ -211,6 +238,7 @@
 
         submitBtn.addEventListener('click', function () {
             var currentQty = getCurrentQty();
+            var currentPrice = parseFloat(priceInput.value) || 0;
             var components = [];
 
             slots.forEach(function (slot) {
@@ -230,6 +258,7 @@
                 article: form.article || '',
                 name: productName,
                 qty: currentQty,
+                price: currentPrice,
                 components: components
             };
 
@@ -238,23 +267,59 @@
             submitStatus.style.color = '#6b7280';
             submitStatus.textContent = '';
 
+            function onHierarchyDone(ok) {
+                if (!ok) {
+                    submitBtn.textContent = '❌ Ошибка сохранения';
+                    submitBtn.disabled = false;
+                    submitStatus.style.color = '#dc2626';
+                    submitStatus.textContent = 'Попробуйте ещё раз';
+                    return;
+                }
+
+                // Если цена указана — пишем в строки товаров сделки
+                if (currentPrice > 0 && dealId) {
+                    var body = 'dealId=' + encodeURIComponent(dealId)
+                        + '&productName=' + encodeURIComponent(productName)
+                        + '&article=' + encodeURIComponent(form.article || '')
+                        + '&quantity=' + encodeURIComponent(currentQty)
+                        + '&price=' + encodeURIComponent(currentPrice);
+
+                    fetch('/local/ajax/add_deal_product.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (resp) {
+                        if (resp.status === 'success') {
+                            submitBtn.textContent = '✅ Добавлено';
+                            submitStatus.style.color = '#16a34a';
+                            submitStatus.textContent = 'Товар добавлен в сделку';
+                        } else {
+                            submitBtn.textContent = '✅ В иерархии';
+                            submitStatus.style.color = '#f59e0b';
+                            submitStatus.textContent = 'Ошибка записи в товары сделки';
+                        }
+                        setTimeout(function () { overlay.remove(); }, 2000);
+                    })
+                    .catch(function () {
+                        submitBtn.textContent = '✅ В иерархии';
+                        submitStatus.style.color = '#f59e0b';
+                        submitStatus.textContent = 'Ошибка записи в товары сделки';
+                        setTimeout(function () { overlay.remove(); }, 2000);
+                    });
+                } else {
+                    submitBtn.textContent = '✅ Добавлено';
+                    submitStatus.style.color = '#16a34a';
+                    submitStatus.textContent = '';
+                    setTimeout(function () { overlay.remove(); }, 1500);
+                }
+            }
+
             if (window.CrystalHierarchyPanel) {
-                window.CrystalHierarchyPanel.addItem(newItem, function (ok) {
-                    if (ok) {
-                        submitBtn.textContent = '✅ Добавлено';
-                        submitStatus.style.color = '#16a34a';
-                        submitStatus.textContent = '';
-                        setTimeout(function () { overlay.remove(); }, 1500);
-                    } else {
-                        submitBtn.textContent = '❌ Ошибка сохранения';
-                        submitBtn.disabled = false;
-                        submitStatus.style.color = '#dc2626';
-                        submitStatus.textContent = 'Попробуйте ещё раз';
-                    }
-                });
+                window.CrystalHierarchyPanel.addItem(newItem, onHierarchyDone);
             } else {
-                submitBtn.textContent = '✅ Готово';
-                setTimeout(function () { overlay.remove(); }, 1500);
+                onHierarchyDone(true);
             }
         });
 
@@ -265,6 +330,7 @@
         modal.appendChild(title);
         modal.appendChild(qtyRow);
         modal.appendChild(slotsContainer);
+        modal.appendChild(priceRow);
         modal.appendChild(footer);
         overlay.appendChild(modal);
 
