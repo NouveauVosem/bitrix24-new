@@ -58,12 +58,13 @@ if ($action === 'get') {
         foreach ($articles as $article) {
             $article = trim((string)$article);
             if ($article === '') continue;
+            // Артикул содержится в начале названия товара (например "11.1503.5 Пружина 65 кг")
             $res = \CIBlockElement::GetList(
                 [],
-                ['IBLOCK_ID' => 14, 'PROPERTY_ARTNUMBER' => $article, 'ACTIVE' => 'Y'],
+                ['IBLOCK_ID' => 14, 'ACTIVE' => 'Y', '%=NAME' => $article . '%'],
                 false,
                 ['nTopCount' => 1],
-                ['ID']
+                ['ID', 'NAME']
             );
             if ($el = $res->Fetch()) {
                 $map[$article] = (int)$el['ID'];
