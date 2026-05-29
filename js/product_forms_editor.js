@@ -16,7 +16,62 @@
         if (body !== undefined) opts.body = JSON.stringify(body);
         return fetch(CRYSTAL_BASE + path, opts).then(function (r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (r.status === 204) return null;
             return r.json();
+        });
+    }
+
+    function saveFormSequentially(isNew, existingForm, formData, onSuccess, onError) {
+        var formId;
+
+        var step1 = isNew
+            ? crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article })
+            : crystalFetch('PUT', '/api/product-forms/' + existingForm.id, { name: formData.name, article: formData.article })
+                .then(function () { return { id: existingForm.id }; });
+
+        step1.then(function (form) {
+            formId = form.id;
+
+            // Удаляем все существующие слоты (для редактирования)
+            var deleteChain = Promise.resolve();
+            if (!isNew && existingForm.slots && existingForm.slots.length > 0) {
+                existingForm.slots.forEach(function (slot) {
+                    deleteChain = deleteChain.then(function () {
+                        return crystalFetch('DELETE', '/api/product-forms/' + formId + '/slots/' + slot.id);
+                    });
+                });
+            }
+            return deleteChain;
+
+        }).then(function () {
+            // Создаём слоты и опции последовательно
+            var createChain = Promise.resolve();
+            formData.slots.forEach(function (slot) {
+                createChain = createChain.then(function () {
+                    return crystalFetch('POST', '/api/product-forms/' + formId + '/slots', {
+                        name: slot.name,
+                        required: slot.required,
+                        quantityPerUnit: slot.quantityPerUnit
+                    }).then(function (createdSlot) {
+                        var optChain = Promise.resolve();
+                        slot.options.forEach(function (opt) {
+                            optChain = optChain.then(function () {
+                                return crystalFetch('POST',
+                                    '/api/product-forms/' + formId + '/slots/' + createdSlot.id + '/options',
+                                    { article: opt.article, name: opt.name }
+                                );
+                            });
+                        });
+                        return optChain;
+                    });
+                });
+            });
+            return createChain;
+
+        }).then(function () {
+            onSuccess();
+        }).catch(function (err) {
+            onError(err);
         });
     }
 
@@ -301,21 +356,19 @@
             saveBtn.textContent = 'Сохранение...';
             saveStatus.textContent = '';
 
-            var method = isNew ? 'POST' : 'PUT';
-            var path = isNew ? '/api/product-forms' : '/api/product-forms/' + existingForm.id;
-
-            crystalFetch(method, path, formData)
-                .then(function () {
+            saveFormSequentially(isNew, existingForm, formData,
+                function () {
                     saveBtn.textContent = '✓ Сохранено';
                     saveStatus.style.color = '#16a34a';
                     setTimeout(onBack, 900);
-                })
-                .catch(function () {
+                },
+                function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = isNew ? 'Создать форму' : 'Сохранить изменения';
                     saveStatus.style.color = '#dc2626';
                     saveStatus.textContent = 'Ошибка сохранения';
-                });
+                }
+            );
         });
 
         footer.appendChild(saveBtn);
