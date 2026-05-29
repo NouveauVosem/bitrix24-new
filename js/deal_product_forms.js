@@ -469,12 +469,26 @@
         titleEl.style.cssText = 'font-size:15px;font-weight:700;color:#222;margin-bottom:14px;padding-right:24px;';
         titleEl.textContent = 'Выберите форму товара';
 
+        var manageBtn = document.createElement('button');
+        manageBtn.textContent = '⚙ Управление формами';
+        manageBtn.style.cssText = [
+            'display:block;width:100%;margin-bottom:12px;',
+            'background:#fff;border:1px solid #d1d5db;color:#374151;',
+            'padding:7px 12px;border-radius:5px;',
+            'font-size:12px;cursor:pointer;text-align:left;'
+        ].join('');
+        manageBtn.addEventListener('click', function () {
+            overlay.remove();
+            if (window.CrystalFormsEditor) window.CrystalFormsEditor.open();
+        });
+
         var listDiv = document.createElement('div');
         listDiv.style.cssText = 'font-size:12px;color:#888;';
         listDiv.textContent = 'Загрузка...';
 
         modal.appendChild(closeBtn);
         modal.appendChild(titleEl);
+        modal.appendChild(manageBtn);
         modal.appendChild(listDiv);
         overlay.appendChild(modal);
         overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
