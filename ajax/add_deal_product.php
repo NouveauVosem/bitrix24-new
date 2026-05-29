@@ -72,9 +72,6 @@ $existingRows[] = [
     'STORE_ID'         => 1,
 ];
 
-$result = \CCrmDeal::SaveProductRows($dealId, $existingRows);
+\CCrmDeal::SaveProductRows($dealId, $existingRows);
 
-echo json_encode([
-    'status'    => $result ? 'success' : 'error',
-    'productId' => $productId,
-]);
+echo json_encode(['status' => 'success', 'productId' => $productId]);

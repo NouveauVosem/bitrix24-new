@@ -85,9 +85,21 @@
         .catch(function () { callback(); });
     }
 
+    function updateBitrixRow(bitrixId, qty, price) {
+        var dealId = getDealId();
+        if (!dealId || !bitrixId) return;
+        fetch('/local/ajax/update_deal_product_row.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'dealId=' + encodeURIComponent(dealId)
+                + '&productId=' + encodeURIComponent(bitrixId)
+                + '&price=' + encodeURIComponent(price || 0)
+                + '&quantity=' + encodeURIComponent(qty || 1)
+        });
+    }
+
     // ===== RENDER =====
 
-    // Для компонентов — ссылка по сохранённому bitrixId, без резолва
     function articleElDirect(article, bitrixId, extraStyle) {
         var el = document.createElement('span');
         el.style.cssText = extraStyle || '';
@@ -139,7 +151,6 @@
             return;
         }
 
-        // Резолвим только главные артикулы (у компонентов bitrixId уже хранится)
         var allArticles = [];
         _items.forEach(function (item) {
             if (item.article) allArticles.push(item.article);
@@ -164,13 +175,74 @@
                 info.style.cssText = 'flex:1;min-width:0;';
 
                 var artLine = document.createElement('div');
-                artLine.style.cssText = 'display:flex;align-items:center;gap:5px;';
+                artLine.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;';
                 artLine.appendChild(articleEl(item.article, 'font-size:12px;'));
 
-                var qtyBadge = document.createElement('span');
-                qtyBadge.style.cssText = 'font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:8px;flex-shrink:0;';
-                qtyBadge.textContent = '× ' + item.qty;
-                artLine.appendChild(qtyBadge);
+                // editable qty input (styled as badge)
+                var qtyInput = document.createElement('input');
+                qtyInput.type = 'number';
+                qtyInput.min = '1';
+                qtyInput.value = item.qty || 1;
+                qtyInput.title = 'Количество (редактировать)';
+                qtyInput.style.cssText = [
+                    'width:48px;font-size:10px;font-weight:700;',
+                    'background:#dbeafe;color:#1d4ed8;',
+                    'padding:1px 4px;border-radius:8px;',
+                    'border:1px solid #93c5fd;text-align:center;',
+                    'flex-shrink:0;'
+                ].join('');
+
+                qtyInput.addEventListener('click', function (e) { e.stopPropagation(); });
+                qtyInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') qtyInput.blur();
+                });
+                qtyInput.addEventListener('change', function () {
+                    var newQty = Math.max(1, parseInt(qtyInput.value) || 1);
+                    qtyInput.value = newQty;
+                    _items[idx].qty = newQty;
+                    saveItems(_items, function () {});
+                    if (item.bitrixId) updateBitrixRow(item.bitrixId, newQty, _items[idx].price || 0);
+                });
+
+                artLine.appendChild(qtyInput);
+
+                // editable price input
+                var priceWrap = document.createElement('span');
+                priceWrap.style.cssText = 'display:inline-flex;align-items:center;gap:2px;flex-shrink:0;';
+
+                var priceInput = document.createElement('input');
+                priceInput.type = 'number';
+                priceInput.min = '0';
+                priceInput.step = '0.01';
+                priceInput.value = item.price || '';
+                priceInput.placeholder = '0';
+                priceInput.title = 'Цена (редактировать)';
+                priceInput.style.cssText = [
+                    'width:64px;font-size:10px;',
+                    'background:#f0fdf4;color:#166534;',
+                    'padding:1px 4px;border-radius:8px;',
+                    'border:1px solid #86efac;text-align:right;'
+                ].join('');
+
+                priceInput.addEventListener('click', function (e) { e.stopPropagation(); });
+                priceInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') priceInput.blur();
+                });
+                priceInput.addEventListener('change', function () {
+                    var newPrice = Math.max(0, parseFloat(priceInput.value) || 0);
+                    priceInput.value = newPrice || '';
+                    _items[idx].price = newPrice;
+                    saveItems(_items, function () {});
+                    if (item.bitrixId) updateBitrixRow(item.bitrixId, _items[idx].qty || 1, newPrice);
+                });
+
+                var priceUnit = document.createElement('span');
+                priceUnit.style.cssText = 'font-size:10px;color:#166534;';
+                priceUnit.textContent = 'EUR';
+
+                priceWrap.appendChild(priceInput);
+                priceWrap.appendChild(priceUnit);
+                artLine.appendChild(priceWrap);
 
                 var nameLine = document.createElement('div');
                 nameLine.style.cssText = 'font-size:11px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
@@ -230,6 +302,7 @@
 
                 var collapsed = false;
                 hdr.addEventListener('click', function () {
+                    if (comps.length === 0) return;
                     collapsed = !collapsed;
                     compWrap.style.display = collapsed ? 'none' : 'block';
                     arrow.style.transform = collapsed ? 'rotate(-90deg)' : '';
@@ -349,12 +422,24 @@
         }
     }
 
+    function updateItemBitrixId(itemId, bitrixId) {
+        if (!_items) return;
+        for (var i = 0; i < _items.length; i++) {
+            if (_items[i].id === itemId) {
+                _items[i].bitrixId = bitrixId;
+                saveItems(_items, function () {});
+                renderBody();
+                break;
+            }
+        }
+    }
+
     function refresh() {
         _items = null;
         loadItems(function () { renderBody(); });
     }
 
-    window.CrystalHierarchyPanel = { addItem: addItem, refresh: refresh };
+    window.CrystalHierarchyPanel = { addItem: addItem, updateItemBitrixId: updateItemBitrixId, refresh: refresh };
 
     // ===== INIT =====
 

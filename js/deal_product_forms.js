@@ -291,16 +291,17 @@
                     })
                     .then(function (r) { return r.json(); })
                     .then(function (resp) {
-                        if (resp.status === 'success') {
-                            submitBtn.textContent = '✅ Добавлено';
-                            submitStatus.style.color = '#16a34a';
-                            submitStatus.textContent = 'Товар добавлен в сделку';
-                        } else {
-                            submitBtn.textContent = '✅ В иерархии';
-                            submitStatus.style.color = '#f59e0b';
-                            submitStatus.textContent = 'Ошибка записи в товары сделки';
+                        // Сохраняем bitrixId главного товара в иерархии
+                        if (resp.status === 'success' && resp.productId) {
+                            newItem.bitrixId = resp.productId;
+                            if (window.CrystalHierarchyPanel) {
+                                window.CrystalHierarchyPanel.updateItemBitrixId(newItem.id, resp.productId);
+                            }
                         }
-                        setTimeout(function () { overlay.remove(); }, 2000);
+                        submitBtn.textContent = '✅ Добавлено';
+                        submitStatus.style.color = '#16a34a';
+                        submitStatus.textContent = '';
+                        setTimeout(function () { overlay.remove(); }, 1500);
                     })
                     .catch(function () {
                         submitBtn.textContent = '✅ В иерархии';
