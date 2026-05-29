@@ -85,17 +85,26 @@
         .catch(function () { callback(); });
     }
 
-    function updateBitrixRow(rowId, qty, price) {
+    function updateBitrixRow(rowId, productName, qty, price) {
         var dealId = getDealId();
-        if (!dealId || !rowId) return;
+        if (!dealId) return;
+        if (!rowId && !productName) return;
         fetch('/local/ajax/update_deal_product_row.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'dealId=' + encodeURIComponent(dealId)
-                + '&rowId=' + encodeURIComponent(rowId)
+                + '&rowId=' + encodeURIComponent(rowId || 0)
+                + '&productName=' + encodeURIComponent(productName || '')
                 + '&price=' + encodeURIComponent(price || 0)
                 + '&quantity=' + encodeURIComponent(qty || 1)
-        });
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (resp) {
+            if (resp.status !== 'success') {
+                console.warn('[Hierarchy] Bitrix row update failed:', resp);
+            }
+        })
+        .catch(function (e) { console.error('[Hierarchy] update_deal_product_row error:', e); });
     }
 
     // ===== RENDER =====
@@ -201,7 +210,7 @@
                     qtyInput.value = newQty;
                     _items[idx].qty = newQty;
                     saveItems(_items, function () {});
-                    if (item.rowId) updateBitrixRow(item.rowId, newQty, _items[idx].price || 0);
+                    updateBitrixRow(item.rowId || 0, item.name, newQty, _items[idx].price || 0);
                 });
 
                 artLine.appendChild(qtyInput);
@@ -233,7 +242,7 @@
                     priceInput.value = newPrice || '';
                     _items[idx].price = newPrice;
                     saveItems(_items, function () {});
-                    if (item.rowId) updateBitrixRow(item.rowId, _items[idx].qty || 1, newPrice);
+                    updateBitrixRow(item.rowId || 0, item.name, _items[idx].qty || 1, newPrice);
                 });
 
                 var priceUnit = document.createElement('span');
