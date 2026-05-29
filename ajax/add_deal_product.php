@@ -3,7 +3,6 @@ define('NO_KEEP_STATISTIC', true);
 define('NO_AGENT_CHECK', true);
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/local/ajax/crest/crest.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -11,6 +10,9 @@ if (!$USER->IsAuthorized()) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     die;
 }
+
+\CModule::IncludeModule('crm');
+\CModule::IncludeModule('iblock');
 
 $dealId      = (int)($_POST['dealId']     ?? 0);
 $productName = trim($_POST['productName'] ?? '');
@@ -23,10 +25,9 @@ if (!$dealId || !$productName) {
     die;
 }
 
-// Пробуем найти товар в каталоге по артикулу (начало названия)
+// Ищем товар в каталоге по артикулу (начало названия)
 $productId = 0;
 if ($article) {
-    \CModule::IncludeModule('iblock');
     $connection = \Bitrix\Main\Application::getConnection();
     $safe       = $connection->getSqlHelper()->forSql($article);
     $res        = $connection->query(
@@ -40,31 +41,40 @@ if ($article) {
     }
 }
 
-// Получаем текущие строки товаров сделки через REST
-$existing = CRest::call('crm.deal.productrows.get', ['id' => $dealId]);
-$rows     = $existing['result'] ?? [];
+// Загружаем существующие строки товаров через ORM
+$existingRows = \CCrmDeal::LoadProductRows($dealId) ?: [];
 
-// Добавляем новую строку
-// PRODUCT_ID = 0 — допустимо в Битрикс (произвольный товар без привязки к каталогу)
-$rows[] = [
-    'PRODUCT_ID'   => $productId,
-    'PRODUCT_NAME' => $productName,
-    'QUANTITY'     => $quantity,
-    'PRICE'        => $price,
-];
-
-$setResult = CRest::call('crm.deal.productrows.set', [
-    'id'   => $dealId,
-    'rows' => $rows,
-]);
-
-if (!empty($setResult['error'])) {
-    echo json_encode([
-        'status'  => 'error',
-        'message' => $setResult['error_description'] ?? 'CRest error',
-        'debug'   => $setResult,
-    ]);
-    die;
+// Вычисляем следующий SORT
+$maxSort = 0;
+foreach ($existingRows as $row) {
+    if ((int)$row['SORT'] > $maxSort) $maxSort = (int)$row['SORT'];
 }
 
-echo json_encode(['status' => 'success', 'productId' => $productId]);
+// Добавляем новую строку
+$existingRows[] = [
+    'PRODUCT_ID'       => $productId,
+    'PRODUCT_NAME'     => $productName,
+    'PRICE'            => $price,
+    'PRICE_EXCLUSIVE'  => $price,
+    'PRICE_NETTO'      => $price,
+    'PRICE_BRUTTO'     => $price,
+    'QUANTITY'         => $quantity,
+    'DISCOUNT_TYPE_ID' => 2,
+    'DISCOUNT_RATE'    => 0,
+    'DISCOUNT_SUM'     => 0,
+    'TAX_RATE'         => null,
+    'TAX_INCLUDED'     => 'N',
+    'CUSTOMIZED'       => 'Y',
+    'MEASURE_CODE'     => 796,
+    'MEASURE_NAME'     => 'шт',
+    'SORT'             => $maxSort + 10,
+    'TYPE'             => 1,
+    'STORE_ID'         => 1,
+];
+
+$result = \CCrmDeal::SaveProductRows($dealId, $existingRows);
+
+echo json_encode([
+    'status'    => $result ? 'success' : 'error',
+    'productId' => $productId,
+]);
