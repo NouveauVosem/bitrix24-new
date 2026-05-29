@@ -202,71 +202,59 @@
         footer.style.cssText = 'border-top:1px solid #e5e7eb;padding-top:16px;margin-top:4px;';
 
         var submitBtn = document.createElement('button');
-        submitBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
+        submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
         submitBtn.style.cssText = 'width:100%;';
-        submitBtn.textContent = 'Создать расчёт';
+        submitBtn.textContent = 'Добавить в заказ';
 
         var submitStatus = document.createElement('div');
         submitStatus.style.cssText = 'font-size:12px;text-align:center;margin-top:8px;min-height:16px;';
 
         submitBtn.addEventListener('click', function () {
             var currentQty = getCurrentQty();
-            var additions = [];
+            var components = [];
 
             slots.forEach(function (slot) {
                 var opt = selectedOptions[slot.id];
                 if (opt && opt.id !== '__none__') {
-                    additions.push({
+                    components.push({
                         article: opt.article || '',
                         name: opt.name,
-                        qtyPerUnit: slot.quantityPerUnit,
-                        totalQty: currentQty * slot.quantityPerUnit
+                        qty: currentQty * slot.quantityPerUnit
                     });
                 }
             });
 
+            var newItem = {
+                id: 'item_' + Date.now(),
+                article: form.article || '',
+                name: productName,
+                qty: currentQty,
+                components: components
+            };
+
             submitBtn.disabled = true;
-            submitBtn.textContent = '⧗ Создаю расчёт...';
+            submitBtn.textContent = '⧗ Добавляю...';
             submitStatus.style.color = '#6b7280';
             submitStatus.textContent = '';
 
-            fetch(CRYSTAL_BASE + '/api/price-calculations/crm/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Api-Key': API_KEY
-                },
-                body: JSON.stringify({
-                    dealId: dealId,
-                    productName: productName,
-                    quantity: String(currentQty),
-                    clientName: clientName || '',
-                    additions: additions
-                })
-            })
-            .then(function (res) {
-                return res.json().then(function (d) { return { ok: res.ok, data: d }; });
-            })
-            .then(function (result) {
-                if (result.data && result.data.status === 'error') {
-                    submitBtn.textContent = '❌ Ошибка';
-                    submitBtn.disabled = false;
-                    submitStatus.style.color = '#dc2626';
-                    submitStatus.textContent = result.data.message || 'Ошибка сервера';
-                } else {
-                    submitBtn.textContent = '✅ Расчёт создан';
-                    submitStatus.style.color = '#16a34a';
-                    submitStatus.textContent = (result.data && result.data.message) || '';
-                    setTimeout(function () { overlay.remove(); }, 2500);
-                }
-            })
-            .catch(function (err) {
-                submitBtn.textContent = '❌ Ошибка запроса';
-                submitBtn.disabled = false;
-                submitStatus.style.color = '#dc2626';
-                submitStatus.textContent = 'Не удалось соединиться с сервером';
-                console.error('[CrystalForms] create calc error:', err);
-            });
+            if (window.CrystalHierarchyPanel) {
+                window.CrystalHierarchyPanel.addItem(newItem, function (ok) {
+                    if (ok) {
+                        submitBtn.textContent = '✅ Добавлено';
+                        submitStatus.style.color = '#16a34a';
+                        submitStatus.textContent = '';
+                        setTimeout(function () { overlay.remove(); }, 1500);
+                    } else {
+                        submitBtn.textContent = '❌ Ошибка сохранения';
+                        submitBtn.disabled = false;
+                        submitStatus.style.color = '#dc2626';
+                        submitStatus.textContent = 'Попробуйте ещё раз';
+                    }
+                });
+            } else {
+                submitBtn.textContent = '✅ Готово';
+                setTimeout(function () { overlay.remove(); }, 1500);
+            }
         });
 
         footer.appendChild(submitBtn);

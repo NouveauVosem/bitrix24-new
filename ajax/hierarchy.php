@@ -1,0 +1,76 @@
+<?php
+define('NO_KEEP_STATISTIC', true);
+define('NO_AGENT_CHECK', true);
+define('DisableEventsCheck', true);
+
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php';
+
+header('Content-Type: application/json; charset=utf-8');
+
+$action = $_POST['action'] ?? '';
+$dealId = (int)($_POST['dealId'] ?? 0);
+
+if (!$dealId) {
+    echo json_encode(['status' => 'error', 'message' => 'No dealId']);
+    die();
+}
+
+$connection = \Bitrix\Main\Application::getConnection();
+
+$connection->query("CREATE TABLE IF NOT EXISTS `crm_deal_hierarchy` (
+    `ID` int(11) NOT NULL AUTO_INCREMENT,
+    `DEAL_ID` int(11) NOT NULL,
+    `ITEMS` mediumtext NOT NULL,
+    `DATE_UPDATE` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`ID`),
+    UNIQUE KEY `uidx_deal_id` (`DEAL_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+if ($action === 'get') {
+
+    $res = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEAL_ID = " . $dealId);
+    $row = $res->fetch();
+    echo json_encode([
+        'status' => 'success',
+        'items'  => $row ? json_decode($row['ITEMS'], true) : []
+    ]);
+
+} elseif ($action === 'save') {
+
+    $items = json_decode($_POST['items'] ?? '[]', true);
+    if ($items === null) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid JSON']);
+        die();
+    }
+    $safe = $connection->getSqlHelper()->forSql(json_encode($items, JSON_UNESCAPED_UNICODE));
+    $connection->query(
+        "INSERT INTO crm_deal_hierarchy (DEAL_ID, ITEMS) VALUES ($dealId, '$safe')
+         ON DUPLICATE KEY UPDATE ITEMS = '$safe', DATE_UPDATE = NOW()"
+    );
+    echo json_encode(['status' => 'success']);
+
+} elseif ($action === 'resolve_articles') {
+
+    $articles = json_decode($_POST['articles'] ?? '[]', true) ?: [];
+    $map = [];
+
+    if (!empty($articles) && \Bitrix\Main\Loader::includeModule('iblock')) {
+        foreach ($articles as $article) {
+            $article = trim((string)$article);
+            if ($article === '') continue;
+            $res = \CIBlockElement::GetList(
+                [],
+                ['IBLOCK_ID' => 14, 'PROPERTY_ARTNUMBER' => $article, 'ACTIVE' => 'Y'],
+                false,
+                ['nTopCount' => 1],
+                ['ID']
+            );
+            if ($el = $res->Fetch()) {
+                $map[$article] = (int)$el['ID'];
+            }
+        }
+    }
+
+    echo json_encode(['status' => 'success', 'map' => $map]);
+
+}
