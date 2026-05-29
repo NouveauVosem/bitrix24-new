@@ -284,18 +284,18 @@
         return idx !== -1 ? text.slice(idx + 3).trim() : text;
     }
 
-    function openFormFromPanel(form, dealId) {
-        // Use full data if already available (slots with options loaded), otherwise fetch by article
+    function openFormFromPanel(form, dealId, clientName) {
+        var cn = clientName || getClientNameForPanel();
         var hasFullData = form.slots && Array.isArray(form.slots) &&
             form.slots.length > 0 && form.slots[0].options !== undefined;
 
         if (hasFullData) {
-            openConfigurator(form, form.name, 1, dealId, getClientNameForPanel());
+            openConfigurator(form, form.name, 1, dealId, cn);
             return;
         }
 
         if (!form.article) {
-            openConfigurator(form, form.name, 1, dealId, getClientNameForPanel());
+            openConfigurator(form, form.name, 1, dealId, cn);
             return;
         }
 
@@ -304,10 +304,10 @@
         })
         .then(function (res) { return res.json(); })
         .then(function (fullForm) {
-            openConfigurator(fullForm, fullForm.name, 1, dealId, getClientNameForPanel());
+            openConfigurator(fullForm, fullForm.name, 1, dealId, cn);
         })
         .catch(function () {
-            openConfigurator(form, form.name, 1, dealId, getClientNameForPanel());
+            openConfigurator(form, form.name, 1, dealId, cn);
         });
     }
 
@@ -447,10 +447,99 @@
         if (!isCollapsed) loadForms();
     }
 
+    // ===== FORMS PICKER MODAL (вызывается из панели иерархии) =====
+
+    function openFormsPicker(dealId, clientName) {
+        var existing = document.getElementById('cpf-picker-overlay');
+        if (existing) existing.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'cpf-picker-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#fff;border-radius:8px;padding:20px;max-width:420px;width:90vw;max-height:75vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:#999;padding:2px 6px;line-height:1;';
+        closeBtn.textContent = '✕';
+        closeBtn.addEventListener('click', function () { overlay.remove(); });
+
+        var titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-size:15px;font-weight:700;color:#222;margin-bottom:14px;padding-right:24px;';
+        titleEl.textContent = 'Выберите форму товара';
+
+        var listDiv = document.createElement('div');
+        listDiv.style.cssText = 'font-size:12px;color:#888;';
+        listDiv.textContent = 'Загрузка...';
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(titleEl);
+        modal.appendChild(listDiv);
+        overlay.appendChild(modal);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+
+        fetch(CRYSTAL_BASE + '/api/product-forms', {
+            headers: { 'X-Api-Key': API_KEY }
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (forms) {
+            listDiv.innerHTML = '';
+
+            if (!Array.isArray(forms) || forms.length === 0) {
+                listDiv.textContent = 'Нет доступных форм';
+                return;
+            }
+
+            forms.forEach(function (form) {
+                var item = document.createElement('div');
+                item.style.cssText = 'padding:9px 11px;margin-bottom:5px;background:#f5f7fa;border-radius:5px;cursor:pointer;border:1px solid #e5e7eb;';
+
+                var r1 = document.createElement('div');
+                r1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
+
+                var nameEl = document.createElement('span');
+                nameEl.style.cssText = 'font-weight:600;color:#222;font-size:13px;';
+                nameEl.textContent = form.name;
+
+                var cnt = document.createElement('span');
+                cnt.style.cssText = 'font-size:10px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
+                cnt.textContent = (form.slots ? form.slots.length : 0) + ' слотов';
+
+                r1.appendChild(nameEl);
+                r1.appendChild(cnt);
+                item.appendChild(r1);
+
+                if (form.article) {
+                    var r2 = document.createElement('div');
+                    r2.style.cssText = 'font-size:11px;color:#9ca3af;margin-top:2px;';
+                    r2.textContent = form.article;
+                    item.appendChild(r2);
+                }
+
+                item.addEventListener('mouseenter', function () { item.style.borderColor = '#3b82f6'; item.style.background = '#eff6ff'; });
+                item.addEventListener('mouseleave', function () { item.style.borderColor = '#e5e7eb'; item.style.background = '#f5f7fa'; });
+
+                item.addEventListener('click', function () {
+                    overlay.remove();
+                    openFormFromPanel(form, dealId, clientName);
+                });
+
+                listDiv.appendChild(item);
+            });
+        })
+        .catch(function () {
+            listDiv.style.color = '#dc2626';
+            listDiv.textContent = 'Ошибка загрузки форм';
+        });
+    }
+
     // ===== GLOBAL EXPORT =====
 
     window.CrystalProductForms = {
         openConfigurator: openConfigurator,
+        openFormsPicker: openFormsPicker,
         extractArticleFromRow: extractArticleFromRow
     };
 

@@ -262,15 +262,17 @@
         addBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 7px;cursor:pointer;font-size:14px;font-weight:700;line-height:1.4;';
         addBtn.textContent = '+';
         addBtn.addEventListener('click', function () {
-            // Open "Формы товаров" panel in sidebar
-            var cpfContent = document.getElementById('cpf-forms-content');
-            var cpfArrow   = document.querySelector('#cpf-forms-panel #cpf-toggle-arrow, #cpf-forms-panel [id$="toggle-arrow"]');
-            if (cpfContent) {
-                cpfContent.style.display = 'block';
-                localStorage.setItem('cpf-panel-collapsed', 'false');
-                if (cpfArrow) cpfArrow.textContent = '▼';
-                var fp = document.getElementById('cpf-forms-panel');
-                if (fp) fp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            var dealId = getDealId();
+            if (!dealId) return;
+            var clientName = '';
+            var titleEl = document.querySelector('#pagetitle');
+            if (titleEl) {
+                var t = (titleEl.textContent || '').trim();
+                var idx = t.indexOf(' - ');
+                clientName = idx !== -1 ? t.slice(idx + 3).trim() : t;
+            }
+            if (window.CrystalProductForms && window.CrystalProductForms.openFormsPicker) {
+                window.CrystalProductForms.openFormsPicker(dealId, clientName);
             }
         });
 
