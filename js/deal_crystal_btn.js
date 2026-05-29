@@ -485,40 +485,72 @@ BX.ready(function () {
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
                 var dealId = dm ? dm[1] : null;
 
-                btn.disabled = true;
-                btn.textContent = '⌛ Создаю...';
-                statusDiv.textContent = '';
+                function doCreate() {
+                    btn.disabled = true;
+                    btn.textContent = '⌛ Создаю...';
+                    statusDiv.textContent = '';
 
-                fetch('https://crystal.alvla.tools/api/price-calculations/crm/create', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Api-Key': 'legenda'
-                    },
-                    body: JSON.stringify({
-                        dealId: dealId,
-                        productName: productName,
-                        quantity: quantity,
-                        clientName: getClientName()
+                    fetch('https://crystal.alvla.tools/api/price-calculations/crm/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Api-Key': 'legenda'
+                        },
+                        body: JSON.stringify({
+                            dealId: dealId,
+                            productName: productName,
+                            quantity: quantity,
+                            clientName: getClientName()
+                        })
                     })
-                })
-                .then(function(res) {
-                    return res.json().then(function(data) { return { ok: res.ok, data: data }; });
-                })
-                .then(function(result) {
-                    if (result.data.status === 'error') {
+                    .then(function(res) {
+                        return res.json().then(function(data) { return { ok: res.ok, data: data }; });
+                    })
+                    .then(function(result) {
+                        if (result.data.status === 'error') {
+                            btn.textContent = '❌ Ошибка';
+                            btn.disabled = false;
+                        } else {
+                            btn.textContent = '✅ Готово';
+                        }
+                        statusDiv.textContent = result.data.message || '';
+                    })
+                    .catch(function(err) {
                         btn.textContent = '❌ Ошибка';
                         btn.disabled = false;
-                    } else {
-                        btn.textContent = '✅ Готово';
-                    }
-                    statusDiv.textContent = result.data.message || '';
+                        statusDiv.textContent = 'Ошибка запроса';
+                        console.error('[Crystal] price calc error:', err);
+                    });
+                }
+
+                if (!productName || !window.CrystalProductForms) {
+                    doCreate();
+                    return;
+                }
+
+                var article = window.CrystalProductForms.extractArticleFromRow(row.node, productName);
+                btn.disabled = true;
+                btn.textContent = '⌛ Ищу форму...';
+                statusDiv.textContent = '';
+
+                fetch('https://crystal.alvla.tools/api/product-forms/byArticle/' + encodeURIComponent(article), {
+                    headers: { 'X-Api-Key': 'legenda' }
                 })
-                .catch(function(err) {
-                    btn.textContent = '❌ Ошибка';
-                    btn.disabled = false;
-                    statusDiv.textContent = 'Ошибка запроса';
-                    console.error('[Crystal] price calc error:', err);
+                .then(function(res) {
+                    if (res.status === 404) return null;
+                    return res.ok ? res.json() : null;
+                })
+                .then(function(form) {
+                    if (form && form.id) {
+                        btn.disabled = false;
+                        btn.textContent = 'Рассчитать';
+                        window.CrystalProductForms.openConfigurator(form, productName, quantity, dealId, getClientName());
+                    } else {
+                        doCreate();
+                    }
+                })
+                .catch(function() {
+                    doCreate();
                 });
             });
 
