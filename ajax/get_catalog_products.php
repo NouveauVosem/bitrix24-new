@@ -30,20 +30,22 @@ $res = CIBlockElement::GetList(
     ],
     false,
     false,
-    ['ID', 'NAME', 'PROPERTY_ARTNUMBER']
+    ['ID', 'NAME']
 );
 
-while ($el = $res->GetNextElement()) {
-    $fields  = $el->GetFields();
-    $props   = $el->GetProperties();
-    $article = $props['ARTNUMBER']['VALUE'] ?? '';
-    if ($article) {
-        $products[] = [
-            'id'      => (int)$fields['ID'],
-            'name'    => $fields['NAME'],
-            'article' => $article,
-        ];
+while ($row = $res->Fetch()) {
+    $name = $row['NAME'];
+    $article = '';
+
+    if (preg_match('/\d+\.\d+\.\d+/', $name, $m)) {
+        $article = $m[0];
     }
+
+    $products[] = [
+        'id'      => (int)$row['ID'],
+        'name'    => $name,
+        'article' => $article,
+    ];
 }
 
 echo json_encode($products, JSON_UNESCAPED_UNICODE);
