@@ -85,14 +85,14 @@
         .catch(function () { callback(); });
     }
 
-    function updateBitrixRow(bitrixId, qty, price) {
+    function updateBitrixRow(rowId, qty, price) {
         var dealId = getDealId();
-        if (!dealId || !bitrixId) return;
+        if (!dealId || !rowId) return;
         fetch('/local/ajax/update_deal_product_row.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'dealId=' + encodeURIComponent(dealId)
-                + '&productId=' + encodeURIComponent(bitrixId)
+                + '&rowId=' + encodeURIComponent(rowId)
                 + '&price=' + encodeURIComponent(price || 0)
                 + '&quantity=' + encodeURIComponent(qty || 1)
         });
@@ -201,7 +201,7 @@
                     qtyInput.value = newQty;
                     _items[idx].qty = newQty;
                     saveItems(_items, function () {});
-                    if (item.bitrixId) updateBitrixRow(item.bitrixId, newQty, _items[idx].price || 0);
+                    if (item.rowId) updateBitrixRow(item.rowId, newQty, _items[idx].price || 0);
                 });
 
                 artLine.appendChild(qtyInput);
@@ -233,7 +233,7 @@
                     priceInput.value = newPrice || '';
                     _items[idx].price = newPrice;
                     saveItems(_items, function () {});
-                    if (item.bitrixId) updateBitrixRow(item.bitrixId, _items[idx].qty || 1, newPrice);
+                    if (item.rowId) updateBitrixRow(item.rowId, _items[idx].qty || 1, newPrice);
                 });
 
                 var priceUnit = document.createElement('span');
@@ -422,11 +422,11 @@
         }
     }
 
-    function updateItemBitrixId(itemId, bitrixId) {
+    function updateItemRowId(itemId, rowId) {
         if (!_items) return;
         for (var i = 0; i < _items.length; i++) {
             if (_items[i].id === itemId) {
-                _items[i].bitrixId = bitrixId;
+                _items[i].rowId = rowId;
                 saveItems(_items, function () {});
                 renderBody();
                 break;
@@ -439,7 +439,7 @@
         loadItems(function () { renderBody(); });
     }
 
-    window.CrystalHierarchyPanel = { addItem: addItem, updateItemBitrixId: updateItemBitrixId, refresh: refresh };
+    window.CrystalHierarchyPanel = { addItem: addItem, updateItemRowId: updateItemRowId, refresh: refresh };
 
     // ===== INIT =====
 

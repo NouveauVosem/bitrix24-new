@@ -291,11 +291,11 @@
                     })
                     .then(function (r) { return r.json(); })
                     .then(function (resp) {
-                        // Сохраняем bitrixId главного товара в иерархии
-                        if (resp.status === 'success' && resp.productId) {
-                            newItem.bitrixId = resp.productId;
+                        // Сохраняем rowId строки сделки в иерархии
+                        if (resp.status === 'success' && resp.rowId) {
+                            newItem.rowId = resp.rowId;
                             if (window.CrystalHierarchyPanel) {
-                                window.CrystalHierarchyPanel.updateItemBitrixId(newItem.id, resp.productId);
+                                window.CrystalHierarchyPanel.updateItemRowId(newItem.id, resp.rowId);
                             }
                         }
                         submitBtn.textContent = '✅ Добавлено';

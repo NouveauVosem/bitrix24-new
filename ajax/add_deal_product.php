@@ -74,4 +74,24 @@ $existingRows[] = [
 
 \CCrmDeal::SaveProductRows($dealId, $existingRows);
 
-echo json_encode(['status' => 'success', 'productId' => $productId]);
+// Находим ID только что добавленной строки (максимальный SORT)
+$newSort  = $maxSort + 10;
+$rowId    = 0;
+$reloaded = \CCrmDeal::LoadProductRows($dealId) ?: [];
+foreach ($reloaded as $r) {
+    if ((int)$r['SORT'] === $newSort && trim($r['PRODUCT_NAME']) === $productName) {
+        $rowId = (int)$r['ID'];
+        break;
+    }
+}
+// fallback: берём строку с максимальным SORT
+if (!$rowId) {
+    foreach ($reloaded as $r) {
+        if ((int)$r['SORT'] === $newSort) {
+            $rowId = (int)$r['ID'];
+            break;
+        }
+    }
+}
+
+echo json_encode(['status' => 'success', 'productId' => $productId, 'rowId' => $rowId]);

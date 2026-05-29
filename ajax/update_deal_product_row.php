@@ -13,21 +13,21 @@ if (!$USER->IsAuthorized()) {
 
 \CModule::IncludeModule('crm');
 
-$dealId    = (int)($_POST['dealId']    ?? 0);
-$productId = (int)($_POST['productId'] ?? 0);
-$price     = (float)($_POST['price']   ?? 0);
-$quantity  = (float)($_POST['quantity'] ?? 1);
+$dealId   = (int)($_POST['dealId']   ?? 0);
+$rowId    = (int)($_POST['rowId']    ?? 0);
+$price    = (float)($_POST['price']  ?? 0);
+$quantity = (float)($_POST['quantity'] ?? 1);
 
-if (!$dealId || !$productId) {
-    echo json_encode(['status' => 'error', 'message' => 'dealId and productId are required']);
+if (!$dealId || !$rowId) {
+    echo json_encode(['status' => 'error', 'message' => 'dealId and rowId are required']);
     die;
 }
 
-$rows   = \CCrmDeal::LoadProductRows($dealId) ?: [];
-$found  = false;
+$rows  = \CCrmDeal::LoadProductRows($dealId) ?: [];
+$found = false;
 
 foreach ($rows as &$row) {
-    if ((int)$row['PRODUCT_ID'] === $productId) {
+    if ((int)$row['ID'] === $rowId) {
         $row['PRICE']           = $price;
         $row['PRICE_EXCLUSIVE'] = $price;
         $row['PRICE_NETTO']     = $price;
@@ -40,10 +40,9 @@ foreach ($rows as &$row) {
 unset($row);
 
 if (!$found) {
-    echo json_encode(['status' => 'error', 'message' => 'Product row not found in deal']);
+    echo json_encode(['status' => 'error', 'message' => 'Row not found', 'rowId' => $rowId]);
     die;
 }
 
-\CCrmDeal::SaveProductRows($dealId, $rows);
-
-echo json_encode(['status' => 'success']);
+$ok = \CCrmDeal::SaveProductRows($dealId, $rows);
+echo json_encode(['status' => $ok ? 'success' : 'error', 'rowId' => $rowId]);
