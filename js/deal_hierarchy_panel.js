@@ -87,6 +87,27 @@
 
     // ===== RENDER =====
 
+    // Для компонентов — ссылка по сохранённому bitrixId, без резолва
+    function articleElDirect(article, bitrixId, extraStyle) {
+        var el = document.createElement('span');
+        el.style.cssText = extraStyle || '';
+        if (bitrixId) {
+            var a = document.createElement('a');
+            a.href = CATALOG + bitrixId + '/';
+            a.target = '_blank';
+            a.title = 'Открыть карточку товара';
+            a.style.cssText = 'color:#1d4ed8;text-decoration:none;font-weight:600;';
+            a.textContent = article || String(bitrixId);
+            el.appendChild(a);
+        } else {
+            var s = document.createElement('span');
+            s.style.fontWeight = '600';
+            s.textContent = article || '—';
+            el.appendChild(s);
+        }
+        return el;
+    }
+
     function articleEl(article, extraStyle) {
         var el = document.createElement('span');
         el.style.cssText = extraStyle || '';
@@ -118,10 +139,10 @@
             return;
         }
 
+        // Резолвим только главные артикулы (у компонентов bitrixId уже хранится)
         var allArticles = [];
         _items.forEach(function (item) {
             if (item.article) allArticles.push(item.article);
-            (item.components || []).forEach(function (c) { if (c.article) allArticles.push(c.article); });
         });
 
         resolveArticles(allArticles, function () {
@@ -189,7 +210,7 @@
 
                     var cInfo = document.createElement('div');
                     cInfo.style.cssText = 'flex:1;min-width:0;display:flex;align-items:center;gap:5px;';
-                    cInfo.appendChild(articleEl(c.article, 'font-size:11px;'));
+                    cInfo.appendChild(articleElDirect(c.article, c.bitrixId, 'font-size:11px;'));
 
                     var cName = document.createElement('span');
                     cName.style.cssText = 'color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';

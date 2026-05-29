@@ -219,7 +219,8 @@
                     components.push({
                         article: opt.article || '',
                         name: opt.name,
-                        qty: currentQty * slot.quantityPerUnit
+                        qty: currentQty * slot.quantityPerUnit,
+                        bitrixId: opt.bitrixId || null
                     });
                 }
             });

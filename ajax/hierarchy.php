@@ -54,20 +54,20 @@ if ($action === 'get') {
     $articles = json_decode($_POST['articles'] ?? '[]', true) ?: [];
     $map = [];
 
-    if (!empty($articles) && \Bitrix\Main\Loader::includeModule('iblock')) {
+    if (!empty($articles)) {
         foreach ($articles as $article) {
             $article = trim((string)$article);
             if ($article === '') continue;
-            // Артикул содержится в начале названия товара (например "11.1503.5 Пружина 65 кг")
-            $res = \CIBlockElement::GetList(
-                [],
-                ['IBLOCK_ID' => 14, 'ACTIVE' => 'Y', '%=NAME' => $article . '%'],
-                false,
-                ['nTopCount' => 1],
-                ['ID', 'NAME']
+            $safe = $connection->getSqlHelper()->forSql($article);
+            // Ищем по точному совпадению или "артикул + пробел + что-то" в названии
+            $res = $connection->query(
+                "SELECT ID FROM b_iblock_element
+                 WHERE IBLOCK_ID = 14 AND ACTIVE = 'Y'
+                 AND (NAME = '$safe' OR NAME LIKE '$safe %')
+                 LIMIT 1"
             );
-            if ($el = $res->Fetch()) {
-                $map[$article] = (int)$el['ID'];
+            if ($row = $res->Fetch()) {
+                $map[$article] = (int)$row['ID'];
             }
         }
     }

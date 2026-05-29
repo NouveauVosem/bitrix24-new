@@ -564,7 +564,7 @@
                 cb.addEventListener('change', function () {
                     if (cb.checked) {
                         if (!slot.options.some(function (o) { return o.article === p.article; })) {
-                            slot.options.push({ article: p.article, name: p.name });
+                            slot.options.push({ article: p.article, name: p.name, bitrixId: p.id });
                         }
                     } else {
                         slot.options = slot.options.filter(function (o) { return o.article !== p.article; });
