@@ -12,15 +12,16 @@ if (!$USER->IsAuthorized()) { die(json_encode(['error' => 'Unauthorized'])); }
 $dealId = (int)($_GET['dealId'] ?? 0);
 if (!$dealId) { die(json_encode(['error' => 'Pass ?dealId=XXX'])); }
 
-// 1. Получаем текущие строки товаров
-$getResult = CRest::call('crm.deal.productrows.get', ['id' => $dealId]);
+// Полный сырой ответ CRest
+$rawGet  = CRest::call('crm.deal.productrows.get', ['id' => $dealId]);
+$rawDeal = CRest::call('crm.deal.get', ['id' => $dealId]);
 
-// 2. Получаем поля самой сделки (сумма, валюта)
-$dealResult = CRest::call('crm.deal.get', ['id' => $dealId]);
+// Попробуем и через прямой ORM Битрикс без REST
+\CModule::IncludeModule('crm');
+$ormRows = \CCrmDeal::LoadProductRows($dealId);
 
 echo json_encode([
-    'productrows_get'    => $getResult,
-    'deal_opportunity'   => $dealResult['result']['OPPORTUNITY'] ?? null,
-    'deal_currency'      => $dealResult['result']['CURRENCY_ID'] ?? null,
-    'deal_category'      => $dealResult['result']['CATEGORY_ID'] ?? null,
+    'crest_productrows_raw' => $rawGet,
+    'crest_deal_raw'        => $rawDeal,
+    'orm_product_rows'      => $ormRows,
 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
