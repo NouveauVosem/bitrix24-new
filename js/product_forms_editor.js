@@ -21,58 +21,39 @@
         });
     }
 
-    function saveFormSequentially(isNew, existingForm, formData, onSuccess, onError) {
-        var formId;
-
-        var step1 = isNew
-            ? crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article })
-            : crystalFetch('PUT', '/api/product-forms/' + existingForm.id, { name: formData.name, article: formData.article })
-                .then(function () { return { id: existingForm.id }; });
-
-        step1.then(function (form) {
-            formId = form.id;
-
-            // Удаляем все существующие слоты (для редактирования)
-            var deleteChain = Promise.resolve();
-            if (!isNew && existingForm.slots && existingForm.slots.length > 0) {
-                existingForm.slots.forEach(function (slot) {
-                    deleteChain = deleteChain.then(function () {
-                        return crystalFetch('DELETE', '/api/product-forms/' + formId + '/slots/' + slot.id);
-                    });
-                });
-            }
-            return deleteChain;
-
-        }).then(function () {
-            // Создаём слоты и опции последовательно
-            var createChain = Promise.resolve();
-            formData.slots.forEach(function (slot) {
-                createChain = createChain.then(function () {
-                    return crystalFetch('POST', '/api/product-forms/' + formId + '/slots', {
-                        name: slot.name,
-                        required: slot.required,
-                        quantityPerUnit: slot.quantityPerUnit
-                    }).then(function (createdSlot) {
-                        var optChain = Promise.resolve();
-                        slot.options.forEach(function (opt) {
-                            optChain = optChain.then(function () {
-                                return crystalFetch('POST',
-                                    '/api/product-forms/' + formId + '/slots/' + createdSlot.id + '/options',
-                                    { article: opt.article, name: opt.name }
-                                );
-                            });
-                        });
-                        return optChain;
-                    });
-                });
-            });
-            return createChain;
-
-        }).then(function () {
-            onSuccess();
-        }).catch(function (err) {
-            onError(err);
+    function saveForm(isNew, existingForm, formData, onSuccess, onError) {
+        var slots = formData.slots.map(function (s, i) {
+            return {
+                name: s.name,
+                required: s.required,
+                quantityPerUnit: s.quantityPerUnit,
+                order: i,
+                options: s.options
+            };
         });
+
+        if (isNew) {
+            // Создаём форму, затем одним запросом заливаем слоты
+            crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article })
+                .then(function (created) {
+                    return crystalFetch('PUT', '/api/product-forms/' + created.id + '/full', {
+                        name: formData.name,
+                        article: formData.article,
+                        slots: slots
+                    });
+                })
+                .then(onSuccess)
+                .catch(onError);
+        } else {
+            // Один запрос заменяет всё
+            crystalFetch('PUT', '/api/product-forms/' + existingForm.id + '/full', {
+                name: formData.name,
+                article: formData.article,
+                slots: slots
+            })
+                .then(onSuccess)
+                .catch(onError);
+        }
     }
 
     function getSections(cb) {
@@ -356,7 +337,7 @@
             saveBtn.textContent = 'Сохранение...';
             saveStatus.textContent = '';
 
-            saveFormSequentially(isNew, existingForm, formData,
+            saveForm(isNew, existingForm, formData,
                 function () {
                     saveBtn.textContent = '✓ Сохранено';
                     saveStatus.style.color = '#16a34a';
