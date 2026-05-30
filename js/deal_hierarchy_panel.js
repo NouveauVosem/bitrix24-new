@@ -260,6 +260,13 @@
                 qtyInput.addEventListener('input', function () {
                     var newQty = Math.max(1, parseInt(qtyInput.value) || 1);
                     _items[idx].qty = newQty;
+                    (_items[idx].components || []).forEach(function (c, ci) {
+                        if (c.baseQty !== undefined) {
+                            c.qty = newQty * c.baseQty;
+                            var cQtyEl = compWrap.querySelector('[data-comp-idx="' + ci + '"]');
+                            if (cQtyEl) cQtyEl.textContent = '× ' + c.qty;
+                        }
+                    });
                     clearTimeout(qtyTimer);
                     qtyTimer = setTimeout(function () {
                         qtyInput.value = newQty;
@@ -379,6 +386,7 @@
                     cInfo.appendChild(cName);
 
                     var cQty = document.createElement('span');
+                    cQty.dataset.compIdx = ci;
                     cQty.style.cssText = 'color:#9ca3af;flex-shrink:0;margin-left:auto;';
                     cQty.textContent = '× ' + c.qty;
 

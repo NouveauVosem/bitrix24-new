@@ -248,6 +248,7 @@
                         article: opt.article || '',
                         name: opt.name,
                         qty: currentQty * slot.quantityPerUnit,
+                        baseQty: slot.quantityPerUnit,
                         bitrixId: opt.bitrixId || null
                     });
                 }
