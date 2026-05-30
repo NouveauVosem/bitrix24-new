@@ -646,12 +646,15 @@
             if (!results.length) return;
 
             dropdown = document.createElement('div');
+            var rect = input.getBoundingClientRect();
             dropdown.style.cssText = [
-                'position:absolute;z-index:99999;',
+                'position:fixed;z-index:1000000;',
                 'background:#fff;border:1px solid #d1d5db;border-radius:4px;',
                 'box-shadow:0 4px 12px rgba(0,0,0,0.12);',
                 'max-height:240px;overflow-y:auto;',
-                'width:' + input.offsetWidth + 'px;'
+                'width:' + input.offsetWidth + 'px;',
+                'top:' + rect.bottom + 'px;',
+                'left:' + rect.left + 'px;'
             ].join('');
 
             results.forEach(function (norm) {
@@ -680,9 +683,6 @@
                 dropdown.appendChild(item);
             });
 
-            var rect = input.getBoundingClientRect();
-            dropdown.style.top = (rect.bottom + window.scrollY) + 'px';
-            dropdown.style.left = (rect.left + window.scrollX) + 'px';
             document.body.appendChild(dropdown);
         }
 
