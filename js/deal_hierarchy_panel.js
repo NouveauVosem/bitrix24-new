@@ -127,7 +127,11 @@
         var gridNode = document.querySelector('[id^="CCrmEntityProductListComponent"]');
         if (!gridNode) return;
         var grid = BX.Main.gridManager.getById(gridNode.id);
-        if (grid) grid.reload();
+        if (!grid) return;
+        if (typeof grid.reloadTable === 'function') grid.reloadTable();
+        else if (typeof grid.reload === 'function') grid.reload();
+        else if (typeof grid.refresh === 'function') grid.refresh();
+        else console.log('[Hierarchy] grid methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(grid)));
     }
 
     function updateBitrixRow(rowId, productName, qty, price) {
