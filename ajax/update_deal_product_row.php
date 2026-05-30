@@ -2,6 +2,7 @@
 define('NO_KEEP_STATISTIC', true);
 define('NO_AGENT_CHECK', true);
 
+ob_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -50,4 +51,5 @@ if (!$found) {
 }
 
 $ok = \CCrmDeal::SaveProductRows($dealId, $rows);
+ob_end_clean();
 echo json_encode(['status' => $ok !== false ? 'success' : 'error', 'rowId' => $rowId]);

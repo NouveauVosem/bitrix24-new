@@ -239,16 +239,20 @@
                     'flex-shrink:0;'
                 ].join('');
 
+                var qtyTimer = null;
                 qtyInput.addEventListener('click', function (e) { e.stopPropagation(); });
                 qtyInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') qtyInput.blur();
                 });
-                qtyInput.addEventListener('change', function () {
+                qtyInput.addEventListener('input', function () {
                     var newQty = Math.max(1, parseInt(qtyInput.value) || 1);
-                    qtyInput.value = newQty;
                     _items[idx].qty = newQty;
-                    saveItems(_items, function () {});
-                    updateBitrixRow(item.rowId || 0, item.name, newQty, _items[idx].price || 0);
+                    clearTimeout(qtyTimer);
+                    qtyTimer = setTimeout(function () {
+                        qtyInput.value = newQty;
+                        saveItems(_items, function () {});
+                        updateBitrixRow(item.rowId || 0, item.name, newQty, _items[idx].price || 0);
+                    }, 600);
                 });
 
                 artLine.appendChild(qtyInput);
@@ -271,16 +275,20 @@
                     'border:1px solid #86efac;text-align:right;'
                 ].join('');
 
+                var priceTimer = null;
                 priceInput.addEventListener('click', function (e) { e.stopPropagation(); });
                 priceInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') priceInput.blur();
                 });
-                priceInput.addEventListener('change', function () {
+                priceInput.addEventListener('input', function () {
                     var newPrice = Math.max(0, parseFloat(priceInput.value) || 0);
-                    priceInput.value = newPrice || '';
                     _items[idx].price = newPrice;
-                    saveItems(_items, function () {});
-                    updateBitrixRow(item.rowId || 0, item.name, _items[idx].qty || 1, newPrice);
+                    clearTimeout(priceTimer);
+                    priceTimer = setTimeout(function () {
+                        priceInput.value = newPrice || '';
+                        saveItems(_items, function () {});
+                        updateBitrixRow(item.rowId || 0, item.name, _items[idx].qty || 1, newPrice);
+                    }, 600);
                 });
 
                 var priceUnit = document.createElement('span');

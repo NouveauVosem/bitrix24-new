@@ -2,6 +2,7 @@
 define('NO_KEEP_STATISTIC', true);
 define('NO_AGENT_CHECK', true);
 
+ob_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -94,4 +95,5 @@ if (!$rowId) {
     }
 }
 
+ob_end_clean();
 echo json_encode(['status' => 'success', 'productId' => $productId, 'rowId' => $rowId]);
