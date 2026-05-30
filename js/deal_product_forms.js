@@ -23,7 +23,7 @@
 
     // ===== CONFIGURATOR MODAL =====
 
-    function openConfigurator(form, productName, initialQty, dealId, clientName) {
+    function openConfigurator(form, productName, initialQty, dealId, clientName, presetNorm) {
         var existing = document.getElementById('cpf-modal-overlay');
         if (existing) existing.remove();
 
@@ -39,6 +39,18 @@
                 ? slot.options[0]
                 : null;
         });
+
+        if (presetNorm && presetNorm.slotSelections) {
+            slots.forEach(function (slot) {
+                var selId = String(presetNorm.slotSelections[String(slot.id)] || '');
+                if (!selId) return;
+                var found = null;
+                (slot.options || []).forEach(function (o) {
+                    if (String(o.id) === selId) found = o;
+                });
+                selectedOptions[slot.id] = found;
+            });
+        }
 
         // overlay
         var overlay = document.createElement('div');
@@ -264,6 +276,9 @@
         priceInput.step = '0.01';
         priceInput.placeholder = '0.00';
         priceInput.style.cssText = 'width:100px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:right;font-size:14px;font-weight:600;flex-shrink:0;';
+        if (presetNorm && presetNorm.draftPrice) {
+            priceInput.value = parseFloat(presetNorm.draftPrice).toFixed(2);
+        }
 
         var priceCurrency = document.createElement('span');
         priceCurrency.style.cssText = 'color:#666;font-size:13px;flex-shrink:0;';
@@ -433,18 +448,18 @@
         return idx !== -1 ? text.slice(idx + 3).trim() : text;
     }
 
-    function openFormFromPanel(form, dealId, clientName) {
+    function openFormFromPanel(form, dealId, clientName, presetNorm) {
         var cn = clientName || getClientNameForPanel();
         var hasFullData = form.slots && Array.isArray(form.slots) &&
             form.slots.length > 0 && form.slots[0].options !== undefined;
 
         if (hasFullData) {
-            openConfigurator(form, form.name, 1, dealId, cn);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
             return;
         }
 
         if (!form.article) {
-            openConfigurator(form, form.name, 1, dealId, cn);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
             return;
         }
 
@@ -453,10 +468,10 @@
         })
         .then(function (res) { return res.json(); })
         .then(function (fullForm) {
-            openConfigurator(fullForm, fullForm.name, 1, dealId, cn);
+            openConfigurator(fullForm, fullForm.name, 1, dealId, cn, presetNorm);
         })
         .catch(function () {
-            openConfigurator(form, form.name, 1, dealId, cn);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
         });
     }
 
@@ -643,14 +658,16 @@
         overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
         document.body.appendChild(overlay);
 
-        fetch(CRYSTAL_BASE + '/api/product-forms', {
-            headers: { 'X-Api-Key': API_KEY }
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (forms) {
+        var savedForms = null;
+
+        function renderFormsList(forms) {
+            titleEl.textContent = 'Выберите форму товара';
+            manageBtn.style.display = 'block';
             listDiv.innerHTML = '';
+            listDiv.style.cssText = '';
 
             if (!Array.isArray(forms) || forms.length === 0) {
+                listDiv.style.cssText = 'font-size:12px;color:#888;';
                 listDiv.textContent = 'Нет доступных форм';
                 return;
             }
@@ -683,14 +700,113 @@
 
                 item.addEventListener('mouseenter', function () { item.style.borderColor = '#3b82f6'; item.style.background = '#eff6ff'; });
                 item.addEventListener('mouseleave', function () { item.style.borderColor = '#e5e7eb'; item.style.background = '#f5f7fa'; });
-
-                item.addEventListener('click', function () {
-                    overlay.remove();
-                    openFormFromPanel(form, dealId, clientName);
-                });
+                item.addEventListener('click', function () { showNormsView(form); });
 
                 listDiv.appendChild(item);
             });
+        }
+
+        function showNormsView(form) {
+            titleEl.textContent = form.name;
+            manageBtn.style.display = 'none';
+            listDiv.innerHTML = '';
+            listDiv.style.cssText = '';
+
+            var backBtn = document.createElement('button');
+            backBtn.textContent = '← Назад к формам';
+            backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;font-size:12px;cursor:pointer;padding:0 0 10px 0;display:block;';
+            backBtn.addEventListener('click', function () { renderFormsList(savedForms); });
+            listDiv.appendChild(backBtn);
+
+            var newConfigItem = document.createElement('div');
+            newConfigItem.style.cssText = 'padding:9px 11px;margin-bottom:8px;background:#f0fdf4;border-radius:5px;cursor:pointer;border:1px solid #86efac;';
+            var newConfigSpan = document.createElement('span');
+            newConfigSpan.style.cssText = 'font-weight:600;color:#166534;font-size:13px;';
+            newConfigSpan.textContent = '+ Новая конфигурация';
+            newConfigItem.appendChild(newConfigSpan);
+            newConfigItem.addEventListener('mouseenter', function () { newConfigItem.style.background = '#dcfce7'; });
+            newConfigItem.addEventListener('mouseleave', function () { newConfigItem.style.background = '#f0fdf4'; });
+            newConfigItem.addEventListener('click', function () {
+                overlay.remove();
+                openFormFromPanel(form, dealId, clientName);
+            });
+            listDiv.appendChild(newConfigItem);
+
+            var loadingEl = document.createElement('div');
+            loadingEl.style.cssText = 'font-size:12px;color:#888;padding:4px 0;';
+            loadingEl.textContent = 'Загрузка норм...';
+            listDiv.appendChild(loadingEl);
+
+            fetch(CRYSTAL_BASE + '/api/product-form-norms?baseNormArticle=' + encodeURIComponent(form.article || ''), {
+                headers: { 'X-Api-Key': API_KEY }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (norms) {
+                if (listDiv.contains(loadingEl)) listDiv.removeChild(loadingEl);
+
+                if (!Array.isArray(norms) || norms.length === 0) {
+                    var emptyEl = document.createElement('div');
+                    emptyEl.style.cssText = 'font-size:12px;color:#9ca3af;padding:4px 0;';
+                    emptyEl.textContent = 'Сохранённых норм нет';
+                    listDiv.appendChild(emptyEl);
+                    return;
+                }
+
+                norms.forEach(function (norm) {
+                    var normItem = document.createElement('div');
+                    normItem.style.cssText = 'padding:9px 11px;margin-bottom:5px;background:#f5f7fa;border-radius:5px;cursor:pointer;border:1px solid #e5e7eb;';
+
+                    var nr1 = document.createElement('div');
+                    nr1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
+
+                    var normArticleEl = document.createElement('span');
+                    normArticleEl.style.cssText = 'font-weight:600;color:#1d4ed8;font-size:12px;font-family:monospace;';
+                    normArticleEl.textContent = norm.article;
+
+                    var priceTag = document.createElement('span');
+                    if (norm.draftPrice) {
+                        priceTag.style.cssText = 'font-size:11px;color:#166534;background:#dcfce7;padding:2px 7px;border-radius:8px;flex-shrink:0;font-weight:600;';
+                        priceTag.textContent = parseFloat(norm.draftPrice).toFixed(2) + ' EUR';
+                    } else {
+                        priceTag.style.cssText = 'font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:8px;flex-shrink:0;';
+                        priceTag.textContent = 'цена не задана';
+                    }
+
+                    nr1.appendChild(normArticleEl);
+                    nr1.appendChild(priceTag);
+                    normItem.appendChild(nr1);
+
+                    var normNameEl = document.createElement('div');
+                    normNameEl.style.cssText = 'font-size:11px;color:#6b7280;margin-top:2px;';
+                    normNameEl.textContent = norm.name;
+                    normItem.appendChild(normNameEl);
+
+                    normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
+                    normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = '#e5e7eb'; normItem.style.background = '#f5f7fa'; });
+                    normItem.addEventListener('click', function () {
+                        overlay.remove();
+                        openFormFromPanel(form, dealId, clientName, norm);
+                    });
+
+                    listDiv.appendChild(normItem);
+                });
+            })
+            .catch(function () {
+                if (listDiv.contains(loadingEl)) listDiv.removeChild(loadingEl);
+                var errEl = document.createElement('div');
+                errEl.style.cssText = 'font-size:12px;color:#dc2626;padding:4px 0;';
+                errEl.textContent = 'Ошибка загрузки норм';
+                listDiv.appendChild(errEl);
+            });
+        }
+
+        fetch(CRYSTAL_BASE + '/api/product-forms', {
+            headers: { 'X-Api-Key': API_KEY }
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (forms) {
+            savedForms = forms;
+            renderFormsList(forms);
         })
         .catch(function () {
             listDiv.style.color = '#dc2626';
