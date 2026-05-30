@@ -94,10 +94,58 @@
 
         // slots
         var slotsContainer = document.createElement('div');
-        slotsContainer.style.marginBottom = '20px';
+        slotsContainer.style.marginBottom = '10px';
+
+        var currentNorm = null;
+        var normCheckTimer = null;
+
+        var normStatus = document.createElement('div');
+        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:none;';
 
         function getCurrentQty() {
             return Math.max(1, parseInt(qtyInput.value) || 1);
+        }
+
+        function getSlotSelections() {
+            var sel = {};
+            slots.forEach(function (slot) {
+                var opt = selectedOptions[slot.id];
+                if (opt && opt.id !== '__none__') sel[slot.id] = opt.id;
+            });
+            return sel;
+        }
+
+        function checkNorm() {
+            if (!form.id || !form.article) { normStatus.style.display = 'none'; return; }
+            clearTimeout(normCheckTimer);
+            normStatus.style.display = 'block';
+            normStatus.style.cssText += 'background:#f9fafb;border:1px solid #e5e7eb;color:#9ca3af;';
+            normStatus.textContent = 'Проверка нормы...';
+            normCheckTimer = setTimeout(function () {
+                fetch(CRYSTAL_BASE + '/api/product-form-norms/find', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                    body: JSON.stringify({ templateId: form.id, slotSelections: getSlotSelections() })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) {
+                    currentNorm = resp.norm || null;
+                    if (resp.found) {
+                        var priceText = resp.norm.draftPrice
+                            ? ' · ' + parseFloat(resp.norm.draftPrice).toFixed(2) + ' EUR (черн.)'
+                            : ' · цена не задана';
+                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
+                        normStatus.textContent = '✓ Норма: ' + resp.norm.article + priceText;
+                        if (resp.norm.draftPrice && !priceInput.value) {
+                            priceInput.value = parseFloat(resp.norm.draftPrice).toFixed(2);
+                        }
+                    } else {
+                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:block;background:#f9fafb;border:1px solid #e5e7eb;color:#6b7280;';
+                        normStatus.textContent = 'Будет создана новая норма: ' + form.article + '.XXXX';
+                    }
+                })
+                .catch(function () { normStatus.style.display = 'none'; });
+            }, 500);
         }
 
         function buildSlots() {
@@ -192,6 +240,7 @@
                 card.appendChild(qtyInfo);
                 slotsContainer.appendChild(card);
             });
+            checkNorm();
         }
 
         qtyInput.addEventListener('input', buildSlots);
@@ -254,21 +303,23 @@
                 }
             });
 
-            var newItem = {
-                id: 'item_' + Date.now(),
-                article: form.article || '',
-                name: productName,
-                qty: currentQty,
-                price: currentPrice,
-                components: components
-            };
-
             submitBtn.disabled = true;
             submitBtn.textContent = '⧗ Добавляю...';
             submitStatus.style.color = '#6b7280';
             submitStatus.textContent = '';
 
-            function onHierarchyDone(ok) {
+            function saveToHierarchy(normId, normArticle) {
+                var newItem = {
+                    id: 'item_' + Date.now(),
+                    article: normArticle || form.article || '',
+                    name: productName,
+                    qty: currentQty,
+                    price: currentPrice,
+                    normId: normId || null,
+                    components: components
+                };
+
+                function onHierarchyDone(ok) {
                 if (!ok) {
                     submitBtn.textContent = '❌ Ошибка сохранения';
                     submitBtn.disabled = false;
@@ -318,10 +369,38 @@
                 }
             }
 
-            if (window.CrystalHierarchyPanel) {
-                window.CrystalHierarchyPanel.addItem(newItem, onHierarchyDone);
+                if (window.CrystalHierarchyPanel) {
+                    window.CrystalHierarchyPanel.addItem(newItem, onHierarchyDone);
+                } else {
+                    onHierarchyDone(true);
+                }
+            }
+
+            // findOrCreate norm, then save
+            if (form.id && form.article) {
+                var normComponents = components.map(function (c) {
+                    return { article: c.article, name: c.name, baseQty: c.baseQty, bitrixId: c.bitrixId };
+                });
+                fetch(CRYSTAL_BASE + '/api/product-form-norms/findOrCreate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                    body: JSON.stringify({
+                        baseNormArticle: form.article,
+                        templateId: form.id,
+                        name: productName,
+                        slotSelections: getSlotSelections(),
+                        components: normComponents,
+                        draftPrice: currentPrice || null
+                    })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) {
+                    var n = resp.norm;
+                    saveToHierarchy(n ? n.id : null, n ? n.article : null);
+                })
+                .catch(function () { saveToHierarchy(null, null); });
             } else {
-                onHierarchyDone(true);
+                saveToHierarchy(null, null);
             }
         });
 
@@ -332,6 +411,7 @@
         modal.appendChild(title);
         modal.appendChild(qtyRow);
         modal.appendChild(slotsContainer);
+        modal.appendChild(normStatus);
         modal.appendChild(priceRow);
         modal.appendChild(footer);
         overlay.appendChild(modal);

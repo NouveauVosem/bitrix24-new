@@ -211,9 +211,12 @@
             return;
         }
 
+        // resolveArticles нужен только для компонентов — у топ-айтемов теперь normArticle или bitrixId
         var allArticles = [];
         _items.forEach(function (item) {
-            if (item.article) allArticles.push(item.article);
+            (item.components || []).forEach(function (c) {
+                if (c.article) allArticles.push(c.article);
+            });
         });
 
         resolveArticles(allArticles, function () {
@@ -236,7 +239,7 @@
 
                 var artLine = document.createElement('div');
                 artLine.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;';
-                artLine.appendChild(articleEl(item.article, 'font-size:12px;'));
+                artLine.appendChild(articleElDirect(item.article, item.bitrixId || null, 'font-size:12px;'));
 
                 // editable qty input (styled as badge)
                 var qtyInput = document.createElement('input');
