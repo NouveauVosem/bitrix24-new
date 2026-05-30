@@ -267,8 +267,26 @@
                 delBtn.textContent = '✕';
                 delBtn.addEventListener('click', function (e) {
                     e.stopPropagation();
+                    var dealId = getDealId();
+                    var rowId  = item.rowId || 0;
+                    var name   = item.name  || '';
                     _items.splice(idx, 1);
                     saveItems(_items, function () { renderBody(); });
+                    if (dealId && rowId) {
+                        fetch('/local/ajax/delete_deal_product_row.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'dealId=' + encodeURIComponent(dealId)
+                                + '&rowId=' + encodeURIComponent(rowId)
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (resp) {
+                            if (resp.status !== 'success') {
+                                console.warn('[Hierarchy] delete row failed:', resp);
+                            }
+                        })
+                        .catch(function (e) { console.error('[Hierarchy] delete_deal_product_row error:', e); });
+                    }
                 });
 
                 hdr.appendChild(arrow);
