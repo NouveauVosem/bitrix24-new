@@ -318,6 +318,16 @@
                 }
             });
 
+            var normSlotSnapshot = slots
+                .filter(function (slot) {
+                    var opt = selectedOptions[slot.id];
+                    return opt && opt.id !== '__none__';
+                })
+                .map(function (slot) {
+                    var opt = selectedOptions[slot.id];
+                    return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
+                });
+
             submitBtn.disabled = true;
             submitBtn.textContent = '⧗ Добавляю...';
             submitStatus.style.color = '#6b7280';
@@ -331,6 +341,7 @@
                     qty: currentQty,
                     price: currentPrice,
                     normId: normId || null,
+                    slotSnapshot: normSlotSnapshot,
                     components: components
                 };
 
@@ -397,15 +408,6 @@
                 var normComponents = components.map(function (c) {
                     return { article: c.article, name: c.name, baseQty: c.baseQty, bitrixId: c.bitrixId };
                 });
-                var normSlotSnapshot = slots
-                    .filter(function (slot) {
-                        var opt = selectedOptions[slot.id];
-                        return opt && opt.id !== '__none__';
-                    })
-                    .map(function (slot) {
-                        var opt = selectedOptions[slot.id];
-                        return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
-                    });
                 fetch(CRYSTAL_BASE + '/api/product-form-norms/findOrCreate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
