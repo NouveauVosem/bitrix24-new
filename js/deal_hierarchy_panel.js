@@ -123,6 +123,13 @@
         .catch(function () { callback(); });
     }
 
+    function reloadBitrixGrid() {
+        var gridNode = document.querySelector('[id^="CCrmEntityProductListComponent"]');
+        if (!gridNode) return;
+        var grid = BX.Main.gridManager.getById(gridNode.id);
+        if (grid) grid.reload();
+    }
+
     function updateBitrixRow(rowId, productName, qty, price) {
         var dealId = getDealId();
         if (!dealId) return;
@@ -138,7 +145,9 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (resp) {
-            if (resp.status !== 'success') {
+            if (resp.status === 'success') {
+                reloadBitrixGrid();
+            } else {
                 console.warn('[Hierarchy] Bitrix row update failed:', resp);
             }
         })
@@ -327,7 +336,9 @@
                         })
                         .then(function (r) { return r.json(); })
                         .then(function (resp) {
-                            if (resp.status !== 'success') {
+                            if (resp.status === 'success') {
+                                reloadBitrixGrid();
+                            } else {
                                 console.warn('[Hierarchy] delete row failed:', resp);
                             }
                         })
