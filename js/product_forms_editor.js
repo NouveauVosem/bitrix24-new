@@ -559,6 +559,7 @@
             });
 
             productsListEl.innerHTML = '';
+            updateSelectAllState();
             if (filtered.length === 0) {
                 productsListEl.style.cssText = 'font-size:11px;color:#9ca3af;padding:10px;';
                 productsListEl.textContent = 'Нет товаров';
@@ -599,6 +600,7 @@
                     }
                     pRow.style.background = cb.checked ? '#f0fdf4' : '#fff';
                     renderChips();
+                    updateSelectAllState();
                 });
 
                 pRow.appendChild(cb);
@@ -607,10 +609,56 @@
             });
         }
 
+        var selectAllRow = el('div', 'display:none;margin-bottom:6px;');
+        var selectAllCb = document.createElement('input');
+        selectAllCb.type = 'checkbox';
+        selectAllCb.style.cssText = 'margin:0 5px 0 0;accent-color:#16a34a;cursor:pointer;vertical-align:middle;';
+        var selectAllLbl = el('span', 'font-size:11px;color:#374151;cursor:pointer;vertical-align:middle;', 'Выбрать все');
+        selectAllLbl.addEventListener('click', function () { selectAllCb.click(); });
+        selectAllRow.appendChild(selectAllCb);
+        selectAllRow.appendChild(selectAllLbl);
+
+        selectAllCb.addEventListener('change', function () {
+            var filtered = currentProducts.filter(function (p) {
+                var q = searchInput.value.toLowerCase();
+                if (!q) return true;
+                return p.article.toLowerCase().indexOf(q) !== -1 || p.name.toLowerCase().indexOf(q) !== -1;
+            });
+            if (selectAllCb.checked) {
+                filtered.forEach(function (p) {
+                    if (!slot.options.some(function (o) { return o.article === p.article; })) {
+                        slot.options.push({ article: p.article, name: p.name, bitrixId: p.id });
+                    }
+                });
+            } else {
+                var filteredArticles = filtered.map(function (p) { return p.article; });
+                slot.options = slot.options.filter(function (o) {
+                    return filteredArticles.indexOf(o.article) === -1;
+                });
+            }
+            renderChips();
+            renderProductsList();
+        });
+
+        function updateSelectAllState() {
+            var filtered = currentProducts.filter(function (p) {
+                var q = searchInput.value.toLowerCase();
+                if (!q) return true;
+                return p.article.toLowerCase().indexOf(q) !== -1 || p.name.toLowerCase().indexOf(q) !== -1;
+            });
+            if (filtered.length === 0) { selectAllCb.checked = false; selectAllCb.indeterminate = false; return; }
+            var selectedCount = filtered.filter(function (p) {
+                return slot.options.some(function (o) { return o.article === p.article; });
+            }).length;
+            selectAllCb.indeterminate = selectedCount > 0 && selectedCount < filtered.length;
+            selectAllCb.checked = selectedCount === filtered.length;
+        }
+
         sectionSelect.addEventListener('change', function () {
             var sid = sectionSelect.value;
             if (!sid) {
                 searchInput.style.display = 'none';
+                selectAllRow.style.display = 'none';
                 if (productsListEl) { productsListEl.innerHTML = ''; productsListEl.style.cssText = ''; }
                 return;
             }
@@ -622,10 +670,12 @@
             productsListEl.textContent = 'Загрузка...';
             searchInput.style.display = 'block';
             searchInput.value = '';
+            selectAllRow.style.display = 'none';
             currentProducts = [];
 
             getProductsBySection(sid, function (products) {
                 currentProducts = products;
+                selectAllRow.style.display = products.length > 0 ? 'block' : 'none';
                 renderProductsList();
             });
         });
@@ -646,6 +696,7 @@
 
         browserArea.appendChild(sectionSelect);
         browserArea.appendChild(searchInput);
+        browserArea.appendChild(selectAllRow);
         wrap.appendChild(browserArea);
 
         return wrap;
