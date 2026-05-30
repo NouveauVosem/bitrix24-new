@@ -36,6 +36,44 @@
         .then(function (r) { return r.json(); })
         .then(function (resp) {
             _items = (resp.status === 'success') ? (resp.items || []) : [];
+            var bitrixRows = (resp.bitrixRows || []).slice();
+
+            // Авто-матчим rowId для элементов у которых его нет
+            var usedRowIds = {};
+            var changed = false;
+            _items.forEach(function (item) {
+                if (item.rowId) { usedRowIds[item.rowId] = true; }
+            });
+            _items.forEach(function (item) {
+                if (item.rowId) return;
+                var match = null;
+                // Сначала по PRODUCT_ID (catalog ID)
+                if (item.bitrixId) {
+                    for (var i = 0; i < bitrixRows.length; i++) {
+                        if (bitrixRows[i].productId === item.bitrixId && !usedRowIds[bitrixRows[i].rowId]) {
+                            match = bitrixRows[i]; break;
+                        }
+                    }
+                }
+                // Fallback по имени (вхождение в любую сторону)
+                if (!match && item.name) {
+                    for (var i = 0; i < bitrixRows.length; i++) {
+                        var bn = bitrixRows[i].productName || '';
+                        var inn = item.name;
+                        if (!usedRowIds[bitrixRows[i].rowId] &&
+                            (bn === inn || bn.indexOf(inn) !== -1 || inn.indexOf(bn) !== -1)) {
+                            match = bitrixRows[i]; break;
+                        }
+                    }
+                }
+                if (match) {
+                    item.rowId = match.rowId;
+                    usedRowIds[match.rowId] = true;
+                    changed = true;
+                }
+            });
+            if (changed) saveItems(_items, function () {});
+
             if (callback) callback(_items);
         })
         .catch(function () {

@@ -28,11 +28,28 @@ $connection->query("CREATE TABLE IF NOT EXISTS `crm_deal_hierarchy` (
 
 if ($action === 'get') {
 
-    $res = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEAL_ID = " . $dealId);
-    $row = $res->fetch();
+    $res   = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEAL_ID = " . $dealId);
+    $row   = $res->fetch();
+    $items = $row ? json_decode($row['ITEMS'], true) : [];
+
+    // Грузим строки Битрикс только если есть элементы без rowId
+    $bitrixRows = [];
+    $needsSync  = !empty(array_filter($items, function ($i) { return empty($i['rowId']); }));
+    if ($needsSync) {
+        \CModule::IncludeModule('crm');
+        foreach ((\CCrmDeal::LoadProductRows($dealId) ?: []) as $r) {
+            $bitrixRows[] = [
+                'rowId'       => (int)$r['ID'],
+                'productId'   => (int)$r['PRODUCT_ID'],
+                'productName' => $r['PRODUCT_NAME'],
+            ];
+        }
+    }
+
     echo json_encode([
-        'status' => 'success',
-        'items'  => $row ? json_decode($row['ITEMS'], true) : []
+        'status'     => 'success',
+        'items'      => $items,
+        'bitrixRows' => $bitrixRows,
     ]);
 
 } elseif ($action === 'save') {

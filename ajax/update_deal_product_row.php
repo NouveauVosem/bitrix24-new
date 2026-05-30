@@ -50,4 +50,4 @@ if (!$found) {
 }
 
 $ok = \CCrmDeal::SaveProductRows($dealId, $rows);
-echo json_encode(['status' => $ok ? 'success' : 'error', 'rowId' => $rowId]);
+echo json_encode(['status' => $ok !== false ? 'success' : 'error', 'rowId' => $rowId]);

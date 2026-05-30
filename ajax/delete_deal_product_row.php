@@ -38,5 +38,5 @@ if (!$found) {
     die;
 }
 
-\CCrmDeal::SaveProductRows($dealId, $filtered);
-echo json_encode(['status' => 'success']);
+$ok = \CCrmDeal::SaveProductRows($dealId, $filtered);
+echo json_encode(['status' => $ok !== false ? 'success' : 'error', 'rowId' => $rowId]);
