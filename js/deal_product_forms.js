@@ -781,6 +781,18 @@
                     normNameEl.textContent = norm.name;
                     normItem.appendChild(normNameEl);
 
+                    if (norm.components && norm.components.length > 0) {
+                        var compsRow = document.createElement('div');
+                        compsRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;';
+                        norm.components.forEach(function (c) {
+                            var tag = document.createElement('span');
+                            tag.style.cssText = 'font-size:10px;background:#e5e7eb;color:#374151;padding:1px 6px;border-radius:8px;white-space:nowrap;';
+                            tag.textContent = c.name + (c.baseQty > 1 ? ' ×' + c.baseQty : '');
+                            compsRow.appendChild(tag);
+                        });
+                        normItem.appendChild(compsRow);
+                    }
+
                     normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
                     normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = '#e5e7eb'; normItem.style.background = '#f5f7fa'; });
                     normItem.addEventListener('click', function () {
