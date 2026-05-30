@@ -254,7 +254,7 @@
         var nameGroup = buildField('Название формы', existingForm ? existingForm.name : '', 'Например: Тележка ML-T');
         body.appendChild(nameGroup.wrap);
         attachNormSearch(nameGroup.input, function (norm) {
-            if (!nameGroup.input.value) nameGroup.input.value = norm.name || '';
+            nameGroup.input.value    = norm.name    || '';
             articleGroup.input.value = norm.article || '';
         });
 
@@ -263,7 +263,7 @@
         body.appendChild(articleGroup.wrap);
         attachNormSearch(articleGroup.input, function (norm) {
             articleGroup.input.value = norm.article || '';
-            if (!nameGroup.input.value) nameGroup.input.value = norm.name || '';
+            nameGroup.input.value    = norm.name    || '';
         });
 
         // Slots
