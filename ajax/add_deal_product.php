@@ -15,20 +15,23 @@ if (!$USER->IsAuthorized()) {
 \CModule::IncludeModule('crm');
 \CModule::IncludeModule('iblock');
 
-$dealId      = (int)($_POST['dealId']     ?? 0);
-$productName = trim($_POST['productName'] ?? '');
-$quantity    = (float)($_POST['quantity'] ?? 1);
-$price       = (float)($_POST['price']    ?? 0);
-$article     = trim($_POST['article']     ?? '');
+$dealId          = (int)($_POST['dealId']          ?? 0);
+$productName     = trim($_POST['productName']      ?? '');
+$quantity        = (float)($_POST['quantity']       ?? 1);
+$price           = (float)($_POST['price']          ?? 0);
+$article         = trim($_POST['article']           ?? '');
+$bitrixProductId = (int)($_POST['bitrixProductId'] ?? 0);
 
 if (!$dealId || !$productName) {
     echo json_encode(['status' => 'error', 'message' => 'dealId and productName are required']);
     die;
 }
 
-// Ищем товар в каталоге по артикулу (начало названия)
+// Определяем PRODUCT_ID: явный ID имеет приоритет над поиском по артикулу
 $productId = 0;
-if ($article) {
+if ($bitrixProductId > 0) {
+    $productId = $bitrixProductId;
+} elseif ($article) {
     $connection = \Bitrix\Main\Application::getConnection();
     $safe       = $connection->getSqlHelper()->forSql($article);
     $res        = $connection->query(

@@ -348,6 +348,7 @@
                     var body = 'dealId=' + encodeURIComponent(dealId)
                         + '&productName=' + encodeURIComponent(productName)
                         + '&article=' + encodeURIComponent(form.article || '')
+                        + '&bitrixProductId=' + encodeURIComponent(form.bitrixId || 0)
                         + '&quantity=' + encodeURIComponent(currentQty)
                         + '&price=' + encodeURIComponent(currentPrice);
 
