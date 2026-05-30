@@ -253,10 +253,18 @@
         // Name
         var nameGroup = buildField('Название формы', existingForm ? existingForm.name : '', 'Например: Тележка ML-T');
         body.appendChild(nameGroup.wrap);
+        attachNormSearch(nameGroup.input, function (norm) {
+            if (!nameGroup.input.value) nameGroup.input.value = norm.name || '';
+            articleGroup.input.value = norm.article || '';
+        });
 
         // Article
         var articleGroup = buildField('Артикул главного товара', existingForm ? (existingForm.article || '') : '', 'Например: 11.1565.5');
         body.appendChild(articleGroup.wrap);
+        attachNormSearch(articleGroup.input, function (norm) {
+            articleGroup.input.value = norm.article || '';
+            if (!nameGroup.input.value) nameGroup.input.value = norm.name || '';
+        });
 
         // Slots
         var slotsWrap = el('div', 'margin-top:20px;');
@@ -621,6 +629,78 @@
         wrap.appendChild(browserArea);
 
         return wrap;
+    }
+
+    // ===== NORM AUTOCOMPLETE =====
+
+    function attachNormSearch(input, onSelect) {
+        var timer = null;
+        var dropdown = null;
+
+        function removeDropdown() {
+            if (dropdown) { dropdown.remove(); dropdown = null; }
+        }
+
+        function showDropdown(results) {
+            removeDropdown();
+            if (!results.length) return;
+
+            dropdown = document.createElement('div');
+            dropdown.style.cssText = [
+                'position:absolute;z-index:99999;',
+                'background:#fff;border:1px solid #d1d5db;border-radius:4px;',
+                'box-shadow:0 4px 12px rgba(0,0,0,0.12);',
+                'max-height:240px;overflow-y:auto;',
+                'width:' + input.offsetWidth + 'px;'
+            ].join('');
+
+            results.forEach(function (norm) {
+                var item = document.createElement('div');
+                item.style.cssText = 'padding:7px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:12px;';
+
+                var artSpan = document.createElement('span');
+                artSpan.style.cssText = 'font-weight:700;color:#1d4ed8;margin-right:8px;';
+                artSpan.textContent = norm.article || '—';
+
+                var nameSpan = document.createElement('span');
+                nameSpan.style.cssText = 'color:#374151;';
+                nameSpan.textContent = norm.name || '';
+
+                item.appendChild(artSpan);
+                item.appendChild(nameSpan);
+
+                item.addEventListener('mouseenter', function () { item.style.background = '#eff6ff'; });
+                item.addEventListener('mouseleave', function () { item.style.background = ''; });
+                item.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    onSelect(norm);
+                    removeDropdown();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            var rect = input.getBoundingClientRect();
+            dropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+            dropdown.style.left = (rect.left + window.scrollX) + 'px';
+            document.body.appendChild(dropdown);
+        }
+
+        input.addEventListener('input', function () {
+            var q = input.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { removeDropdown(); return; }
+            timer = setTimeout(function () {
+                fetch('/local/ajax/search_catalog_products.php?q=' + encodeURIComponent(q) + '&limit=8')
+                    .then(function (r) { return r.json(); })
+                    .then(function (results) { showDropdown(results || []); })
+                    .catch(function () { removeDropdown(); });
+            }, 300);
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(removeDropdown, 150);
+        });
     }
 
     // ===== FIELD BUILDER =====
