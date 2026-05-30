@@ -88,7 +88,7 @@
 
     // ===== OPEN MANAGER =====
 
-    function openFormsManager() {
+    function openFormsManager(onBack) {
         var existing = document.getElementById('cfe-overlay');
         if (existing) existing.remove();
 
@@ -112,7 +112,19 @@
             'display:flex;align-items:center;justify-content:space-between;flex-shrink:0;'
         ].join(''));
 
+        var headerLeft = el('div', 'display:flex;align-items:center;gap:10px;');
+
+        if (onBack) {
+            var backBtn = el('button', [
+                'background:none;border:none;color:#3b82f6;',
+                'font-size:13px;cursor:pointer;padding:0;'
+            ].join(''), '← Назад');
+            backBtn.addEventListener('click', function () { overlay.remove(); onBack(); });
+            headerLeft.appendChild(backBtn);
+        }
+
         var headerTitle = el('div', 'font-size:16px;font-weight:700;color:#111;', 'Управление формами');
+        headerLeft.appendChild(headerTitle);
 
         var closeBtn = el('button', [
             'background:none;border:none;font-size:20px;',
@@ -120,7 +132,7 @@
         ].join(''), '✕');
         closeBtn.addEventListener('click', function () { overlay.remove(); });
 
-        header.appendChild(headerTitle);
+        header.appendChild(headerLeft);
         header.appendChild(closeBtn);
 
         var body = el('div', 'flex:1;overflow-y:auto;padding:16px 20px;');

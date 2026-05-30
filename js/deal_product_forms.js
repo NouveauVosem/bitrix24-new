@@ -654,7 +654,9 @@
         ].join('');
         manageBtn.addEventListener('click', function () {
             overlay.remove();
-            if (window.CrystalFormsEditor) window.CrystalFormsEditor.open();
+            if (window.CrystalFormsEditor) window.CrystalFormsEditor.open(function () {
+                openFormsPicker(dealId, clientName);
+            });
         });
 
         var listDiv = document.createElement('div');
@@ -810,6 +812,26 @@
                         });
                         normItem.appendChild(slotsDiv);
                     }
+
+                    var delNormBtn = document.createElement('button');
+                    delNormBtn.textContent = '✕';
+                    delNormBtn.title = 'Удалить норму';
+                    delNormBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;color:#d1d5db;font-size:13px;cursor:pointer;padding:0;line-height:1;';
+                    delNormBtn.addEventListener('mouseenter', function () { delNormBtn.style.color = '#dc2626'; });
+                    delNormBtn.addEventListener('mouseleave', function () { delNormBtn.style.color = '#d1d5db'; });
+                    delNormBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (!confirm('Удалить норму ' + norm.article + '?')) return;
+                        delNormBtn.disabled = true;
+                        fetch(CRYSTAL_BASE + '/api/product-form-norms/' + norm.id, {
+                            method: 'DELETE',
+                            headers: { 'X-Api-Key': API_KEY }
+                        })
+                        .then(function () { normItem.remove(); })
+                        .catch(function () { delNormBtn.disabled = false; alert('Ошибка удаления'); });
+                    });
+                    normItem.style.position = 'relative';
+                    normItem.appendChild(delNormBtn);
 
                     normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
                     normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = '#e5e7eb'; normItem.style.background = '#f5f7fa'; });
