@@ -15,26 +15,30 @@ if (strlen($q) < 2) {
     die();
 }
 
-\CModule::IncludeModule('iblock');
+$connection = \Bitrix\Main\Application::getConnection();
+$safe  = $connection->getSqlHelper()->forSql($q);
+$limit = (int)$limit;
 
-$res = \CIBlockElement::GetList(
-    ['NAME' => 'ASC'],
-    [
-        'IBLOCK_ID' => 14,
-        'ACTIVE'    => 'Y',
-        '%NAME'     => $q,
-    ],
-    false,
-    ['nTopCount' => $limit],
-    ['ID', 'NAME', 'CODE', 'PROPERTY_ARTNUMBER']
-);
+$res = $connection->query("
+    SELECT ID, NAME
+    FROM b_iblock_element
+    WHERE IBLOCK_ID = 14
+      AND ACTIVE = 'Y'
+      AND NAME LIKE '%{$safe}%'
+    ORDER BY NAME ASC
+    LIMIT {$limit}
+");
 
 $items = [];
-while ($row = $res->GetNext()) {
-    $article = $row['PROPERTY_ARTNUMBER_VALUE'] ?: $row['CODE'] ?: '';
+while ($row = $res->Fetch()) {
+    $name    = $row['NAME'];
+    $article = '';
+    if (preg_match('/\d+\.\d+\.\d+/', $name, $m)) {
+        $article = $m[0];
+    }
     $items[] = [
         'id'      => (int)$row['ID'],
-        'name'    => $row['NAME'],
+        'name'    => $name,
         'article' => $article,
     ];
 }
