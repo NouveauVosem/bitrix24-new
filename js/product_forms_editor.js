@@ -33,22 +33,22 @@
         });
 
         if (isNew) {
-            // Создаём форму, затем одним запросом заливаем слоты
-            crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article })
+            crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article, bitrixId: formData.bitrixId })
                 .then(function (created) {
                     return crystalFetch('PUT', '/api/product-forms/' + created.id + '/full', {
                         name: formData.name,
                         article: formData.article,
+                        bitrixId: formData.bitrixId,
                         slots: slots
                     });
                 })
                 .then(onSuccess)
                 .catch(onError);
         } else {
-            // Один запрос заменяет всё
             crystalFetch('PUT', '/api/product-forms/' + existingForm.id + '/full', {
                 name: formData.name,
                 article: formData.article,
+                bitrixId: formData.bitrixId,
                 slots: slots
             })
                 .then(onSuccess)
@@ -254,17 +254,24 @@
         var nameGroup = buildField('Название формы', existingForm ? existingForm.name : '', 'Например: Тележка ML-T');
         body.appendChild(nameGroup.wrap);
         attachNormSearch(nameGroup.input, function (norm) {
-            nameGroup.input.value    = norm.name    || '';
-            articleGroup.input.value = norm.article || '';
+            nameGroup.input.value        = norm.name    || '';
+            articleGroup.input.value     = norm.article || '';
+            bitrixIdGroup.input.value    = norm.id      || '';
         });
 
         // Article
         var articleGroup = buildField('Артикул главного товара', existingForm ? (existingForm.article || '') : '', 'Например: 11.1565.5');
         body.appendChild(articleGroup.wrap);
         attachNormSearch(articleGroup.input, function (norm) {
-            articleGroup.input.value = norm.article || '';
-            nameGroup.input.value    = norm.name    || '';
+            articleGroup.input.value     = norm.article || '';
+            nameGroup.input.value        = norm.name    || '';
+            bitrixIdGroup.input.value    = norm.id      || '';
         });
+
+        // Bitrix ID
+        var bitrixIdGroup = buildField('ID товара в Битрикс', existingForm ? (existingForm.bitrixId || '') : '', 'Заполняется автоматически при выборе из поиска');
+        bitrixIdGroup.input.type = 'number';
+        body.appendChild(bitrixIdGroup.wrap);
 
         // Slots
         var slotsWrap = el('div', 'margin-top:20px;');
@@ -324,6 +331,7 @@
             var formData = {
                 name: nameGroup.input.value.trim(),
                 article: articleGroup.input.value.trim(),
+                bitrixId: parseInt(bitrixIdGroup.input.value) || null,
                 slots: slots.map(function (s, i) {
                     return {
                         name: s.name,
