@@ -396,6 +396,15 @@
                 var normComponents = components.map(function (c) {
                     return { article: c.article, name: c.name, baseQty: c.baseQty, bitrixId: c.bitrixId };
                 });
+                var normSlotSnapshot = slots
+                    .filter(function (slot) {
+                        var opt = selectedOptions[slot.id];
+                        return opt && opt.id !== '__none__';
+                    })
+                    .map(function (slot) {
+                        var opt = selectedOptions[slot.id];
+                        return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
+                    });
                 fetch(CRYSTAL_BASE + '/api/product-form-norms/findOrCreate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
@@ -405,6 +414,7 @@
                         name: productName,
                         slotSelections: getSlotSelections(),
                         components: normComponents,
+                        slotSnapshot: normSlotSnapshot,
                         draftPrice: currentPrice || null
                     })
                 })
@@ -781,16 +791,23 @@
                     normNameEl.textContent = norm.name;
                     normItem.appendChild(normNameEl);
 
-                    if (norm.components && norm.components.length > 0) {
-                        var compsRow = document.createElement('div');
-                        compsRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;';
-                        norm.components.forEach(function (c) {
-                            var tag = document.createElement('span');
-                            tag.style.cssText = 'font-size:10px;background:#e5e7eb;color:#374151;padding:1px 6px;border-radius:8px;white-space:nowrap;';
-                            tag.textContent = c.name + (c.baseQty > 1 ? ' ×' + c.baseQty : '');
-                            compsRow.appendChild(tag);
+                    var snapshot = norm.slotSnapshot;
+                    if (Array.isArray(snapshot) && snapshot.length > 0) {
+                        var slotsDiv = document.createElement('div');
+                        slotsDiv.style.cssText = 'margin-top:6px;';
+                        snapshot.forEach(function (entry) {
+                            var line = document.createElement('div');
+                            line.style.cssText = 'font-size:12px;color:#374151;margin-top:3px;';
+                            var slotSpan = document.createElement('span');
+                            slotSpan.style.cssText = 'color:#9ca3af;';
+                            slotSpan.textContent = entry.slotName + ' — ';
+                            var optSpan = document.createElement('span');
+                            optSpan.textContent = entry.optionName;
+                            line.appendChild(slotSpan);
+                            line.appendChild(optSpan);
+                            slotsDiv.appendChild(line);
                         });
-                        normItem.appendChild(compsRow);
+                        normItem.appendChild(slotsDiv);
                     }
 
                     normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
