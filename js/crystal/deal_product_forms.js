@@ -211,7 +211,7 @@
                 // — scrollable options list
                 var optsDiv = document.createElement('div');
                 optsDiv.style.cssText = [
-                    'max-height:160px;overflow-y:auto;',
+                    'height:160px;overflow-y:auto;',
                     'border:1px solid #d1d5db;border-radius:0 0 4px 4px;',
                     'margin-bottom:8px;'
                 ].join('');
