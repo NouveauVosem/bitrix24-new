@@ -161,6 +161,7 @@
         }
 
         function buildSlots() {
+            var scrollY = modal.scrollTop;
             slotsContainer.innerHTML = '';
 
             if (slots.length === 0) {
@@ -192,47 +193,95 @@
                 header.appendChild(slotName);
                 header.appendChild(badge);
 
-                var optsDiv = document.createElement('div');
-                optsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
-
                 var opts = (slot.options || []).slice();
                 if (!slot.required) {
                     opts.push({ id: '__none__', article: null, name: 'Не включать' });
                 }
 
-                opts.forEach(function (opt) {
-                    var isSelected = selectedOptions[slot.id]
-                        ? selectedOptions[slot.id].id === opt.id
-                        : opt.id === '__none__';
+                // — search input
+                var searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Поиск...';
+                searchInput.style.cssText = [
+                    'width:100%;box-sizing:border-box;padding:5px 9px;',
+                    'border:1px solid #d1d5db;border-radius:4px 4px 0 0;border-bottom:none;',
+                    'font-size:12px;outline:none;color:#374151;background:#fafafa;'
+                ].join('');
 
-                    var label = document.createElement('label');
-                    label.style.cssText = [
-                        'display:inline-flex;align-items:center;gap:5px;cursor:pointer;',
-                        'padding:5px 10px;border-radius:4px;font-size:12px;user-select:none;',
-                        'border:1px solid ' + (isSelected ? '#3b82f6' : '#d1d5db') + ';',
-                        'background:' + (isSelected ? '#eff6ff' : '#fff') + ';',
-                        'color:' + (isSelected ? '#1d4ed8' : '#374151') + ';'
-                    ].join('');
+                // — scrollable options list
+                var optsDiv = document.createElement('div');
+                optsDiv.style.cssText = [
+                    'max-height:160px;overflow-y:auto;',
+                    'border:1px solid #d1d5db;border-radius:0 0 4px 4px;',
+                    'margin-bottom:8px;'
+                ].join('');
 
-                    var radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'cpf-slot-' + slot.id;
-                    radio.value = opt.id;
-                    radio.style.cssText = 'margin:0;accent-color:#3b82f6;';
-                    if (isSelected) radio.checked = true;
-
-                    radio.addEventListener('change', function () {
-                        selectedOptions[slot.id] = (opt.id === '__none__') ? null : opt;
-                        buildSlots();
+                function renderOpts(filter) {
+                    optsDiv.innerHTML = '';
+                    var q = (filter || '').toLowerCase();
+                    var filtered = opts.filter(function (o) {
+                        if (!q || o.id === '__none__') return true;
+                        return (o.name || '').toLowerCase().indexOf(q) !== -1
+                            || (o.article || '').toLowerCase().indexOf(q) !== -1;
                     });
 
-                    var optText = document.createElement('span');
-                    optText.textContent = opt.name;
+                    if (filtered.length === 0) {
+                        var empty = document.createElement('div');
+                        empty.style.cssText = 'padding:10px;font-size:11px;color:#9ca3af;text-align:center;';
+                        empty.textContent = 'Ничего не найдено';
+                        optsDiv.appendChild(empty);
+                        return;
+                    }
 
-                    label.appendChild(radio);
-                    label.appendChild(optText);
-                    optsDiv.appendChild(label);
-                });
+                    filtered.forEach(function (opt) {
+                        var isSelected = selectedOptions[slot.id]
+                            ? selectedOptions[slot.id].id === opt.id
+                            : opt.id === '__none__';
+
+                        var label = document.createElement('label');
+                        label.style.cssText = [
+                            'display:flex;align-items:center;gap:8px;cursor:pointer;',
+                            'padding:7px 10px;font-size:12px;user-select:none;',
+                            'border-bottom:1px solid #f3f4f6;',
+                            'background:' + (isSelected ? '#eff6ff' : '#fff') + ';',
+                            'color:' + (isSelected ? '#1d4ed8' : '#374151') + ';'
+                        ].join('');
+
+                        var radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'cpf-slot-' + slot.id;
+                        radio.value = opt.id;
+                        radio.style.cssText = 'margin:0;flex-shrink:0;accent-color:#3b82f6;';
+                        if (isSelected) radio.checked = true;
+
+                        radio.addEventListener('change', function () {
+                            selectedOptions[slot.id] = (opt.id === '__none__') ? null : opt;
+                            buildSlots();
+                        });
+
+                        var textWrap = document.createElement('div');
+                        textWrap.style.cssText = 'flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;';
+
+                        if (opt.article && opt.id !== '__none__') {
+                            var articleSpan = document.createElement('span');
+                            articleSpan.style.cssText = 'font-size:11px;color:#9ca3af;font-weight:600;flex-shrink:0;';
+                            articleSpan.textContent = opt.article;
+                            textWrap.appendChild(articleSpan);
+                        }
+
+                        var nameSpan = document.createElement('span');
+                        nameSpan.style.cssText = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                        nameSpan.textContent = opt.name;
+                        textWrap.appendChild(nameSpan);
+
+                        label.appendChild(radio);
+                        label.appendChild(textWrap);
+                        optsDiv.appendChild(label);
+                    });
+                }
+
+                searchInput.addEventListener('input', function () { renderOpts(searchInput.value); });
+                renderOpts('');
 
                 var qtyInfo = document.createElement('div');
                 qtyInfo.style.cssText = 'font-size:11px;margin-top:2px;';
@@ -248,10 +297,13 @@
                 }
 
                 card.appendChild(header);
+                card.appendChild(searchInput);
                 card.appendChild(optsDiv);
                 card.appendChild(qtyInfo);
                 slotsContainer.appendChild(card);
             });
+
+            modal.scrollTop = scrollY;
             checkNorm();
         }
 
