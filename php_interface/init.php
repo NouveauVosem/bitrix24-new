@@ -24,12 +24,12 @@ function addCustomAssets() {
     $asset->addJs("/local/js/main_email_templates/main_email_templates.js");
 	
 	$asset->addJs("/local/grid_documents/menu.js");
-	$asset->addJs("/local/js/product_forms_editor.js");
-	$asset->addJs("/local/js/deal_product_forms.js");
-	$asset->addJs("/local/js/deal_hierarchy_panel.js");
-	$asset->addJs("/local/js/deal_crystal_btn.js");
-	$asset->addCss("/local/js/deal_crystal_btn.css");
-	$asset->addJs("/local/js/deal_reservation_status.js");
+	$asset->addJs("/local/js/crystal/product_forms_editor.js");
+	$asset->addJs("/local/js/crystal/deal_product_forms.js");
+	$asset->addJs("/local/js/crystal/deal_hierarchy_panel.js");
+	$asset->addJs("/local/js/crystal/deal_crystal_btn.js");
+	$asset->addCss("/local/js/crystal/deal_crystal_btn.css");
+	$asset->addJs("/local/js/crystal/deal_reservation_status.js");
 
 }
 

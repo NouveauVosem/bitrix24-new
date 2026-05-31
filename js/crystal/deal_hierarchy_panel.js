@@ -2,7 +2,7 @@
     'use strict';
 
     var PANEL_ID  = 'cdh-panel';
-    var AJAX_URL  = '/local/ajax/hierarchy.php';
+    var AJAX_URL  = '/local/ajax/crystal/hierarchy.php';
     var CATALOG   = '/crm/catalog/14/product/';
 
     var _dealId     = null;
@@ -138,7 +138,7 @@
         var dealId = getDealId();
         if (!dealId) return;
         if (!rowId && !productName) return;
-        fetch('/local/ajax/update_deal_product_row.php', {
+        fetch('/local/ajax/crystal/update_deal_product_row.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'dealId=' + encodeURIComponent(dealId)
@@ -342,7 +342,7 @@
                     _items.splice(idx, 1);
                     saveItems(_items, function () { renderBody(); });
                     if (dealId && rowId) {
-                        fetch('/local/ajax/delete_deal_product_row.php', {
+                        fetch('/local/ajax/crystal/delete_deal_product_row.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'dealId=' + encodeURIComponent(dealId)

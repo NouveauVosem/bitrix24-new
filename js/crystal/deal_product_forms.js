@@ -363,7 +363,7 @@
                         + '&quantity=' + encodeURIComponent(currentQty)
                         + '&price=' + encodeURIComponent(currentPrice);
 
-                    fetch('/local/ajax/add_deal_product.php', {
+                    fetch('/local/ajax/crystal/add_deal_product.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: body

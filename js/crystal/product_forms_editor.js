@@ -58,14 +58,14 @@
 
     function getSections(cb) {
         if (_sectionsCache) { cb(_sectionsCache); return; }
-        fetch('/local/ajax/get_catalog_sections.php')
+        fetch('/local/ajax/crystal/get_catalog_sections.php')
             .then(function (r) { return r.json(); })
             .then(function (data) { _sectionsCache = data; cb(data); })
             .catch(function () { cb([]); });
     }
 
     function getProductsBySection(sectionId, cb) {
-        fetch('/local/ajax/get_catalog_products.php?sectionId=' + sectionId)
+        fetch('/local/ajax/crystal/get_catalog_products.php?sectionId=' + sectionId)
             .then(function (r) { return r.json(); })
             .then(cb)
             .catch(function () { cb([]); });
@@ -762,7 +762,7 @@
             clearTimeout(timer);
             if (q.length < 2) { removeDropdown(); return; }
             timer = setTimeout(function () {
-                fetch('/local/ajax/search_catalog_products.php?q=' + encodeURIComponent(q) + '&limit=8')
+                fetch('/local/ajax/crystal/search_catalog_products.php?q=' + encodeURIComponent(q) + '&limit=8')
                     .then(function (r) { return r.json(); })
                     .then(function (results) { showDropdown(results || []); })
                     .catch(function () { removeDropdown(); });
