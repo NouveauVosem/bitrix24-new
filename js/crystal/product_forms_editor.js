@@ -139,7 +139,30 @@
                 });
                 cardTop.appendChild(delBtn);
                 card.appendChild(cardTop);
-                card.appendChild(el('div', 'cfe-preset-card-count', (preset.options ? preset.options.length : 0) + ' опций'));
+
+                var infoRow = document.createElement('div');
+                infoRow.style.cssText = 'display:flex;align-items:center;gap:5px;margin-bottom:7px;flex-wrap:wrap;';
+
+                var reqBadge = document.createElement('span');
+                reqBadge.style.cssText = 'font-size:12px;padding:2px 6px;border-radius:6px;font-weight:600;' +
+                    (preset.required !== false
+                        ? 'background:#fef3c7;color:#92400e;'
+                        : 'background:#dcfce7;color:#166534;');
+                reqBadge.textContent = preset.required !== false ? 'Обязат.' : 'Опц.';
+
+                var qtyBadge = document.createElement('span');
+                qtyBadge.style.cssText = 'font-size:12px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#374151;font-weight:600;';
+                qtyBadge.textContent = '\xd7' + (preset.quantityPerUnit || 1);
+
+                var countEl = document.createElement('span');
+                countEl.style.cssText = 'font-size:12px;color:#9ca3af;margin-left:auto;';
+                countEl.textContent = (preset.options ? preset.options.length : 0) + ' опций';
+
+                infoRow.appendChild(reqBadge);
+                infoRow.appendChild(qtyBadge);
+                infoRow.appendChild(countEl);
+                card.appendChild(infoRow);
+
                 var addBtn = el('button', 'cfe-preset-add-btn', '+ В форму');
                 addBtn.addEventListener('click', function () { onAddPreset(preset); });
                 card.appendChild(addBtn);
