@@ -175,10 +175,6 @@
             }
 
             slots.forEach(function (slot) {
-                var sel = selectedOptions[slot.id];
-                var selName = sel
-                    ? (sel.id === '__none__' ? 'Не включать' : sel.name)
-                    : (slot.required ? '—' : 'Не включать');
                 var isOpen = !!expandedSlots[slot.id];
 
                 var card = document.createElement('div');
@@ -197,13 +193,21 @@
                     (slot.required ? 'background:#fef3c7;color:#92400e;' : 'background:#dcfce7;color:#166534;');
                 badge.textContent = slot.required ? 'Обяз.' : 'Опц.';
 
+                function getSelName() {
+                    var s = selectedOptions[slot.id];
+                    return s ? (s.id === '__none__' ? 'Не включать' : s.name) : (slot.required ? '—' : 'Не включать');
+                }
+                function isRealSel() {
+                    var s = selectedOptions[slot.id];
+                    return !!(s && s.id !== '__none__');
+                }
+
                 var selLabel = document.createElement('span');
-                var hasRealSel = sel && sel.id !== '__none__';
-                selLabel.style.cssText = 'flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (hasRealSel ? '#1d4ed8' : '#9ca3af') + ';';
-                selLabel.textContent = selName;
+                selLabel.style.cssText = 'flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (isRealSel() ? '#1d4ed8' : '#9ca3af') + ';';
+                selLabel.textContent = getSelName();
 
                 var arrow = document.createElement('span');
-                arrow.style.cssText = 'flex-shrink:0;font-size:12px;color:#9ca3af;display:inline-block;transition:transform 0.15s;transform:' + (isOpen ? 'rotate(90deg)' : 'rotate(0deg)') + ';';
+                arrow.style.cssText = 'flex-shrink:0;font-size:12px;color:#9ca3af;display:inline-block;transition:transform 0.22s ease;transform:' + (isOpen ? 'rotate(90deg)' : 'rotate(0deg)') + ';';
                 arrow.textContent = '▶';
 
                 header.appendChild(slotName);
@@ -211,14 +215,17 @@
                 header.appendChild(selLabel);
                 header.appendChild(arrow);
 
-                // === Collapsible body ===
+                // === Collapsible body — CSS transition, no display:none ===
                 var body = document.createElement('div');
-                body.style.cssText = 'padding:10px 12px;border-top:1px solid #e5e7eb;display:' + (isOpen ? 'block' : 'none') + ';';
+                body.style.cssText = 'overflow:hidden;transition:max-height 0.22s ease,padding 0.22s ease;' +
+                    (isOpen ? 'max-height:280px;padding:10px 12px;' : 'max-height:0;padding:0 12px;');
 
                 header.addEventListener('click', function () {
                     isOpen = !isOpen;
                     expandedSlots[slot.id] = isOpen;
-                    body.style.display = isOpen ? 'block' : 'none';
+                    body.style.maxHeight = isOpen ? '280px' : '0';
+                    body.style.paddingTop = isOpen ? '10px' : '0';
+                    body.style.paddingBottom = isOpen ? '10px' : '0';
                     arrow.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
                     header.style.background = isOpen ? '#eff6ff' : '#f9fafb';
                 });
@@ -243,6 +250,21 @@
                     'border:1px solid #d1d5db;border-radius:0 0 4px 4px;',
                     'margin-bottom:8px;'
                 ].join('');
+
+                var qtyInfo = document.createElement('div');
+                qtyInfo.style.cssText = 'font-size:14px;margin-top:4px;';
+
+                function updateQtyInfo() {
+                    if (isRealSel()) {
+                        var total = getCurrentQty() * slot.quantityPerUnit;
+                        qtyInfo.style.color = '#6b7280';
+                        qtyInfo.textContent = 'Количество: ' + total + ' шт (' + getCurrentQty() + ' \xd7 ' + slot.quantityPerUnit + ')';
+                    } else {
+                        qtyInfo.style.color = '#9ca3af';
+                        qtyInfo.textContent = 'Не включается в расчёт';
+                    }
+                }
+                updateQtyInfo();
 
                 function renderOpts(filter) {
                     optsDiv.innerHTML = '';
@@ -284,8 +306,11 @@
 
                         radio.addEventListener('change', function () {
                             selectedOptions[slot.id] = (opt.id === '__none__') ? null : opt;
-                            expandedSlots[slot.id] = false;
-                            buildSlots();
+                            selLabel.textContent = getSelName();
+                            selLabel.style.color = isRealSel() ? '#1d4ed8' : '#9ca3af';
+                            updateQtyInfo();
+                            renderOpts(searchInput.value);
+                            checkNorm();
                         });
 
                         var textWrap = document.createElement('div');
@@ -311,17 +336,6 @@
 
                 searchInput.addEventListener('input', function () { renderOpts(searchInput.value); });
                 renderOpts('');
-
-                var qtyInfo = document.createElement('div');
-                qtyInfo.style.cssText = 'font-size:14px;margin-top:4px;';
-                if (sel && sel.id !== '__none__') {
-                    var total = getCurrentQty() * slot.quantityPerUnit;
-                    qtyInfo.style.color = '#6b7280';
-                    qtyInfo.textContent = 'Количество: ' + total + ' шт (' + getCurrentQty() + ' \xd7 ' + slot.quantityPerUnit + ')';
-                } else {
-                    qtyInfo.style.color = '#9ca3af';
-                    qtyInfo.textContent = 'Не включается в расчёт';
-                }
 
                 body.appendChild(searchInput);
                 body.appendChild(optsDiv);
