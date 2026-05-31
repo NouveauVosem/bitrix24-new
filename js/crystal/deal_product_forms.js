@@ -160,6 +160,8 @@
             }, 500);
         }
 
+        var expandedSlots = {};
+
         function buildSlots() {
             var scrollY = modal.scrollTop;
             slotsContainer.innerHTML = '';
@@ -173,32 +175,59 @@
             }
 
             slots.forEach(function (slot) {
-                var card = document.createElement('div');
-                card.style.cssText = 'margin-bottom:10px;padding:12px;border:1px solid #e5e7eb;border-radius:6px;';
+                var sel = selectedOptions[slot.id];
+                var selName = sel
+                    ? (sel.id === '__none__' ? 'Не включать' : sel.name)
+                    : (slot.required ? '—' : 'Не включать');
+                var isOpen = !!expandedSlots[slot.id];
 
+                var card = document.createElement('div');
+                card.style.cssText = 'margin-bottom:8px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;';
+
+                // === Clickable accordion header ===
                 var header = document.createElement('div');
-                header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;';
+                header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;background:' + (isOpen ? '#eff6ff' : '#f9fafb') + ';';
 
                 var slotName = document.createElement('span');
-                slotName.style.cssText = 'font-size:15px;font-weight:600;color:#111;';
+                slotName.style.cssText = 'font-size:15px;font-weight:600;color:#111;flex-shrink:0;';
                 slotName.textContent = slot.name;
 
                 var badge = document.createElement('span');
-                badge.style.cssText = 'font-size:14px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;' +
-                    (slot.required
-                        ? 'background:#fef3c7;color:#92400e;'
-                        : 'background:#dcfce7;color:#166534;');
-                badge.textContent = slot.required ? 'Обязательный' : 'Опциональный';
+                badge.style.cssText = 'font-size:13px;padding:2px 6px;border-radius:8px;font-weight:600;flex-shrink:0;' +
+                    (slot.required ? 'background:#fef3c7;color:#92400e;' : 'background:#dcfce7;color:#166534;');
+                badge.textContent = slot.required ? 'Обяз.' : 'Опц.';
+
+                var selLabel = document.createElement('span');
+                var hasRealSel = sel && sel.id !== '__none__';
+                selLabel.style.cssText = 'flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (hasRealSel ? '#1d4ed8' : '#9ca3af') + ';';
+                selLabel.textContent = selName;
+
+                var arrow = document.createElement('span');
+                arrow.style.cssText = 'flex-shrink:0;font-size:12px;color:#9ca3af;display:inline-block;transition:transform 0.15s;transform:' + (isOpen ? 'rotate(90deg)' : 'rotate(0deg)') + ';';
+                arrow.textContent = '▶';
 
                 header.appendChild(slotName);
                 header.appendChild(badge);
+                header.appendChild(selLabel);
+                header.appendChild(arrow);
+
+                // === Collapsible body ===
+                var body = document.createElement('div');
+                body.style.cssText = 'padding:10px 12px;border-top:1px solid #e5e7eb;display:' + (isOpen ? 'block' : 'none') + ';';
+
+                header.addEventListener('click', function () {
+                    isOpen = !isOpen;
+                    expandedSlots[slot.id] = isOpen;
+                    body.style.display = isOpen ? 'block' : 'none';
+                    arrow.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+                    header.style.background = isOpen ? '#eff6ff' : '#f9fafb';
+                });
 
                 var opts = (slot.options || []).slice();
                 if (!slot.required) {
                     opts.push({ id: '__none__', article: null, name: 'Не включать' });
                 }
 
-                // — search input
                 var searchInput = document.createElement('input');
                 searchInput.type = 'text';
                 searchInput.placeholder = 'Поиск...';
@@ -208,7 +237,6 @@
                     'font-size:14px;outline:none;color:#374151;background:#fafafa;'
                 ].join('');
 
-                // — scrollable options list
                 var optsDiv = document.createElement('div');
                 optsDiv.style.cssText = [
                     'height:160px;overflow-y:auto;',
@@ -256,6 +284,7 @@
 
                         radio.addEventListener('change', function () {
                             selectedOptions[slot.id] = (opt.id === '__none__') ? null : opt;
+                            expandedSlots[slot.id] = false;
                             buildSlots();
                         });
 
@@ -284,10 +313,8 @@
                 renderOpts('');
 
                 var qtyInfo = document.createElement('div');
-                qtyInfo.style.cssText = 'font-size:14px;margin-top:2px;';
-
-                var sel = selectedOptions[slot.id];
-                if (sel) {
+                qtyInfo.style.cssText = 'font-size:14px;margin-top:4px;';
+                if (sel && sel.id !== '__none__') {
                     var total = getCurrentQty() * slot.quantityPerUnit;
                     qtyInfo.style.color = '#6b7280';
                     qtyInfo.textContent = 'Количество: ' + total + ' шт (' + getCurrentQty() + ' \xd7 ' + slot.quantityPerUnit + ')';
@@ -296,10 +323,12 @@
                     qtyInfo.textContent = 'Не включается в расчёт';
                 }
 
+                body.appendChild(searchInput);
+                body.appendChild(optsDiv);
+                body.appendChild(qtyInfo);
+
                 card.appendChild(header);
-                card.appendChild(searchInput);
-                card.appendChild(optsDiv);
-                card.appendChild(qtyInfo);
+                card.appendChild(body);
                 slotsContainer.appendChild(card);
             });
 
