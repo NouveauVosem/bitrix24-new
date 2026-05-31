@@ -23,7 +23,7 @@
 
     // ===== CONFIGURATOR MODAL =====
 
-    function openConfigurator(form, productName, initialQty, dealId, clientName, presetNorm) {
+    function openConfigurator(form, productName, initialQty, dealId, clientName, presetNorm, onBack) {
         var existing = document.getElementById('cpf-modal-overlay');
         if (existing) existing.remove();
 
@@ -488,6 +488,13 @@
         footer.appendChild(submitStatus);
 
         modal.appendChild(closeBtn);
+        if (onBack) {
+            var backBtn = document.createElement('button');
+            backBtn.textContent = '← Назад к выбору';
+            backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;font-size:14px;cursor:pointer;padding:0;margin-bottom:12px;display:block;';
+            backBtn.addEventListener('click', function () { overlay.remove(); onBack(); });
+            modal.appendChild(backBtn);
+        }
         modal.appendChild(title);
         modal.appendChild(qtyRow);
         modal.appendChild(slotsContainer);
@@ -509,18 +516,18 @@
         return idx !== -1 ? text.slice(idx + 3).trim() : text;
     }
 
-    function openFormFromPanel(form, dealId, clientName, presetNorm) {
+    function openFormFromPanel(form, dealId, clientName, presetNorm, onBack) {
         var cn = clientName || getClientNameForPanel();
         var hasFullData = form.slots && Array.isArray(form.slots) &&
             form.slots.length > 0 && form.slots[0].options !== undefined;
 
         if (hasFullData) {
-            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm, onBack);
             return;
         }
 
         if (!form.article) {
-            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm, onBack);
             return;
         }
 
@@ -529,10 +536,10 @@
         })
         .then(function (res) { return res.json(); })
         .then(function (fullForm) {
-            openConfigurator(fullForm, fullForm.name, 1, dealId, cn, presetNorm);
+            openConfigurator(fullForm, fullForm.name, 1, dealId, cn, presetNorm, onBack);
         })
         .catch(function () {
-            openConfigurator(form, form.name, 1, dealId, cn, presetNorm);
+            openConfigurator(form, form.name, 1, dealId, cn, presetNorm, onBack);
         });
     }
 
@@ -789,8 +796,8 @@
             newConfigItem.addEventListener('mouseenter', function () { newConfigItem.style.background = '#dcfce7'; });
             newConfigItem.addEventListener('mouseleave', function () { newConfigItem.style.background = '#f0fdf4'; });
             newConfigItem.addEventListener('click', function () {
-                overlay.remove();
-                openFormFromPanel(form, dealId, clientName);
+                overlay.style.display = 'none';
+                openFormFromPanel(form, dealId, clientName, null, function () { overlay.style.display = 'flex'; });
             });
             listDiv.appendChild(newConfigItem);
 
@@ -885,8 +892,8 @@
                     normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
                     normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = '#e5e7eb'; normItem.style.background = '#f5f7fa'; });
                     normItem.addEventListener('click', function () {
-                        overlay.remove();
-                        openFormFromPanel(form, dealId, clientName, norm);
+                        overlay.style.display = 'none';
+                        openFormFromPanel(form, dealId, clientName, norm, function () { overlay.style.display = 'flex'; });
                     });
 
                     listDiv.appendChild(normItem);
