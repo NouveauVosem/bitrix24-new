@@ -496,10 +496,6 @@
         modal.appendChild(footer);
         overlay.appendChild(modal);
 
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
         document.body.appendChild(overlay);
     }
 
@@ -722,7 +718,6 @@
         modal.appendChild(manageBtn);
         modal.appendChild(listDiv);
         overlay.appendChild(modal);
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
         document.body.appendChild(overlay);
 
         var savedForms = null;

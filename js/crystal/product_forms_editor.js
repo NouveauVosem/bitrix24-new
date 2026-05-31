@@ -209,10 +209,6 @@
         modal.appendChild(body);
         overlay.appendChild(modal);
 
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
         document.body.appendChild(overlay);
         showListView(headerTitle, body, overlay);
     }
