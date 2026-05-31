@@ -73,16 +73,16 @@
 
     // ===== DOM HELPERS =====
 
-    function el(tag, css, text) {
+    function el(tag, cls, text) {
         var e = document.createElement(tag);
-        if (css) e.style.cssText = css;
+        if (cls) e.className = cls;
         if (text !== undefined) e.textContent = text;
         return e;
     }
 
     function nbsp(n) {
         var s = '';
-        for (var i = 0; i < n; i++) s += ' ';
+        for (var i = 0; i < n; i++) s += ' ';
         return s;
     }
 
@@ -92,50 +92,30 @@
         var existing = document.getElementById('cfe-overlay');
         if (existing) existing.remove();
 
-        var overlay = el('div', [
-            'position:fixed;top:0;left:0;right:0;bottom:0;',
-            'background:rgba(0,0,0,0.5);z-index:999999;',
-            'display:flex;align-items:center;justify-content:center;'
-        ].join(''));
+        var overlay = el('div', 'cfe-overlay');
         overlay.id = 'cfe-overlay';
 
-        var modal = el('div', [
-            'background:#fff;border-radius:8px;',
-            'width:700px;max-width:95vw;max-height:88vh;',
-            'display:flex;flex-direction:column;',
-            'box-shadow:0 12px 50px rgba(0,0,0,0.25);',
-            'overflow:hidden;'
-        ].join(''));
+        var modal = el('div', 'cfe-modal');
 
-        var header = el('div', [
-            'padding:16px 20px;border-bottom:1px solid #e5e7eb;',
-            'display:flex;align-items:center;justify-content:space-between;flex-shrink:0;'
-        ].join(''));
-
-        var headerLeft = el('div', 'display:flex;align-items:center;gap:10px;');
+        var header = el('div', 'cfe-modal-header');
+        var headerLeft = el('div', 'cfe-modal-header-left');
 
         if (onBack) {
-            var backBtn = el('button', [
-                'background:none;border:none;color:#3b82f6;',
-                'font-size:13px;cursor:pointer;padding:0;'
-            ].join(''), '← Назад');
+            var backBtn = el('button', 'cfe-back-btn', '← Назад');
             backBtn.addEventListener('click', function () { overlay.remove(); onBack(); });
             headerLeft.appendChild(backBtn);
         }
 
-        var headerTitle = el('div', 'font-size:16px;font-weight:700;color:#111;', 'Управление формами');
+        var headerTitle = el('div', 'cfe-modal-title', 'Управление формами');
         headerLeft.appendChild(headerTitle);
 
-        var closeBtn = el('button', [
-            'background:none;border:none;font-size:20px;',
-            'cursor:pointer;color:#9ca3af;padding:2px 8px;line-height:1;'
-        ].join(''), '✕');
+        var closeBtn = el('button', 'cfe-close-btn', '✕');
         closeBtn.addEventListener('click', function () { overlay.remove(); });
 
         header.appendChild(headerLeft);
         header.appendChild(closeBtn);
 
-        var body = el('div', 'flex:1;overflow-y:auto;padding:16px 20px;');
+        var body = el('div', 'cfe-modal-body');
 
         modal.appendChild(header);
         modal.appendChild(body);
@@ -155,12 +135,8 @@
         headerTitle.textContent = 'Управление формами';
         body.innerHTML = '';
 
-        var toolbar = el('div', 'margin-bottom:14px;');
-        var createBtn = el('button', [
-            'background:#16a34a;color:#fff;border:none;',
-            'padding:8px 18px;border-radius:5px;',
-            'font-size:13px;font-weight:600;cursor:pointer;'
-        ].join(''), '+ Создать форму');
+        var toolbar = el('div', 'cfe-toolbar');
+        var createBtn = el('button', 'cfe-create-btn', '+ Создать форму');
         createBtn.addEventListener('click', function () {
             showEditorView(headerTitle, body, null, function () {
                 showListView(headerTitle, body, overlay);
@@ -169,40 +145,31 @@
         toolbar.appendChild(createBtn);
         body.appendChild(toolbar);
 
-        var listArea = el('div', 'color:#9ca3af;font-size:13px;', 'Загрузка...');
+        var listArea = el('div', 'cfe-list-empty', 'Загрузка...');
         body.appendChild(listArea);
 
         crystalFetch('GET', '/api/product-forms')
             .then(function (forms) {
                 listArea.innerHTML = '';
-                listArea.style.cssText = '';
+                listArea.className = '';
 
                 if (!Array.isArray(forms) || forms.length === 0) {
-                    listArea.style.cssText = 'color:#9ca3af;font-size:13px;text-align:center;padding:40px 0;';
+                    listArea.className = 'cfe-list-empty--center';
                     listArea.textContent = 'Форм пока нет. Создайте первую!';
                     return;
                 }
 
                 forms.forEach(function (form) {
-                    var row = el('div', [
-                        'display:flex;align-items:center;gap:10px;',
-                        'padding:10px 12px;margin-bottom:6px;',
-                        'border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;'
-                    ].join(''));
-
-                    var info = el('div', 'flex:1;min-width:0;');
-                    var name = el('div', 'font-size:13px;font-weight:600;color:#111;', form.name);
-                    var meta = el('div', 'font-size:11px;color:#9ca3af;margin-top:2px;');
+                    var row = el('div', 'cfe-form-row');
+                    var info = el('div', 'cfe-form-info');
+                    var name = el('div', 'cfe-form-name', form.name);
+                    var meta = el('div', 'cfe-form-meta');
                     var slotCount = form.slots ? form.slots.length : (form.slotsCount || 0);
                     meta.textContent = (form.article || '—') + ' · ' + slotCount + ' слотов';
                     info.appendChild(name);
                     info.appendChild(meta);
 
-                    var editBtn = el('button', [
-                        'background:#3b82f6;color:#fff;border:none;',
-                        'padding:5px 12px;border-radius:4px;',
-                        'font-size:12px;cursor:pointer;flex-shrink:0;'
-                    ].join(''), 'Редактировать');
+                    var editBtn = el('button', 'cfe-edit-btn', 'Редактировать');
                     editBtn.addEventListener('click', function () {
                         editBtn.textContent = '...';
                         editBtn.disabled = true;
@@ -219,11 +186,7 @@
                             });
                     });
 
-                    var delBtn = el('button', [
-                        'background:#fff;color:#dc2626;border:1px solid #fca5a5;',
-                        'padding:5px 12px;border-radius:4px;',
-                        'font-size:12px;cursor:pointer;flex-shrink:0;'
-                    ].join(''), 'Удалить');
+                    var delBtn = el('button', 'cfe-del-btn', 'Удалить');
                     delBtn.addEventListener('click', function () {
                         if (!confirm('Удалить форму "' + form.name + '"?')) return;
                         delBtn.disabled = true;
@@ -242,7 +205,7 @@
                 });
             })
             .catch(function () {
-                listArea.style.cssText = 'color:#dc2626;font-size:13px;';
+                listArea.className = 'cfe-list-error';
                 listArea.textContent = 'Ошибка загрузки форм';
             });
     }
@@ -254,46 +217,36 @@
         headerTitle.textContent = isNew ? 'Создать форму' : 'Редактировать форму';
         body.innerHTML = '';
 
-        // Back
-        var backBtn = el('button', [
-            'background:none;border:none;color:#3b82f6;',
-            'font-size:13px;cursor:pointer;padding:0;margin-bottom:16px;display:block;'
-        ].join(''), '← Назад');
+        var backBtn = el('button', 'cfe-editor-back', '← Назад');
         backBtn.addEventListener('click', onBack);
         body.appendChild(backBtn);
 
-        // Name
         var nameGroup = buildField('Название формы', existingForm ? existingForm.name : '', 'Например: Тележка ML-T');
         body.appendChild(nameGroup.wrap);
         attachNormSearch(nameGroup.input, function (norm) {
-            nameGroup.input.value        = norm.name    || '';
-            articleGroup.input.value     = norm.article || '';
-            bitrixIdGroup.input.value    = norm.id      || '';
+            nameGroup.input.value     = norm.name    || '';
+            articleGroup.input.value  = norm.article || '';
+            bitrixIdGroup.input.value = norm.id      || '';
         });
 
-        // Article
         var articleGroup = buildField('Артикул главного товара', existingForm ? (existingForm.article || '') : '', 'Например: 11.1565.5');
         body.appendChild(articleGroup.wrap);
         attachNormSearch(articleGroup.input, function (norm) {
-            articleGroup.input.value     = norm.article || '';
-            nameGroup.input.value        = norm.name    || '';
-            bitrixIdGroup.input.value    = norm.id      || '';
+            articleGroup.input.value  = norm.article || '';
+            nameGroup.input.value     = norm.name    || '';
+            bitrixIdGroup.input.value = norm.id      || '';
         });
 
-        // Bitrix ID
         var bitrixIdGroup = buildField('ID товара в Битрикс', existingForm ? (existingForm.bitrixId || '') : '', 'Заполняется автоматически при выборе из поиска');
         bitrixIdGroup.input.type = 'number';
         body.appendChild(bitrixIdGroup.wrap);
 
-        // Slots
-        var slotsWrap = el('div', 'margin-top:20px;');
-        var slotsLabel = el('div', 'font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;', 'Слоты');
-        slotsWrap.appendChild(slotsLabel);
+        var slotsWrap = el('div', 'cfe-slots-wrap');
+        slotsWrap.appendChild(el('div', 'cfe-slots-label', 'Слоты'));
 
-        var slotsContainer = el('div', '');
+        var slotsContainer = document.createElement('div');
         slotsWrap.appendChild(slotsContainer);
 
-        // Deep-copy slots from existing form
         var slots = [];
         if (existingForm && Array.isArray(existingForm.slots)) {
             existingForm.slots.slice().sort(function (a, b) {
@@ -318,12 +271,7 @@
         }
         rebuildSlotsUI();
 
-        var addSlotBtn = el('button', [
-            'margin-top:8px;width:100%;',
-            'background:#fff;border:1px dashed #9ca3af;',
-            'color:#374151;padding:9px;border-radius:5px;',
-            'font-size:12px;cursor:pointer;'
-        ].join(''), '+ Добавить слот');
+        var addSlotBtn = el('button', 'cfe-add-slot-btn', '+ Добавить слот');
         addSlotBtn.addEventListener('click', function () {
             slots.push({ name: '', required: true, quantityPerUnit: 1, options: [] });
             rebuildSlotsUI();
@@ -331,14 +279,10 @@
         slotsWrap.appendChild(addSlotBtn);
         body.appendChild(slotsWrap);
 
-        // Footer
-        var footer = el('div', 'margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb;');
-        var saveStatus = el('div', 'font-size:12px;margin-top:8px;min-height:16px;');
-        var saveBtn = el('button', [
-            'background:#16a34a;color:#fff;border:none;',
-            'padding:10px 28px;border-radius:5px;',
-            'font-size:14px;font-weight:600;cursor:pointer;'
-        ].join(''), isNew ? 'Создать форму' : 'Сохранить изменения');
+        var footer = el('div', 'cfe-footer');
+        var saveStatus = el('div', 'cfe-save-status');
+        var saveBtn = el('button', 'cfe-save-btn', isNew ? 'Создать форму' : 'Сохранить изменения');
+
         saveBtn.addEventListener('click', function () {
             var formData = {
                 name: nameGroup.input.value.trim(),
@@ -356,7 +300,7 @@
             };
 
             if (!formData.name) {
-                saveStatus.style.color = '#dc2626';
+                saveStatus.className = 'cfe-save-status cfe-save-status--err';
                 saveStatus.textContent = 'Введите название формы';
                 return;
             }
@@ -368,13 +312,13 @@
             saveForm(isNew, existingForm, formData,
                 function () {
                     saveBtn.textContent = '✓ Сохранено';
-                    saveStatus.style.color = '#16a34a';
+                    saveStatus.className = 'cfe-save-status cfe-save-status--ok';
                     setTimeout(onBack, 900);
                 },
                 function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = isNew ? 'Создать форму' : 'Сохранить изменения';
-                    saveStatus.style.color = '#dc2626';
+                    saveStatus.className = 'cfe-save-status cfe-save-status--err';
                     saveStatus.textContent = 'Ошибка сохранения';
                 }
             );
@@ -388,82 +332,58 @@
     // ===== SLOT CARD =====
 
     function buildSlotCard(slot, idx, allSlots, rebuildSlotsUI) {
-        var card = el('div', [
-            'border:1px solid #e5e7eb;border-radius:6px;',
-            'padding:14px;margin-bottom:10px;background:#fafafa;'
-        ].join(''));
+        var card = el('div', 'cfe-slot-card');
 
-        // Card header
-        var cardHeader = el('div', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;');
-        var cardTitle = el('div', 'font-size:12px;font-weight:600;color:#6b7280;', 'Слот ' + (idx + 1));
-        var delSlotBtn = el('button', [
-            'background:none;border:none;',
-            'color:#dc2626;font-size:11px;cursor:pointer;padding:0;'
-        ].join(''), 'Удалить слот');
+        var cardHeader = el('div', 'cfe-slot-card-header');
+        cardHeader.appendChild(el('div', 'cfe-slot-card-title', 'Слот ' + (idx + 1)));
+        var delSlotBtn = el('button', 'cfe-del-slot-btn', 'Удалить слот');
         delSlotBtn.addEventListener('click', function () {
             allSlots.splice(idx, 1);
             rebuildSlotsUI();
         });
-        cardHeader.appendChild(cardTitle);
         cardHeader.appendChild(delSlotBtn);
         card.appendChild(cardHeader);
 
-        // Slot name
         var nameGroup = buildField('Название слота', slot.name, 'Например: Пружина');
         nameGroup.input.addEventListener('input', function () { slot.name = nameGroup.input.value; });
         card.appendChild(nameGroup.wrap);
 
-        // Required + qty row
-        var row2 = el('div', 'display:flex;gap:20px;align-items:flex-start;margin-top:10px;');
+        var row2 = el('div', 'cfe-slot-row2');
 
-        // Required toggle (no rebuild on click)
-        var reqWrap = el('div', '');
-        var reqLbl = el('div', 'font-size:11px;color:#6b7280;margin-bottom:5px;font-weight:600;', 'Обязательный');
-        var reqToggleWrap = el('div', 'display:flex;gap:4px;');
-
+        // Required toggle
+        var reqWrap = document.createElement('div');
+        reqWrap.appendChild(el('div', 'cfe-field-label-sm', 'Обязательный'));
+        var reqToggleWrap = el('div', 'cfe-req-toggle-wrap');
         var reqBtns = [];
         ['Да', 'Нет'].forEach(function (label, i) {
             var active = (i === 0) ? slot.required : !slot.required;
-            var b = el('button', [
-                'padding:4px 12px;border-radius:4px;font-size:12px;cursor:pointer;',
-                'border:1px solid ' + (active ? '#3b82f6' : '#d1d5db') + ';',
-                'background:' + (active ? '#eff6ff' : '#fff') + ';',
-                'color:' + (active ? '#1d4ed8' : '#374151') + ';'
-            ].join(''), label);
+            var b = el('button', 'cfe-req-btn' + (active ? ' cfe-req-btn--active' : ''), label);
             reqBtns.push(b);
             b.addEventListener('click', function () {
                 slot.required = (i === 0);
                 reqBtns.forEach(function (rb, j) {
-                    var a = (j === 0) ? slot.required : !slot.required;
-                    rb.style.borderColor = a ? '#3b82f6' : '#d1d5db';
-                    rb.style.background  = a ? '#eff6ff' : '#fff';
-                    rb.style.color       = a ? '#1d4ed8' : '#374151';
+                    rb.classList.toggle('cfe-req-btn--active', (j === 0) ? slot.required : !slot.required);
                 });
             });
             reqToggleWrap.appendChild(b);
         });
-
-        reqWrap.appendChild(reqLbl);
         reqWrap.appendChild(reqToggleWrap);
 
         // Qty per unit
-        var qtyWrap = el('div', '');
-        var qtyLbl = el('div', 'font-size:11px;color:#6b7280;margin-bottom:5px;font-weight:600;', 'Кол-во на единицу');
-        var qtyInput = el('input', 'width:72px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:center;');
+        var qtyWrap = document.createElement('div');
+        qtyWrap.appendChild(el('div', 'cfe-field-label-sm', 'Кол-во на единицу'));
+        var qtyInput = el('input', 'cfe-qty-input');
         qtyInput.type = 'number';
         qtyInput.min = '1';
         qtyInput.value = slot.quantityPerUnit || 1;
         qtyInput.addEventListener('input', function () {
             slot.quantityPerUnit = Math.max(1, parseInt(qtyInput.value) || 1);
         });
-        qtyWrap.appendChild(qtyLbl);
         qtyWrap.appendChild(qtyInput);
 
         row2.appendChild(reqWrap);
         row2.appendChild(qtyWrap);
         card.appendChild(row2);
-
-        // Options section
         card.appendChild(buildOptionsSection(slot));
 
         return card;
@@ -472,32 +392,21 @@
     // ===== OPTIONS SECTION =====
 
     function buildOptionsSection(slot) {
-        var wrap = el('div', 'margin-top:14px;');
-        var optLbl = el('div', 'font-size:11px;color:#6b7280;font-weight:600;margin-bottom:6px;', 'Опции');
-        wrap.appendChild(optLbl);
+        var wrap = el('div', 'cfe-options-wrap');
+        wrap.appendChild(el('div', 'cfe-options-label', 'Опции'));
 
-        // Chips
-        var chipsWrap = el('div', 'display:flex;flex-wrap:wrap;gap:5px;min-height:24px;margin-bottom:8px;');
+        var chipsWrap = el('div', 'cfe-chips-wrap');
         var productsListEl = null;
 
         function renderChips() {
             chipsWrap.innerHTML = '';
             if (slot.options.length === 0) {
-                chipsWrap.appendChild(el('span', 'font-size:11px;color:#9ca3af;', 'Нет выбранных опций'));
+                chipsWrap.appendChild(el('span', 'cfe-chips-empty', 'Нет выбранных опций'));
                 return;
             }
             slot.options.forEach(function (opt, oi) {
-                var chip = el('div', [
-                    'display:inline-flex;align-items:center;gap:4px;',
-                    'padding:3px 8px;background:#eff6ff;',
-                    'border:1px solid #bfdbfe;border-radius:12px;',
-                    'font-size:11px;color:#1d4ed8;'
-                ].join(''), opt.article + ' — ' + opt.name);
-                var rmBtn = el('button', [
-                    'background:none;border:none;',
-                    'color:#93c5fd;cursor:pointer;font-size:12px;',
-                    'padding:0 0 0 3px;line-height:1;'
-                ].join(''), '✕');
+                var chip = el('div', 'cfe-chip', opt.article + ' — ' + opt.name);
+                var rmBtn = el('button', 'cfe-chip-rm', '✕');
                 rmBtn.addEventListener('click', function () {
                     slot.options.splice(oi, 1);
                     renderChips();
@@ -510,42 +419,29 @@
         renderChips();
         wrap.appendChild(chipsWrap);
 
-        // Browser toggle
         var browserShown = false;
-        var browserArea = el('div', 'display:none;margin-top:6px;');
-        var toggleBrowserBtn = el('button', [
-            'background:#fff;border:1px solid #d1d5db;color:#374151;',
-            'padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer;'
-        ].join(''), 'Добавить из каталога ▾');
+        var browserArea = el('div', 'cfe-browser-area');
+        browserArea.style.display = 'none';
+
+        var toggleBrowserBtn = el('button', 'cfe-toggle-browser-btn', 'Добавить из каталога ▾');
         toggleBrowserBtn.addEventListener('click', function () {
             browserShown = !browserShown;
             browserArea.style.display = browserShown ? 'block' : 'none';
-            toggleBrowserBtn.textContent = browserShown
-                ? 'Свернуть ▴'
-                : 'Добавить из каталога ▾';
+            toggleBrowserBtn.textContent = browserShown ? 'Свернуть ▴' : 'Добавить из каталога ▾';
             if (browserShown && !sectionsLoaded) loadSectionsIntoSelect();
         });
         wrap.appendChild(toggleBrowserBtn);
 
-        // Section select
         var sectionsLoaded = false;
-        var sectionSelect = el('select', [
-            'width:100%;padding:6px 8px;',
-            'border:1px solid #d1d5db;border-radius:4px;',
-            'font-size:12px;margin-bottom:8px;'
-        ].join(''));
+        var sectionSelect = el('select', 'cfe-section-select');
         var defaultOpt = document.createElement('option');
         defaultOpt.value = '';
         defaultOpt.textContent = '— Выберите раздел каталога —';
         sectionSelect.appendChild(defaultOpt);
 
-        // Search
-        var searchInput = el('input', [
-            'width:100%;padding:5px 8px;box-sizing:border-box;',
-            'border:1px solid #d1d5db;border-radius:4px;',
-            'font-size:12px;margin-bottom:8px;display:none;'
-        ].join(''));
+        var searchInput = el('input', 'cfe-search-input');
         searchInput.placeholder = 'Поиск по артикулу или названию...';
+        searchInput.style.display = 'none';
 
         var currentProducts = [];
 
@@ -560,35 +456,28 @@
 
             productsListEl.innerHTML = '';
             updateSelectAllState();
+
             if (filtered.length === 0) {
-                productsListEl.style.cssText = 'font-size:11px;color:#9ca3af;padding:10px;';
+                productsListEl.className = 'cfe-products-empty';
                 productsListEl.textContent = 'Нет товаров';
                 return;
             }
 
-            productsListEl.style.cssText = [
-                'max-height:180px;overflow-y:auto;',
-                'border:1px solid #e5e7eb;border-radius:4px;'
-            ].join('');
+            productsListEl.className = 'cfe-products-list';
 
             filtered.forEach(function (p) {
                 var isSelected = slot.options.some(function (o) { return o.article === p.article; });
                 var pRow = document.createElement('label');
-                pRow.style.cssText = [
-                    'display:flex;align-items:center;gap:8px;',
-                    'padding:6px 10px;cursor:pointer;',
-                    'border-bottom:1px solid #f3f4f6;',
-                    'background:' + (isSelected ? '#f0fdf4' : '#fff') + ';'
-                ].join('');
+                pRow.className = 'cfe-product-row' + (isSelected ? ' cfe-product-row--selected' : '');
 
                 var cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.checked = isSelected;
-                cb.style.cssText = 'flex-shrink:0;margin:0;accent-color:#16a34a;cursor:pointer;';
+                cb.className = 'cfe-product-cb';
 
-                var pInfo = el('div', 'flex:1;min-width:0;');
-                pInfo.appendChild(el('div', 'font-size:11px;color:#6b7280;font-weight:600;', p.article));
-                pInfo.appendChild(el('div', 'font-size:11px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', p.name));
+                var pInfo = el('div', 'cfe-product-info');
+                pInfo.appendChild(el('div', 'cfe-product-article', p.article));
+                pInfo.appendChild(el('div', 'cfe-product-name', p.name));
 
                 cb.addEventListener('change', function () {
                     if (cb.checked) {
@@ -598,7 +487,7 @@
                     } else {
                         slot.options = slot.options.filter(function (o) { return o.article !== p.article; });
                     }
-                    pRow.style.background = cb.checked ? '#f0fdf4' : '#fff';
+                    pRow.classList.toggle('cfe-product-row--selected', cb.checked);
                     renderChips();
                     updateSelectAllState();
                 });
@@ -609,11 +498,12 @@
             });
         }
 
-        var selectAllRow = el('div', 'display:none;margin-bottom:6px;');
+        var selectAllRow = el('div', 'cfe-select-all-row');
+        selectAllRow.style.display = 'none';
         var selectAllCb = document.createElement('input');
         selectAllCb.type = 'checkbox';
-        selectAllCb.style.cssText = 'margin:0 5px 0 0;accent-color:#16a34a;cursor:pointer;vertical-align:middle;';
-        var selectAllLbl = el('span', 'font-size:11px;color:#374151;cursor:pointer;vertical-align:middle;', 'Выбрать все');
+        selectAllCb.className = 'cfe-select-all-cb';
+        var selectAllLbl = el('span', 'cfe-select-all-lbl', 'Выбрать все');
         selectAllLbl.addEventListener('click', function () { selectAllCb.click(); });
         selectAllRow.appendChild(selectAllCb);
         selectAllRow.appendChild(selectAllLbl);
@@ -659,14 +549,14 @@
             if (!sid) {
                 searchInput.style.display = 'none';
                 selectAllRow.style.display = 'none';
-                if (productsListEl) { productsListEl.innerHTML = ''; productsListEl.style.cssText = ''; }
+                if (productsListEl) { productsListEl.innerHTML = ''; productsListEl.className = ''; }
                 return;
             }
             if (!productsListEl) {
-                productsListEl = el('div', '');
+                productsListEl = document.createElement('div');
                 browserArea.appendChild(productsListEl);
             }
-            productsListEl.style.cssText = 'font-size:11px;color:#9ca3af;padding:10px;';
+            productsListEl.className = 'cfe-products-empty';
             productsListEl.textContent = 'Загрузка...';
             searchInput.style.display = 'block';
             searchInput.value = '';
@@ -716,41 +606,21 @@
             removeDropdown();
             if (!results.length) return;
 
-            dropdown = document.createElement('div');
+            dropdown = el('div', 'cfe-dropdown');
             var rect = input.getBoundingClientRect();
-            dropdown.style.cssText = [
-                'position:fixed;z-index:1000000;',
-                'background:#fff;border:1px solid #d1d5db;border-radius:4px;',
-                'box-shadow:0 4px 12px rgba(0,0,0,0.12);',
-                'max-height:240px;overflow-y:auto;',
-                'width:' + input.offsetWidth + 'px;',
-                'top:' + rect.bottom + 'px;',
-                'left:' + rect.left + 'px;'
-            ].join('');
+            dropdown.style.width = input.offsetWidth + 'px';
+            dropdown.style.top   = rect.bottom + 'px';
+            dropdown.style.left  = rect.left + 'px';
 
             results.forEach(function (norm) {
-                var item = document.createElement('div');
-                item.style.cssText = 'padding:7px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:12px;';
-
-                var artSpan = document.createElement('span');
-                artSpan.style.cssText = 'font-weight:700;color:#1d4ed8;margin-right:8px;';
-                artSpan.textContent = norm.article || '—';
-
-                var nameSpan = document.createElement('span');
-                nameSpan.style.cssText = 'color:#374151;';
-                nameSpan.textContent = norm.name || '';
-
-                item.appendChild(artSpan);
-                item.appendChild(nameSpan);
-
-                item.addEventListener('mouseenter', function () { item.style.background = '#eff6ff'; });
-                item.addEventListener('mouseleave', function () { item.style.background = ''; });
+                var item = el('div', 'cfe-dropdown-item');
+                item.appendChild(el('span', 'cfe-dropdown-art', norm.article || '—'));
+                item.appendChild(el('span', 'cfe-dropdown-name', norm.name || ''));
                 item.addEventListener('mousedown', function (e) {
                     e.preventDefault();
                     onSelect(norm);
                     removeDropdown();
                 });
-
                 dropdown.appendChild(item);
             });
 
@@ -777,16 +647,12 @@
     // ===== FIELD BUILDER =====
 
     function buildField(label, value, placeholder) {
-        var wrap = el('div', 'margin-bottom:10px;');
-        var lbl = el('label', 'display:block;font-size:11px;color:#6b7280;margin-bottom:4px;font-weight:600;', label);
-        var input = el('input', [
-            'width:100%;padding:7px 10px;box-sizing:border-box;',
-            'border:1px solid #d1d5db;border-radius:4px;font-size:13px;'
-        ].join(''));
+        var wrap = el('div', 'cfe-field');
+        wrap.appendChild(el('label', 'cfe-field-label', label));
+        var input = el('input', 'cfe-field-input');
         input.type = 'text';
         input.value = value || '';
         if (placeholder) input.placeholder = placeholder;
-        wrap.appendChild(lbl);
         wrap.appendChild(input);
         return { wrap: wrap, input: input };
     }

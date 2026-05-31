@@ -24,6 +24,7 @@ function addCustomAssets() {
     $asset->addJs("/local/js/main_email_templates/main_email_templates.js");
 	
 	$asset->addJs("/local/grid_documents/menu.js");
+	$asset->addCss("/local/js/crystal/product_forms_editor.css");
 	$asset->addJs("/local/js/crystal/product_forms_editor.js");
 	$asset->addJs("/local/js/crystal/deal_product_forms.js");
 	$asset->addJs("/local/js/crystal/deal_hierarchy_panel.js");
