@@ -206,7 +206,7 @@
         if (!body || !_items) return;
 
         if (_items.length === 0) {
-            body.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:16px 8px;text-align:center;line-height:1.6;">'
+            body.innerHTML = '<div style="color:#9ca3af;font-size:14px;padding:16px 8px;text-align:center;line-height:1.6;">'
                 + 'Нет позиций.<br>Нажмите <b>+</b> чтобы добавить.</div>';
             return;
         }
@@ -231,7 +231,7 @@
                 hdr.style.cssText = 'display:flex;align-items:center;padding:7px 8px;background:#f8fafc;cursor:pointer;gap:5px;';
 
                 var arrow = document.createElement('span');
-                arrow.style.cssText = 'font-size:9px;color:#9ca3af;flex-shrink:0;transition:transform 0.15s;';
+                arrow.style.cssText = 'font-size:14px;color:#9ca3af;flex-shrink:0;transition:transform 0.15s;';
                 arrow.textContent = '▼';
 
                 var info = document.createElement('div');
@@ -239,7 +239,7 @@
 
                 var artLine = document.createElement('div');
                 artLine.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;';
-                artLine.appendChild(articleElDirect(item.article, item.bitrixId || null, 'font-size:12px;'));
+                artLine.appendChild(articleElDirect(item.article, item.bitrixId || null, 'font-size:14px;'));
 
                 // editable qty input (styled as badge)
                 var qtyInput = document.createElement('input');
@@ -248,7 +248,7 @@
                 qtyInput.value = item.qty || 1;
                 qtyInput.title = 'Количество (редактировать)';
                 qtyInput.style.cssText = [
-                    'width:48px;font-size:10px;font-weight:700;',
+                    'width:48px;font-size:14px;font-weight:700;',
                     'background:#dbeafe;color:#1d4ed8;',
                     'padding:1px 4px;border-radius:8px;',
                     'border:1px solid #93c5fd;text-align:center;',
@@ -292,7 +292,7 @@
                 priceInput.placeholder = '0';
                 priceInput.title = 'Цена (редактировать)';
                 priceInput.style.cssText = [
-                    'width:64px;font-size:10px;',
+                    'width:64px;font-size:14px;',
                     'background:#f0fdf4;color:#166534;',
                     'padding:1px 4px;border-radius:8px;',
                     'border:1px solid #86efac;text-align:right;'
@@ -315,7 +315,7 @@
                 });
 
                 var priceUnit = document.createElement('span');
-                priceUnit.style.cssText = 'font-size:10px;color:#166534;';
+                priceUnit.style.cssText = 'font-size:14px;color:#166534;';
                 priceUnit.textContent = 'EUR';
 
                 priceWrap.appendChild(priceInput);
@@ -323,7 +323,7 @@
                 artLine.appendChild(priceWrap);
 
                 var nameLine = document.createElement('div');
-                nameLine.style.cssText = 'font-size:11px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                nameLine.style.cssText = 'font-size:14px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
                 nameLine.title = item.name;
                 nameLine.textContent = item.name;
 
@@ -332,7 +332,7 @@
 
                 var delBtn = document.createElement('button');
                 delBtn.title = 'Удалить';
-                delBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:#ef4444;font-size:13px;padding:2px 4px;flex-shrink:0;line-height:1;opacity:0.5;';
+                delBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:#ef4444;font-size:15px;padding:2px 4px;flex-shrink:0;line-height:1;opacity:0.5;';
                 delBtn.textContent = '✕';
                 delBtn.addEventListener('click', function (e) {
                     e.stopPropagation();
@@ -371,16 +371,16 @@
 
                 comps.forEach(function (c, ci) {
                     var row = document.createElement('div');
-                    row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:3px 0;font-size:11px;'
+                    row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:3px 0;font-size:14px;'
                         + (ci < comps.length - 1 ? 'border-bottom:1px solid #f3f4f6;' : '');
 
                     var connector = document.createElement('span');
-                    connector.style.cssText = 'color:#d1d5db;flex-shrink:0;font-size:10px;';
+                    connector.style.cssText = 'color:#d1d5db;flex-shrink:0;font-size:14px;';
                     connector.textContent = ci === comps.length - 1 ? '└' : '├';
 
                     var cInfo = document.createElement('div');
                     cInfo.style.cssText = 'flex:1;min-width:0;display:flex;align-items:center;gap:5px;';
-                    cInfo.appendChild(articleElDirect(c.article, c.bitrixId, 'font-size:11px;'));
+                    cInfo.appendChild(articleElDirect(c.article, c.bitrixId, 'font-size:14px;'));
 
                     var cName = document.createElement('span');
                     cName.style.cssText = 'color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
@@ -441,7 +441,7 @@
             'display:flex;align-items:center;justify-content:space-between;',
             'padding:8px 10px;',
             'background:#1e40af;color:#fff;',
-            'font-size:13px;font-weight:700;'
+            'font-size:15px;font-weight:700;'
         ].join('');
 
         var title = document.createElement('span');
@@ -452,7 +452,7 @@
 
         var addBtn = document.createElement('button');
         addBtn.title = 'Добавить товар';
-        addBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 7px;cursor:pointer;font-size:14px;font-weight:700;line-height:1.4;';
+        addBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 7px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.4;';
         addBtn.textContent = '+';
         addBtn.addEventListener('click', function () {
             var dealId = getDealId();
@@ -471,7 +471,7 @@
 
         var refreshBtn = document.createElement('button');
         refreshBtn.title = 'Обновить';
-        refreshBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:12px;';
+        refreshBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:14px;';
         refreshBtn.textContent = '↻';
         refreshBtn.addEventListener('click', function () {
             _items = null;

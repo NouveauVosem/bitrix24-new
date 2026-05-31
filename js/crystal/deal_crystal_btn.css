@@ -4,14 +4,14 @@
 
 #crystal-delivery-hint {
     margin-bottom: 6px;
-    font-size: 12px;
+    font-size: 14px;
     color: #535c69;
 }
 
 #crystal-delivery-hint summary {
     cursor: pointer;
     color: #2066b0;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 #crystal-delivery-hint .crystal-hint-body {
@@ -23,7 +23,7 @@
 }
 
 #crystal-feedback .crystal-feedback-body {
-    font-size: 12px;
+    font-size: 14px;
     color: #535c69;
     line-height: 1.6;
     margin-top: 8px;

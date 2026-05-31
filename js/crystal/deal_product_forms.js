@@ -71,12 +71,12 @@
         ].join('');
 
         var closeBtn = document.createElement('button');
-        closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:#999;padding:4px 8px;line-height:1;';
+        closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px;line-height:1;';
         closeBtn.textContent = '✕';
         closeBtn.addEventListener('click', function () { overlay.remove(); });
 
         var title = document.createElement('div');
-        title.style.cssText = 'font-size:15px;font-weight:700;color:#222;margin-bottom:16px;padding-right:30px;';
+        title.style.cssText = 'font-size:17px;font-weight:700;color:#222;margin-bottom:16px;padding-right:30px;';
         title.textContent = 'Конфигуратор: ' + form.name;
 
         // quantity row
@@ -87,17 +87,17 @@
         ].join('');
 
         var qtyLabel = document.createElement('span');
-        qtyLabel.style.cssText = 'font-size:13px;font-weight:600;color:#333;flex:1;min-width:0;word-break:break-word;';
+        qtyLabel.style.cssText = 'font-size:15px;font-weight:600;color:#333;flex:1;min-width:0;word-break:break-word;';
         qtyLabel.textContent = productName;
 
         var qtyInput = document.createElement('input');
         qtyInput.type = 'number';
         qtyInput.min = '1';
         qtyInput.value = qty;
-        qtyInput.style.cssText = 'width:64px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:center;font-size:14px;font-weight:600;flex-shrink:0;';
+        qtyInput.style.cssText = 'width:64px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:center;font-size:16px;font-weight:600;flex-shrink:0;';
 
         var qtyUnit = document.createElement('span');
-        qtyUnit.style.cssText = 'color:#666;font-size:13px;flex-shrink:0;';
+        qtyUnit.style.cssText = 'color:#666;font-size:15px;flex-shrink:0;';
         qtyUnit.textContent = 'шт';
 
         qtyRow.appendChild(qtyLabel);
@@ -112,7 +112,7 @@
         var normCheckTimer = null;
 
         var normStatus = document.createElement('div');
-        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:none;';
+        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:none;';
 
         function getCurrentQty() {
             return Math.max(1, parseInt(qtyInput.value) || 1);
@@ -146,13 +146,13 @@
                         var priceText = resp.norm.draftPrice
                             ? ' · ' + parseFloat(resp.norm.draftPrice).toFixed(2) + ' EUR (черн.)'
                             : ' · цена не задана';
-                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
+                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
                         normStatus.textContent = '✓ Норма: ' + resp.norm.article + priceText;
                         if (resp.norm.draftPrice && !priceInput.value) {
                             priceInput.value = parseFloat(resp.norm.draftPrice).toFixed(2);
                         }
                     } else {
-                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:11px;display:block;background:#f9fafb;border:1px solid #e5e7eb;color:#6b7280;';
+                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f9fafb;border:1px solid #e5e7eb;color:#6b7280;';
                         normStatus.textContent = 'Будет создана новая норма: ' + form.article + '.XXXX';
                     }
                 })
@@ -166,7 +166,7 @@
 
             if (slots.length === 0) {
                 var noSlots = document.createElement('div');
-                noSlots.style.cssText = 'color:#888;font-size:12px;text-align:center;padding:12px;';
+                noSlots.style.cssText = 'color:#888;font-size:14px;text-align:center;padding:12px;';
                 noSlots.textContent = 'У этой формы нет слотов';
                 slotsContainer.appendChild(noSlots);
                 return;
@@ -180,11 +180,11 @@
                 header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;';
 
                 var slotName = document.createElement('span');
-                slotName.style.cssText = 'font-size:13px;font-weight:600;color:#111;';
+                slotName.style.cssText = 'font-size:15px;font-weight:600;color:#111;';
                 slotName.textContent = slot.name;
 
                 var badge = document.createElement('span');
-                badge.style.cssText = 'font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;' +
+                badge.style.cssText = 'font-size:14px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;' +
                     (slot.required
                         ? 'background:#fef3c7;color:#92400e;'
                         : 'background:#dcfce7;color:#166534;');
@@ -205,7 +205,7 @@
                 searchInput.style.cssText = [
                     'width:100%;box-sizing:border-box;padding:5px 9px;',
                     'border:1px solid #d1d5db;border-radius:4px 4px 0 0;border-bottom:none;',
-                    'font-size:12px;outline:none;color:#374151;background:#fafafa;'
+                    'font-size:14px;outline:none;color:#374151;background:#fafafa;'
                 ].join('');
 
                 // — scrollable options list
@@ -227,7 +227,7 @@
 
                     if (filtered.length === 0) {
                         var empty = document.createElement('div');
-                        empty.style.cssText = 'padding:10px;font-size:11px;color:#9ca3af;text-align:center;';
+                        empty.style.cssText = 'padding:10px;font-size:14px;color:#9ca3af;text-align:center;';
                         empty.textContent = 'Ничего не найдено';
                         optsDiv.appendChild(empty);
                         return;
@@ -241,7 +241,7 @@
                         var label = document.createElement('label');
                         label.style.cssText = [
                             'display:flex;align-items:center;gap:8px;cursor:pointer;',
-                            'padding:7px 10px;font-size:12px;user-select:none;',
+                            'padding:7px 10px;font-size:14px;user-select:none;',
                             'border-bottom:1px solid #f3f4f6;',
                             'background:' + (isSelected ? '#eff6ff' : '#fff') + ';',
                             'color:' + (isSelected ? '#1d4ed8' : '#374151') + ';'
@@ -264,7 +264,7 @@
 
                         if (opt.article && opt.id !== '__none__') {
                             var articleSpan = document.createElement('span');
-                            articleSpan.style.cssText = 'font-size:11px;color:#9ca3af;font-weight:600;flex-shrink:0;';
+                            articleSpan.style.cssText = 'font-size:14px;color:#9ca3af;font-weight:600;flex-shrink:0;';
                             articleSpan.textContent = opt.article;
                             textWrap.appendChild(articleSpan);
                         }
@@ -284,7 +284,7 @@
                 renderOpts('');
 
                 var qtyInfo = document.createElement('div');
-                qtyInfo.style.cssText = 'font-size:11px;margin-top:2px;';
+                qtyInfo.style.cssText = 'font-size:14px;margin-top:2px;';
 
                 var sel = selectedOptions[slot.id];
                 if (sel) {
@@ -319,7 +319,7 @@
         ].join('');
 
         var priceLabel = document.createElement('span');
-        priceLabel.style.cssText = 'font-size:13px;font-weight:600;color:#333;flex:1;';
+        priceLabel.style.cssText = 'font-size:15px;font-weight:600;color:#333;flex:1;';
         priceLabel.textContent = 'Цена за весь комплект';
 
         var priceInput = document.createElement('input');
@@ -327,13 +327,13 @@
         priceInput.min = '0';
         priceInput.step = '0.01';
         priceInput.placeholder = '0.00';
-        priceInput.style.cssText = 'width:100px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:right;font-size:14px;font-weight:600;flex-shrink:0;';
+        priceInput.style.cssText = 'width:100px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;text-align:right;font-size:16px;font-weight:600;flex-shrink:0;';
         if (presetNorm && presetNorm.draftPrice) {
             priceInput.value = parseFloat(presetNorm.draftPrice).toFixed(2);
         }
 
         var priceCurrency = document.createElement('span');
-        priceCurrency.style.cssText = 'color:#666;font-size:13px;flex-shrink:0;';
+        priceCurrency.style.cssText = 'color:#666;font-size:15px;flex-shrink:0;';
         priceCurrency.textContent = 'EUR';
 
         priceRow.appendChild(priceLabel);
@@ -350,7 +350,7 @@
         submitBtn.textContent = 'Добавить в заказ';
 
         var submitStatus = document.createElement('div');
-        submitStatus.style.cssText = 'font-size:12px;text-align:center;margin-top:8px;min-height:16px;';
+        submitStatus.style.cssText = 'font-size:14px;text-align:center;margin-top:8px;min-height:16px;';
 
         submitBtn.addEventListener('click', function () {
             var currentQty = getCurrentQty();
@@ -559,7 +559,7 @@
         toggleBar.style.cssText = [
             'cursor:pointer;padding:6px 10px;',
             'background:#0d6efd;color:#fff;',
-            'border-radius:4px;font-size:13px;font-weight:700;',
+            'border-radius:4px;font-size:15px;font-weight:700;',
             'user-select:none;display:flex;',
             'justify-content:space-between;align-items:center;margin-bottom:4px;'
         ].join('');
@@ -582,7 +582,7 @@
 
         function loadForms() {
             if (formsLoaded) return;
-            listDiv.style.cssText = 'font-size:12px;color:#888;padding:6px 0;';
+            listDiv.style.cssText = 'font-size:14px;color:#888;padding:6px 0;';
             listDiv.textContent = 'Загрузка...';
 
             fetch(CRYSTAL_BASE + '/api/product-forms', {
@@ -595,7 +595,7 @@
                 listDiv.innerHTML = '';
 
                 if (!Array.isArray(forms) || forms.length === 0) {
-                    listDiv.style.cssText = 'font-size:12px;color:#888;padding:6px 0;';
+                    listDiv.style.cssText = 'font-size:14px;color:#888;padding:6px 0;';
                     listDiv.textContent = 'Нет доступных форм';
                     return;
                 }
@@ -612,11 +612,11 @@
                     row1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:6px;';
 
                     var formName = document.createElement('span');
-                    formName.style.cssText = 'font-weight:600;color:#222;font-size:12px;';
+                    formName.style.cssText = 'font-weight:600;color:#222;font-size:14px;';
                     formName.textContent = form.name;
 
                     var slotBadge = document.createElement('span');
-                    slotBadge.style.cssText = 'font-size:10px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
+                    slotBadge.style.cssText = 'font-size:14px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
                     var slotCount = form.slots ? form.slots.length : (form.slotsCount || 0);
                     slotBadge.textContent = slotCount + ' слотов';
 
@@ -626,7 +626,7 @@
 
                     if (form.article) {
                         var row2 = document.createElement('div');
-                        row2.style.cssText = 'font-size:11px;color:#888;margin-top:2px;';
+                        row2.style.cssText = 'font-size:14px;color:#888;margin-top:2px;';
                         row2.textContent = form.article;
                         item.appendChild(row2);
                     }
@@ -651,7 +651,7 @@
             })
             .catch(function (err) {
                 formsLoaded = false;
-                listDiv.style.cssText = 'font-size:12px;color:#e53e3e;padding:6px 0;';
+                listDiv.style.cssText = 'font-size:14px;color:#e53e3e;padding:6px 0;';
                 listDiv.textContent = 'Ошибка загрузки';
                 console.error('[CrystalForms] load forms error:', err);
             });
@@ -686,12 +686,12 @@
         modal.style.cssText = 'background:#fff;border-radius:8px;padding:20px;max-width:420px;width:90vw;max-height:75vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;';
 
         var closeBtn = document.createElement('button');
-        closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:#999;padding:2px 6px;line-height:1;';
+        closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:2px 6px;line-height:1;';
         closeBtn.textContent = '✕';
         closeBtn.addEventListener('click', function () { overlay.remove(); });
 
         var titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:15px;font-weight:700;color:#222;margin-bottom:14px;padding-right:24px;';
+        titleEl.style.cssText = 'font-size:17px;font-weight:700;color:#222;margin-bottom:14px;padding-right:24px;';
         titleEl.textContent = 'Выберите форму товара';
 
         var manageBtn = document.createElement('button');
@@ -700,7 +700,7 @@
             'display:block;width:100%;margin-bottom:12px;',
             'background:#fff;border:1px solid #d1d5db;color:#374151;',
             'padding:7px 12px;border-radius:5px;',
-            'font-size:12px;cursor:pointer;text-align:left;'
+            'font-size:14px;cursor:pointer;text-align:left;'
         ].join('');
         manageBtn.addEventListener('click', function () {
             overlay.remove();
@@ -710,7 +710,7 @@
         });
 
         var listDiv = document.createElement('div');
-        listDiv.style.cssText = 'font-size:12px;color:#888;';
+        listDiv.style.cssText = 'font-size:14px;color:#888;';
         listDiv.textContent = 'Загрузка...';
 
         modal.appendChild(closeBtn);
@@ -729,7 +729,7 @@
             listDiv.style.cssText = '';
 
             if (!Array.isArray(forms) || forms.length === 0) {
-                listDiv.style.cssText = 'font-size:12px;color:#888;';
+                listDiv.style.cssText = 'font-size:14px;color:#888;';
                 listDiv.textContent = 'Нет доступных форм';
                 return;
             }
@@ -742,11 +742,11 @@
                 r1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
 
                 var nameEl = document.createElement('span');
-                nameEl.style.cssText = 'font-weight:600;color:#222;font-size:13px;';
+                nameEl.style.cssText = 'font-weight:600;color:#222;font-size:15px;';
                 nameEl.textContent = form.name;
 
                 var cnt = document.createElement('span');
-                cnt.style.cssText = 'font-size:10px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
+                cnt.style.cssText = 'font-size:14px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
                 cnt.textContent = (form.slots ? form.slots.length : 0) + ' слотов';
 
                 r1.appendChild(nameEl);
@@ -755,7 +755,7 @@
 
                 if (form.article) {
                     var r2 = document.createElement('div');
-                    r2.style.cssText = 'font-size:11px;color:#9ca3af;margin-top:2px;';
+                    r2.style.cssText = 'font-size:14px;color:#9ca3af;margin-top:2px;';
                     r2.textContent = form.article;
                     item.appendChild(r2);
                 }
@@ -776,14 +776,14 @@
 
             var backBtn = document.createElement('button');
             backBtn.textContent = '← Назад к формам';
-            backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;font-size:12px;cursor:pointer;padding:0 0 10px 0;display:block;';
+            backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;font-size:14px;cursor:pointer;padding:0 0 10px 0;display:block;';
             backBtn.addEventListener('click', function () { renderFormsList(savedForms); });
             listDiv.appendChild(backBtn);
 
             var newConfigItem = document.createElement('div');
             newConfigItem.style.cssText = 'padding:9px 11px;margin-bottom:8px;background:#f0fdf4;border-radius:5px;cursor:pointer;border:1px solid #86efac;';
             var newConfigSpan = document.createElement('span');
-            newConfigSpan.style.cssText = 'font-weight:600;color:#166534;font-size:13px;';
+            newConfigSpan.style.cssText = 'font-weight:600;color:#166534;font-size:15px;';
             newConfigSpan.textContent = '+ Новая конфигурация';
             newConfigItem.appendChild(newConfigSpan);
             newConfigItem.addEventListener('mouseenter', function () { newConfigItem.style.background = '#dcfce7'; });
@@ -795,7 +795,7 @@
             listDiv.appendChild(newConfigItem);
 
             var loadingEl = document.createElement('div');
-            loadingEl.style.cssText = 'font-size:12px;color:#888;padding:4px 0;';
+            loadingEl.style.cssText = 'font-size:14px;color:#888;padding:4px 0;';
             loadingEl.textContent = 'Загрузка норм...';
             listDiv.appendChild(loadingEl);
 
@@ -808,7 +808,7 @@
 
                 if (!Array.isArray(norms) || norms.length === 0) {
                     var emptyEl = document.createElement('div');
-                    emptyEl.style.cssText = 'font-size:12px;color:#9ca3af;padding:4px 0;';
+                    emptyEl.style.cssText = 'font-size:14px;color:#9ca3af;padding:4px 0;';
                     emptyEl.textContent = 'Сохранённых норм нет';
                     listDiv.appendChild(emptyEl);
                     return;
@@ -822,15 +822,15 @@
                     nr1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
 
                     var normArticleEl = document.createElement('span');
-                    normArticleEl.style.cssText = 'font-weight:600;color:#1d4ed8;font-size:12px;font-family:monospace;';
+                    normArticleEl.style.cssText = 'font-weight:600;color:#1d4ed8;font-size:14px;font-family:monospace;';
                     normArticleEl.textContent = norm.article;
 
                     var priceTag = document.createElement('span');
                     if (norm.draftPrice) {
-                        priceTag.style.cssText = 'font-size:11px;color:#166534;background:#dcfce7;padding:2px 7px;border-radius:8px;flex-shrink:0;font-weight:600;';
+                        priceTag.style.cssText = 'font-size:14px;color:#166534;background:#dcfce7;padding:2px 7px;border-radius:8px;flex-shrink:0;font-weight:600;';
                         priceTag.textContent = parseFloat(norm.draftPrice).toFixed(2) + ' EUR';
                     } else {
-                        priceTag.style.cssText = 'font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:8px;flex-shrink:0;';
+                        priceTag.style.cssText = 'font-size:14px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:8px;flex-shrink:0;';
                         priceTag.textContent = 'цена не задана';
                     }
 
@@ -839,7 +839,7 @@
                     normItem.appendChild(nr1);
 
                     var normNameEl = document.createElement('div');
-                    normNameEl.style.cssText = 'font-size:11px;color:#6b7280;margin-top:2px;';
+                    normNameEl.style.cssText = 'font-size:14px;color:#6b7280;margin-top:2px;';
                     normNameEl.textContent = norm.name;
                     normItem.appendChild(normNameEl);
 
@@ -849,7 +849,7 @@
                         slotsDiv.style.cssText = 'margin-top:6px;';
                         snapshot.forEach(function (entry) {
                             var line = document.createElement('div');
-                            line.style.cssText = 'font-size:12px;color:#374151;margin-top:3px;';
+                            line.style.cssText = 'font-size:14px;color:#374151;margin-top:3px;';
                             var slotSpan = document.createElement('span');
                             slotSpan.style.cssText = 'color:#9ca3af;';
                             slotSpan.textContent = entry.slotName + ' — ';
@@ -865,7 +865,7 @@
                     var delNormBtn = document.createElement('button');
                     delNormBtn.textContent = '✕';
                     delNormBtn.title = 'Удалить норму';
-                    delNormBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;color:#d1d5db;font-size:13px;cursor:pointer;padding:0;line-height:1;';
+                    delNormBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;color:#d1d5db;font-size:15px;cursor:pointer;padding:0;line-height:1;';
                     delNormBtn.addEventListener('mouseenter', function () { delNormBtn.style.color = '#dc2626'; });
                     delNormBtn.addEventListener('mouseleave', function () { delNormBtn.style.color = '#d1d5db'; });
                     delNormBtn.addEventListener('click', function (e) {
@@ -895,7 +895,7 @@
             .catch(function () {
                 if (listDiv.contains(loadingEl)) listDiv.removeChild(loadingEl);
                 var errEl = document.createElement('div');
-                errEl.style.cssText = 'font-size:12px;color:#dc2626;padding:4px 0;';
+                errEl.style.cssText = 'font-size:14px;color:#dc2626;padding:4px 0;';
                 errEl.textContent = 'Ошибка загрузки норм';
                 listDiv.appendChild(errEl);
             });
