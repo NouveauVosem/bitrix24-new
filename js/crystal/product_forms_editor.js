@@ -377,8 +377,8 @@
         onAddPreset = function (preset) {
             slots.push({
                 name: preset.name,
-                required: true,
-                quantityPerUnit: 1,
+                required: preset.required !== undefined ? !!preset.required : true,
+                quantityPerUnit: parseInt(preset.quantityPerUnit) || 1,
                 options: (preset.options || []).map(function (o) {
                     return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
                 })
@@ -469,7 +469,7 @@
                 if (!name || !name.trim()) return;
                 savePresetBtn.disabled = true;
                 savePresetBtn.textContent = '...';
-                savePreset(true, null, { name: name.trim(), options: slot.options },
+                savePreset(true, null, { name: name.trim(), required: slot.required, quantityPerUnit: slot.quantityPerUnit, options: slot.options },
                     function () {
                         savePresetBtn.textContent = '✓';
                         onPresetSaved();
