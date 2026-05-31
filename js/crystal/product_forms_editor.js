@@ -125,7 +125,20 @@
             listEl.className = 'cfe-presets-list';
             filtered.forEach(function (preset) {
                 var card = el('div', 'cfe-preset-card');
-                card.appendChild(el('div', 'cfe-preset-card-name', preset.name));
+                var cardTop = el('div', 'cfe-preset-card-top');
+                cardTop.appendChild(el('div', 'cfe-preset-card-name', preset.name));
+                var delBtn = el('button', 'cfe-preset-del-btn', '✕');
+                delBtn.title = 'Удалить пресет';
+                delBtn.addEventListener('click', function () {
+                    if (!confirm('Удалить пресет "' + preset.name + '"?')) return;
+                    delBtn.disabled = true;
+                    deletePresetApi(preset.id, reloadPresets, function () {
+                        alert('Ошибка при удалении');
+                        delBtn.disabled = false;
+                    });
+                });
+                cardTop.appendChild(delBtn);
+                card.appendChild(cardTop);
                 card.appendChild(el('div', 'cfe-preset-card-count', (preset.options ? preset.options.length : 0) + ' опций'));
                 var addBtn = el('button', 'cfe-preset-add-btn', '+ В форму');
                 addBtn.addEventListener('click', function () { onAddPreset(preset); });
@@ -146,9 +159,6 @@
 
         var header = el('div', 'cfe-presets-header');
         header.appendChild(el('span', 'cfe-presets-title', 'Пресеты слотов'));
-        var manageBtn = el('button', 'cfe-presets-manage-btn', 'Управлять →');
-        manageBtn.addEventListener('click', function () { openPresetManager(reloadPresets); });
-        header.appendChild(manageBtn);
         panel.appendChild(header);
 
         var searchInput = el('input', 'cfe-presets-search');
@@ -161,7 +171,7 @@
         panel.appendChild(listEl);
 
         reloadPresets();
-        return panel;
+        return { element: panel, reload: reloadPresets };
     }
 
     // ===== OPEN MANAGER =====
@@ -301,9 +311,11 @@
 
         // — preset callback (assigned after slots/rebuildSlotsUI are ready)
         var onAddPreset = null;
-        layout.appendChild(buildPresetsPanel(function (preset) {
+        var presetsPanelData = buildPresetsPanel(function (preset) {
             if (onAddPreset) onAddPreset(preset);
-        }));
+        });
+        layout.appendChild(presetsPanelData.element);
+        var onPresetSaved = function () { presetsPanelData.reload(); };
 
         // — form panel
         var formPanel = el('div', 'cfe-form-panel');
@@ -360,7 +372,7 @@
         function rebuildSlotsUI() {
             slotsContainer.innerHTML = '';
             slots.forEach(function (slot, idx) {
-                slotsContainer.appendChild(buildSlotCard(slot, idx, slots, rebuildSlotsUI));
+                slotsContainer.appendChild(buildSlotCard(slot, idx, slots, rebuildSlotsUI, onPresetSaved));
             });
         }
         rebuildSlotsUI();
@@ -443,174 +455,53 @@
         body.appendChild(layout);
     }
 
-    // ===== PRESET MANAGER =====
-
-    function openPresetManager(onClose) {
-        var existing = document.getElementById('cfe-preset-overlay');
-        if (existing) existing.remove();
-
-        var overlay = el('div', 'cfe-overlay');
-        overlay.id = 'cfe-preset-overlay';
-        overlay.style.zIndex = '1000001';
-
-        var modal = el('div', 'cfe-modal');
-        modal.style.width = '640px';
-
-        var header = el('div', 'cfe-modal-header');
-        var headerLeft = el('div', 'cfe-modal-header-left');
-        var headerTitle = el('div', 'cfe-modal-title', 'Пресеты слотов');
-        headerLeft.appendChild(headerTitle);
-        var closeBtn = el('button', 'cfe-close-btn', '✕');
-        closeBtn.addEventListener('click', function () { overlay.remove(); if (onClose) onClose(); });
-        header.appendChild(headerLeft);
-        header.appendChild(closeBtn);
-
-        var body = el('div', 'cfe-modal-body');
-        modal.appendChild(header);
-        modal.appendChild(body);
-        overlay.appendChild(modal);
-
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) { overlay.remove(); if (onClose) onClose(); }
-        });
-
-        document.body.appendChild(overlay);
-        showPresetListView(headerTitle, body, overlay, onClose);
-    }
-
-    function showPresetListView(headerTitle, body, overlay, onClose) {
-        headerTitle.textContent = 'Пресеты слотов';
-        body.innerHTML = '';
-
-        var toolbar = el('div', 'cfe-toolbar');
-        var createBtn = el('button', 'cfe-create-btn', '+ Создать пресет');
-        createBtn.addEventListener('click', function () {
-            showPresetEditorView(headerTitle, body, null, function () {
-                showPresetListView(headerTitle, body, overlay, onClose);
-            });
-        });
-        toolbar.appendChild(createBtn);
-        body.appendChild(toolbar);
-
-        var listArea = el('div', 'cfe-list-empty', 'Загрузка...');
-        body.appendChild(listArea);
-
-        loadPresets(function (err, presets) {
-            if (err) { listArea.className = 'cfe-list-error'; listArea.textContent = 'Ошибка загрузки'; return; }
-            listArea.innerHTML = '';
-            listArea.className = '';
-
-            if (presets.length === 0) {
-                listArea.className = 'cfe-list-empty--center';
-                listArea.textContent = 'Пресетов пока нет. Создайте первый!';
-                return;
-            }
-
-            presets.forEach(function (preset) {
-                var row = el('div', 'cfe-form-row');
-                var info = el('div', 'cfe-form-info');
-                info.appendChild(el('div', 'cfe-form-name', preset.name));
-                info.appendChild(el('div', 'cfe-form-meta', (preset.options ? preset.options.length : 0) + ' опций'));
-
-                var editBtn = el('button', 'cfe-edit-btn', 'Редактировать');
-                editBtn.addEventListener('click', function () {
-                    showPresetEditorView(headerTitle, body, preset, function () {
-                        showPresetListView(headerTitle, body, overlay, onClose);
-                    });
-                });
-
-                var delBtn = el('button', 'cfe-del-btn', 'Удалить');
-                delBtn.addEventListener('click', function () {
-                    if (!confirm('Удалить пресет "' + preset.name + '"?')) return;
-                    delBtn.disabled = true;
-                    deletePresetApi(preset.id,
-                        function () { showPresetListView(headerTitle, body, overlay, onClose); },
-                        function () { alert('Ошибка при удалении'); delBtn.disabled = false; }
-                    );
-                });
-
-                row.appendChild(info);
-                row.appendChild(editBtn);
-                row.appendChild(delBtn);
-                listArea.appendChild(row);
-            });
-        });
-    }
-
-    function showPresetEditorView(headerTitle, body, existingPreset, onBack) {
-        var isNew = !existingPreset;
-        headerTitle.textContent = isNew ? 'Создать пресет' : 'Редактировать пресет';
-        body.innerHTML = '';
-
-        var backBtn = el('button', 'cfe-editor-back', '← Назад');
-        backBtn.addEventListener('click', onBack);
-        body.appendChild(backBtn);
-
-        var nameGroup = buildField('Название пресета', existingPreset ? existingPreset.name : '', 'Например: Колёса передние 100-125');
-        body.appendChild(nameGroup.wrap);
-
-        var optionsLabel = el('div', 'cfe-slots-label', 'Опции пресета');
-        optionsLabel.style.marginTop = '16px';
-        body.appendChild(optionsLabel);
-
-        var fakeSlot = {
-            options: (existingPreset && Array.isArray(existingPreset.options))
-                ? existingPreset.options.map(function (o) {
-                    return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
-                  })
-                : []
-        };
-        body.appendChild(buildOptionsSection(fakeSlot));
-
-        var footer = el('div', 'cfe-footer');
-        var saveStatus = el('div', 'cfe-save-status');
-        var saveBtn = el('button', 'cfe-save-btn', isNew ? 'Создать пресет' : 'Сохранить изменения');
-
-        saveBtn.addEventListener('click', function () {
-            var name = nameGroup.input.value.trim();
-            if (!name) {
-                saveStatus.className = 'cfe-save-status cfe-save-status--err';
-                saveStatus.textContent = 'Введите название пресета';
-                return;
-            }
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Сохранение...';
-            saveStatus.textContent = '';
-
-            savePreset(isNew, existingPreset ? existingPreset.id : null,
-                { name: name, options: fakeSlot.options },
-                function () {
-                    saveBtn.textContent = '✓ Сохранено';
-                    saveStatus.className = 'cfe-save-status cfe-save-status--ok';
-                    setTimeout(onBack, 900);
-                },
-                function () {
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = isNew ? 'Создать пресет' : 'Сохранить изменения';
-                    saveStatus.className = 'cfe-save-status cfe-save-status--err';
-                    saveStatus.textContent = 'Ошибка сохранения';
-                }
-            );
-        });
-
-        footer.appendChild(saveBtn);
-        footer.appendChild(saveStatus);
-        body.appendChild(footer);
-    }
-
     // ===== SLOT CARD =====
 
-    function buildSlotCard(slot, idx, allSlots, rebuildSlotsUI) {
+    function buildSlotCard(slot, idx, allSlots, rebuildSlotsUI, onPresetSaved) {
         var card = el('div', 'cfe-slot-card');
 
         var cardHeader = el('div', 'cfe-slot-card-header');
         cardHeader.appendChild(el('div', 'cfe-slot-card-title', 'Слот ' + (idx + 1)));
+
+        var headerActions = el('div', 'cfe-slot-card-actions');
+
+        if (onPresetSaved) {
+            var savePresetBtn = el('button', 'cfe-save-preset-btn', 'Сохр. пресет');
+            savePresetBtn.addEventListener('click', function () {
+                var defaultName = slot.name || ('Пресет ' + (idx + 1));
+                var name = window.prompt('Название пресета:', defaultName);
+                if (!name || !name.trim()) return;
+                savePresetBtn.disabled = true;
+                savePresetBtn.textContent = '...';
+                savePreset(true, null, { name: name.trim(), options: slot.options },
+                    function () {
+                        savePresetBtn.textContent = '✓';
+                        onPresetSaved();
+                        setTimeout(function () {
+                            savePresetBtn.textContent = 'Сохр. пресет';
+                            savePresetBtn.disabled = false;
+                        }, 1500);
+                    },
+                    function () {
+                        savePresetBtn.textContent = 'Ошибка';
+                        setTimeout(function () {
+                            savePresetBtn.textContent = 'Сохр. пресет';
+                            savePresetBtn.disabled = false;
+                        }, 1500);
+                    }
+                );
+            });
+            headerActions.appendChild(savePresetBtn);
+        }
+
         var delSlotBtn = el('button', 'cfe-del-slot-btn', 'Удалить слот');
         delSlotBtn.addEventListener('click', function () {
             allSlots.splice(idx, 1);
             rebuildSlotsUI();
         });
-        cardHeader.appendChild(delSlotBtn);
+        headerActions.appendChild(delSlotBtn);
+
+        cardHeader.appendChild(headerActions);
         card.appendChild(cardHeader);
 
         var nameGroup = buildField('Название слота', slot.name, 'Например: Пружина');

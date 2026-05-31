@@ -116,9 +116,8 @@
 .cfe-form-panel         { flex: 1; overflow-y: auto; padding: 16px 20px; }
 
 /* ===== PRESETS PANEL ===== */
-.cfe-presets-header     { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+.cfe-presets-header     { padding: 11px 14px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
 .cfe-presets-title      { font-size: 12px; font-weight: 700; color: #374151; }
-.cfe-presets-manage-btn { background: none; border: none; color: #3b82f6; font-size: 11px; cursor: pointer; padding: 0; white-space: nowrap; }
 .cfe-presets-search     { width: 100%; box-sizing: border-box; padding: 8px 12px; border: none; border-bottom: 1px solid #e5e7eb; font-size: 12px; outline: none; flex-shrink: 0; background: #f9fafb; }
 .cfe-presets-list       { flex: 1; overflow-y: auto; padding: 8px; }
 .cfe-presets-loading,
@@ -127,7 +126,15 @@
 
 /* ===== PRESET CARD ===== */
 .cfe-preset-card        { padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 6px; background: #fff; }
-.cfe-preset-card-name   { font-size: 12px; font-weight: 600; color: #111; margin-bottom: 2px; }
+.cfe-preset-card-top    { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2px; }
+.cfe-preset-card-name   { font-size: 12px; font-weight: 600; color: #111; flex: 1; min-width: 0; }
+.cfe-preset-del-btn     { background: none; border: none; color: #d1d5db; font-size: 12px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; }
+.cfe-preset-del-btn:hover { color: #dc2626; }
 .cfe-preset-card-count  { font-size: 11px; color: #9ca3af; margin-bottom: 7px; }
 .cfe-preset-add-btn     { width: 100%; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 5px 0; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .cfe-preset-add-btn:hover { background: #dbeafe; }
+
+/* ===== SAVE AS PRESET (slot card) ===== */
+.cfe-slot-card-actions  { display: flex; align-items: center; gap: 8px; }
+.cfe-save-preset-btn    { background: none; border: 1px solid #d1d5db; color: #6b7280; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.cfe-save-preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
