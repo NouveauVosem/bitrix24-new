@@ -71,6 +71,25 @@
             .catch(function () { cb([]); });
     }
 
+    // ===== SLOT PRESET API =====
+
+    function loadPresets(cb) {
+        crystalFetch('GET', '/api/slot-presets')
+            .then(function (data) { cb(null, Array.isArray(data) ? data : []); })
+            .catch(function (e) { cb(e, []); });
+    }
+
+    function savePreset(isNew, existingId, data, onSuccess, onError) {
+        var p = isNew
+            ? crystalFetch('POST', '/api/slot-presets', data)
+            : crystalFetch('PUT', '/api/slot-presets/' + existingId, data);
+        p.then(onSuccess).catch(onError);
+    }
+
+    function deletePresetApi(id, onSuccess, onError) {
+        crystalFetch('DELETE', '/api/slot-presets/' + id).then(onSuccess).catch(onError);
+    }
+
     // ===== DOM HELPERS =====
 
     function el(tag, cls, text) {
@@ -84,6 +103,65 @@
         var s = '';
         for (var i = 0; i < n; i++) s += ' ';
         return s;
+    }
+
+    // ===== PRESETS PANEL =====
+
+    function buildPresetsPanel(onAddPreset) {
+        var panel = el('div', 'cfe-presets-panel');
+        var allPresets = [];
+
+        function renderPresets() {
+            var q = searchInput.value.toLowerCase();
+            var filtered = allPresets.filter(function (p) {
+                return !q || p.name.toLowerCase().indexOf(q) !== -1;
+            });
+            listEl.innerHTML = '';
+            if (filtered.length === 0) {
+                listEl.className = 'cfe-presets-empty';
+                listEl.textContent = allPresets.length === 0 ? 'Пресетов пока нет' : 'Ничего не найдено';
+                return;
+            }
+            listEl.className = 'cfe-presets-list';
+            filtered.forEach(function (preset) {
+                var card = el('div', 'cfe-preset-card');
+                card.appendChild(el('div', 'cfe-preset-card-name', preset.name));
+                card.appendChild(el('div', 'cfe-preset-card-count', (preset.options ? preset.options.length : 0) + ' опций'));
+                var addBtn = el('button', 'cfe-preset-add-btn', '+ В форму');
+                addBtn.addEventListener('click', function () { onAddPreset(preset); });
+                card.appendChild(addBtn);
+                listEl.appendChild(card);
+            });
+        }
+
+        function reloadPresets() {
+            listEl.className = 'cfe-presets-loading';
+            listEl.textContent = 'Загрузка...';
+            loadPresets(function (err, presets) {
+                if (err) { listEl.className = 'cfe-presets-error'; listEl.textContent = 'Ошибка загрузки'; return; }
+                allPresets = presets;
+                renderPresets();
+            });
+        }
+
+        var header = el('div', 'cfe-presets-header');
+        header.appendChild(el('span', 'cfe-presets-title', 'Пресеты слотов'));
+        var manageBtn = el('button', 'cfe-presets-manage-btn', 'Управлять →');
+        manageBtn.addEventListener('click', function () { openPresetManager(reloadPresets); });
+        header.appendChild(manageBtn);
+        panel.appendChild(header);
+
+        var searchInput = el('input', 'cfe-presets-search');
+        searchInput.placeholder = 'Поиск...';
+        searchInput.addEventListener('input', renderPresets);
+        panel.appendChild(searchInput);
+
+        var listEl = el('div', 'cfe-presets-loading');
+        listEl.textContent = 'Загрузка...';
+        panel.appendChild(listEl);
+
+        reloadPresets();
+        return panel;
     }
 
     // ===== OPEN MANAGER =====
@@ -133,6 +211,7 @@
 
     function showListView(headerTitle, body, overlay) {
         headerTitle.textContent = 'Управление формами';
+        body.classList.remove('cfe-modal-body--split');
         body.innerHTML = '';
 
         var toolbar = el('div', 'cfe-toolbar');
@@ -216,13 +295,28 @@
         var isNew = !existingForm;
         headerTitle.textContent = isNew ? 'Создать форму' : 'Редактировать форму';
         body.innerHTML = '';
+        body.classList.add('cfe-modal-body--split');
+
+        var layout = el('div', 'cfe-editor-layout');
+
+        // — preset callback (assigned after slots/rebuildSlotsUI are ready)
+        var onAddPreset = null;
+        layout.appendChild(buildPresetsPanel(function (preset) {
+            if (onAddPreset) onAddPreset(preset);
+        }));
+
+        // — form panel
+        var formPanel = el('div', 'cfe-form-panel');
 
         var backBtn = el('button', 'cfe-editor-back', '← Назад');
-        backBtn.addEventListener('click', onBack);
-        body.appendChild(backBtn);
+        backBtn.addEventListener('click', function () {
+            body.classList.remove('cfe-modal-body--split');
+            onBack();
+        });
+        formPanel.appendChild(backBtn);
 
         var nameGroup = buildField('Название формы', existingForm ? existingForm.name : '', 'Например: Тележка ML-T');
-        body.appendChild(nameGroup.wrap);
+        formPanel.appendChild(nameGroup.wrap);
         attachNormSearch(nameGroup.input, function (norm) {
             nameGroup.input.value     = norm.name    || '';
             articleGroup.input.value  = norm.article || '';
@@ -230,7 +324,7 @@
         });
 
         var articleGroup = buildField('Артикул главного товара', existingForm ? (existingForm.article || '') : '', 'Например: 11.1565.5');
-        body.appendChild(articleGroup.wrap);
+        formPanel.appendChild(articleGroup.wrap);
         attachNormSearch(articleGroup.input, function (norm) {
             articleGroup.input.value  = norm.article || '';
             nameGroup.input.value     = norm.name    || '';
@@ -239,7 +333,7 @@
 
         var bitrixIdGroup = buildField('ID товара в Битрикс', existingForm ? (existingForm.bitrixId || '') : '', 'Заполняется автоматически при выборе из поиска');
         bitrixIdGroup.input.type = 'number';
-        body.appendChild(bitrixIdGroup.wrap);
+        formPanel.appendChild(bitrixIdGroup.wrap);
 
         var slotsWrap = el('div', 'cfe-slots-wrap');
         slotsWrap.appendChild(el('div', 'cfe-slots-label', 'Слоты'));
@@ -257,7 +351,7 @@
                     required: s.required !== false,
                     quantityPerUnit: parseInt(s.quantityPerUnit) || 1,
                     options: (s.options || []).map(function (o) {
-                        return { article: o.article, name: o.name };
+                        return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
                     })
                 });
             });
@@ -271,13 +365,27 @@
         }
         rebuildSlotsUI();
 
-        var addSlotBtn = el('button', 'cfe-add-slot-btn', '+ Добавить слот');
+        // — wire preset callback now that slots + rebuildSlotsUI exist
+        onAddPreset = function (preset) {
+            slots.push({
+                name: preset.name,
+                required: true,
+                quantityPerUnit: 1,
+                options: (preset.options || []).map(function (o) {
+                    return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
+                })
+            });
+            rebuildSlotsUI();
+            setTimeout(function () { formPanel.scrollTop = formPanel.scrollHeight; }, 50);
+        };
+
+        var addSlotBtn = el('button', 'cfe-add-slot-btn', '+ Добавить пустой слот');
         addSlotBtn.addEventListener('click', function () {
             slots.push({ name: '', required: true, quantityPerUnit: 1, options: [] });
             rebuildSlotsUI();
         });
         slotsWrap.appendChild(addSlotBtn);
-        body.appendChild(slotsWrap);
+        formPanel.appendChild(slotsWrap);
 
         var footer = el('div', 'cfe-footer');
         var saveStatus = el('div', 'cfe-save-status');
@@ -313,11 +421,172 @@
                 function () {
                     saveBtn.textContent = '✓ Сохранено';
                     saveStatus.className = 'cfe-save-status cfe-save-status--ok';
-                    setTimeout(onBack, 900);
+                    setTimeout(function () {
+                        body.classList.remove('cfe-modal-body--split');
+                        onBack();
+                    }, 900);
                 },
                 function () {
                     saveBtn.disabled = false;
                     saveBtn.textContent = isNew ? 'Создать форму' : 'Сохранить изменения';
+                    saveStatus.className = 'cfe-save-status cfe-save-status--err';
+                    saveStatus.textContent = 'Ошибка сохранения';
+                }
+            );
+        });
+
+        footer.appendChild(saveBtn);
+        footer.appendChild(saveStatus);
+        formPanel.appendChild(footer);
+
+        layout.appendChild(formPanel);
+        body.appendChild(layout);
+    }
+
+    // ===== PRESET MANAGER =====
+
+    function openPresetManager(onClose) {
+        var existing = document.getElementById('cfe-preset-overlay');
+        if (existing) existing.remove();
+
+        var overlay = el('div', 'cfe-overlay');
+        overlay.id = 'cfe-preset-overlay';
+        overlay.style.zIndex = '1000001';
+
+        var modal = el('div', 'cfe-modal');
+        modal.style.width = '640px';
+
+        var header = el('div', 'cfe-modal-header');
+        var headerLeft = el('div', 'cfe-modal-header-left');
+        var headerTitle = el('div', 'cfe-modal-title', 'Пресеты слотов');
+        headerLeft.appendChild(headerTitle);
+        var closeBtn = el('button', 'cfe-close-btn', '✕');
+        closeBtn.addEventListener('click', function () { overlay.remove(); if (onClose) onClose(); });
+        header.appendChild(headerLeft);
+        header.appendChild(closeBtn);
+
+        var body = el('div', 'cfe-modal-body');
+        modal.appendChild(header);
+        modal.appendChild(body);
+        overlay.appendChild(modal);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) { overlay.remove(); if (onClose) onClose(); }
+        });
+
+        document.body.appendChild(overlay);
+        showPresetListView(headerTitle, body, overlay, onClose);
+    }
+
+    function showPresetListView(headerTitle, body, overlay, onClose) {
+        headerTitle.textContent = 'Пресеты слотов';
+        body.innerHTML = '';
+
+        var toolbar = el('div', 'cfe-toolbar');
+        var createBtn = el('button', 'cfe-create-btn', '+ Создать пресет');
+        createBtn.addEventListener('click', function () {
+            showPresetEditorView(headerTitle, body, null, function () {
+                showPresetListView(headerTitle, body, overlay, onClose);
+            });
+        });
+        toolbar.appendChild(createBtn);
+        body.appendChild(toolbar);
+
+        var listArea = el('div', 'cfe-list-empty', 'Загрузка...');
+        body.appendChild(listArea);
+
+        loadPresets(function (err, presets) {
+            if (err) { listArea.className = 'cfe-list-error'; listArea.textContent = 'Ошибка загрузки'; return; }
+            listArea.innerHTML = '';
+            listArea.className = '';
+
+            if (presets.length === 0) {
+                listArea.className = 'cfe-list-empty--center';
+                listArea.textContent = 'Пресетов пока нет. Создайте первый!';
+                return;
+            }
+
+            presets.forEach(function (preset) {
+                var row = el('div', 'cfe-form-row');
+                var info = el('div', 'cfe-form-info');
+                info.appendChild(el('div', 'cfe-form-name', preset.name));
+                info.appendChild(el('div', 'cfe-form-meta', (preset.options ? preset.options.length : 0) + ' опций'));
+
+                var editBtn = el('button', 'cfe-edit-btn', 'Редактировать');
+                editBtn.addEventListener('click', function () {
+                    showPresetEditorView(headerTitle, body, preset, function () {
+                        showPresetListView(headerTitle, body, overlay, onClose);
+                    });
+                });
+
+                var delBtn = el('button', 'cfe-del-btn', 'Удалить');
+                delBtn.addEventListener('click', function () {
+                    if (!confirm('Удалить пресет "' + preset.name + '"?')) return;
+                    delBtn.disabled = true;
+                    deletePresetApi(preset.id,
+                        function () { showPresetListView(headerTitle, body, overlay, onClose); },
+                        function () { alert('Ошибка при удалении'); delBtn.disabled = false; }
+                    );
+                });
+
+                row.appendChild(info);
+                row.appendChild(editBtn);
+                row.appendChild(delBtn);
+                listArea.appendChild(row);
+            });
+        });
+    }
+
+    function showPresetEditorView(headerTitle, body, existingPreset, onBack) {
+        var isNew = !existingPreset;
+        headerTitle.textContent = isNew ? 'Создать пресет' : 'Редактировать пресет';
+        body.innerHTML = '';
+
+        var backBtn = el('button', 'cfe-editor-back', '← Назад');
+        backBtn.addEventListener('click', onBack);
+        body.appendChild(backBtn);
+
+        var nameGroup = buildField('Название пресета', existingPreset ? existingPreset.name : '', 'Например: Колёса передние 100-125');
+        body.appendChild(nameGroup.wrap);
+
+        var optionsLabel = el('div', 'cfe-slots-label', 'Опции пресета');
+        optionsLabel.style.marginTop = '16px';
+        body.appendChild(optionsLabel);
+
+        var fakeSlot = {
+            options: (existingPreset && Array.isArray(existingPreset.options))
+                ? existingPreset.options.map(function (o) {
+                    return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
+                  })
+                : []
+        };
+        body.appendChild(buildOptionsSection(fakeSlot));
+
+        var footer = el('div', 'cfe-footer');
+        var saveStatus = el('div', 'cfe-save-status');
+        var saveBtn = el('button', 'cfe-save-btn', isNew ? 'Создать пресет' : 'Сохранить изменения');
+
+        saveBtn.addEventListener('click', function () {
+            var name = nameGroup.input.value.trim();
+            if (!name) {
+                saveStatus.className = 'cfe-save-status cfe-save-status--err';
+                saveStatus.textContent = 'Введите название пресета';
+                return;
+            }
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Сохранение...';
+            saveStatus.textContent = '';
+
+            savePreset(isNew, existingPreset ? existingPreset.id : null,
+                { name: name, options: fakeSlot.options },
+                function () {
+                    saveBtn.textContent = '✓ Сохранено';
+                    saveStatus.className = 'cfe-save-status cfe-save-status--ok';
+                    setTimeout(onBack, 900);
+                },
+                function () {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = isNew ? 'Создать пресет' : 'Сохранить изменения';
                     saveStatus.className = 'cfe-save-status cfe-save-status--err';
                     saveStatus.textContent = 'Ошибка сохранения';
                 }
