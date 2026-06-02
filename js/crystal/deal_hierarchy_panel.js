@@ -206,8 +206,8 @@
         if (!body || !_items) return;
 
         if (_items.length === 0) {
-            body.innerHTML = '<div style="color:#9ca3af;font-size:14px;padding:16px 8px;text-align:center;line-height:1.6;">'
-                + 'Нет позиций.<br>Нажмите <b>+</b> чтобы добавить.</div>';
+            body.innerHTML = '<div style="color:#9ca3af;font-size:14px;padding:12px 16px;line-height:1.6;">'
+                + 'Нет позиций. Нажмите <b>+</b> чтобы добавить.</div>';
             return;
         }
 
@@ -224,7 +224,7 @@
 
             _items.forEach(function (item, idx) {
                 var card = document.createElement('div');
-                card.style.cssText = 'margin-bottom:6px;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
+                card.style.cssText = 'width:240px;flex-shrink:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
 
                 // --- header ---
                 var hdr = document.createElement('div');
@@ -422,18 +422,11 @@
 
         var gridNode = document.body.querySelector('[id^="CCrmEntityProductListComponent"]');
         if (!gridNode) return;
-        var gridParent = gridNode.parentElement;
-        if (!gridParent) return;
-
-        // flex wrapper
-        var flex = document.createElement('div');
-        flex.id = 'cdh-flex-wrapper';
-        flex.style.cssText = 'display:flex;align-items:flex-start;';
 
         // panel
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
-        panel.style.cssText = 'width:270px;flex-shrink:0;border-right:2px solid #e5e7eb;background:#fff;';
+        panel.style.cssText = 'border-top:2px solid #e5e7eb;background:#fff;';
 
         // panel header
         var panelHdr = document.createElement('div');
@@ -486,19 +479,12 @@
         // panel body
         var panelBody = document.createElement('div');
         panelBody.id = 'cdh-body';
-        panelBody.style.cssText = 'padding:6px;overflow-y:auto;max-height:70vh;';
+        panelBody.style.cssText = 'padding:8px;display:flex;flex-wrap:wrap;gap:8px;overflow-x:auto;';
 
         panel.appendChild(panelHdr);
         panel.appendChild(panelBody);
 
-        // grid gets remaining space
-        var gridWrap = document.createElement('div');
-        gridWrap.style.cssText = 'flex:1;min-width:0;overflow-x:auto;';
-
-        gridParent.insertBefore(flex, gridNode);
-        flex.appendChild(panel);
-        flex.appendChild(gridWrap);
-        gridWrap.appendChild(gridNode);
+        gridNode.parentNode.insertBefore(panel, gridNode.nextSibling);
 
         loadItems(function () { renderBody(); });
     }
