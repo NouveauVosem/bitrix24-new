@@ -46,6 +46,25 @@ if ($action === 'get') {
         }
     }
 
+    // Resolve missing bitrixId via Crystal API
+    foreach ($items as &$item) {
+        if (!empty($item['bitrixId'])) continue;
+        $normId = $item['normId'] ?? null;
+        if (!$normId) continue;
+        $ctx = stream_context_create(['http' => [
+            'method'  => 'GET',
+            'header'  => 'X-Api-Key: legenda' . "\r\n",
+            'timeout' => 5,
+        ]]);
+        $raw = @file_get_contents('https://crystal.alvla.tools/api/product-form-norms/' . urlencode($normId), false, $ctx);
+        if ($raw) {
+            $norm = json_decode($raw, true);
+            $bid  = (int)($norm['template']['bitrixId'] ?? 0);
+            if ($bid) $item['bitrixId'] = $bid;
+        }
+    }
+    unset($item);
+
     echo json_encode([
         'status'     => 'success',
         'items'      => $items,

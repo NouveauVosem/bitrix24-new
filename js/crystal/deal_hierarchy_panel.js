@@ -406,7 +406,8 @@
                 });
 
                 var collapsed = false;
-                hdr.addEventListener('click', function () {
+                hdr.addEventListener('click', function (e) {
+                    if (e.target.tagName === 'A' || e.target.closest('a')) return;
                     if (comps.length === 0) return;
                     collapsed = !collapsed;
                     compWrap.style.display = collapsed ? 'none' : 'block';
