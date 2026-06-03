@@ -83,6 +83,7 @@
         var cityLine   = zip ? zip + ' ' + city : city;
         var line = [streetLine, cityLine, country].filter(Boolean).join(', ');
 
+        console.log('[КП] address from DOM:', { street: streetLine, city: city, zip: zip, country: country, line: line });
         return line;
     }
 
@@ -105,15 +106,24 @@
                 return;
             }
 
-            var dealData    = resp.deal;
-            var companyData = resp.company || {};
-            var contactData = resp.contact || {};
-            var sellerKey   = dealData.seller || DEFAULT_SELLER_KEY;
-            var seller      = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
+            console.log('[КП] full response:', resp);
 
-            var items = window.CrystalHierarchyPanel ? window.CrystalHierarchyPanel.getItems() : [];
+            var dealData     = resp.deal;
+            var companyData  = resp.company  || {};
+            var contactData  = resp.contact  || {};
+            var deliveryData = resp.delivery || {};
+            var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
+            var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
-            renderForm(modal, dealData, seller, companyData, contactData, items);
+            var items = [];
+            if (window.CrystalHierarchyPanel) {
+                items = window.CrystalHierarchyPanel.getItems();
+                console.log('[КП] items from hierarchy (' + items.length + '):', items);
+            } else {
+                console.warn('[КП] CrystalHierarchyPanel не найден');
+            }
+
+            renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
         });
     }
 
@@ -219,18 +229,18 @@
 
     // ===== FORM RENDERING =====
 
-    function renderForm(modal, deal, seller, company, contact, rawItems) {
+    function renderForm(modal, deal, seller, company, contact, delivery, rawItems) {
         var body = modal.body;
         body.innerHTML = '';
 
-        // VAT field ID — update once identified from console log company.uf
-        var VAT_FIELD = 'UF_CRM_1_VAT_ID';
+        // DOM is the reliable source for delivery address
+        var address = readDeliveryAddressFromDom() || delivery.line || company.address || '';
 
         var formState = {
             buyerName:    company.name || '',
             buyerContact: contact.name || '',
-            buyerAddress: readDeliveryAddressFromDom() || company.address || '',
-            buyerVat:     (company.uf && company.uf[VAT_FIELD]) ? company.uf[VAT_FIELD] : '',
+            buyerAddress: address,
+            buyerVat:     company.vat  || '',
             notes:        '',
             validUntil:   defaultValidUntil(),
             items:        rawItems.map(function (it) {
