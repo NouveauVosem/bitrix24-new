@@ -83,7 +83,6 @@
         var cityLine   = zip ? zip + ' ' + city : city;
         var line = [streetLine, cityLine, country].filter(Boolean).join(', ');
 
-        console.log('[КП] address from DOM:', { street: streetLine, city: city, zip: zip, country: country, line: line });
         return line;
     }
 
@@ -106,23 +105,13 @@
                 return;
             }
 
-            console.log('[КП] deal:', resp.deal);
-            console.log('[КП] company:', resp.company);
-            console.log('[КП] contact:', resp.contact);
-
             var dealData    = resp.deal;
             var companyData = resp.company || {};
             var contactData = resp.contact || {};
             var sellerKey   = dealData.seller || DEFAULT_SELLER_KEY;
             var seller      = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
-            var items = [];
-            if (window.CrystalHierarchyPanel) {
-                items = window.CrystalHierarchyPanel.getItems();
-                console.log('[КП] items (' + items.length + '):', items);
-            } else {
-                console.warn('[КП] CrystalHierarchyPanel не найден');
-            }
+            var items = window.CrystalHierarchyPanel ? window.CrystalHierarchyPanel.getItems() : [];
 
             renderForm(modal, dealData, seller, companyData, contactData, items);
         });

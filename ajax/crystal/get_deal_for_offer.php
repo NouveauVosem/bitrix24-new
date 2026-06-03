@@ -6,6 +6,7 @@ define('DisableEventsCheck', true);
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php';
 
 header('Content-Type: application/json; charset=utf-8');
+error_reporting(0);
 
 if (!CModule::IncludeModule('crm')) {
     echo json_encode(['status' => 'error', 'message' => 'CRM module not available']);
@@ -36,39 +37,67 @@ $result = [
     'contact' => null,
 ];
 
+// ── Helpers ──────────────────────────────────────────────────
+
+function extractUfFields(array $row): array {
+    $uf = [];
+    foreach ($row as $k => $v) {
+        if (strpos($k, 'UF_') === 0 && $v !== false && $v !== null && $v !== '') {
+            $uf[$k] = is_array($v) ? implode(', ', $v) : (string)$v;
+        }
+    }
+    return $uf;
+}
+
 // ── Company card ─────────────────────────────────────────────
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
-    // GetByID doesn't load UF_ fields — use GetList with UF_* select
-    $res = CCrmCompany::GetList(
-        [],
-        ['=ID' => $companyId],
-        false,
-        false,
-        ['*', 'UF_*']
-    );
-    $company = $res->Fetch();
+    // Use ORM — avoids the PHP 8 count(false) crash in old CCrmCompany::GetList
+    try {
+        $companyRow = \Bitrix\Crm\CompanyTable::getList([
+            'filter' => ['=ID' => $companyId],
+            'select' => [
+                'ID', 'TITLE',
+                'ADDRESS', 'ADDRESS_2', 'ADDRESS_CITY',
+                'ADDRESS_POSTAL_CODE', 'ADDRESS_REGION', 'ADDRESS_COUNTRY',
+            ],
+            'limit' => 1,
+        ])->fetch();
+    } catch (\Exception $e) {
+        $companyRow = null;
+        $result['company_error'] = $e->getMessage();
+    }
 
-    if ($company) {
-        $ufFields = [];
-        foreach ($company as $k => $v) {
-            if (strpos($k, 'UF_') === 0) {
-                $ufFields[$k] = $v;
+    // UF_ values are in a separate user-fields table — fetch via entity manager
+    $ufFields = [];
+    try {
+        $ufEntity = new \CCrmCompany(false);
+        $arUF = $ufEntity->GetUserFields($companyId, 0, LANGUAGE_ID);
+        foreach ((array)$arUF as $fieldName => $fieldData) {
+            $val = $fieldData['VALUE'] ?? null;
+            if ($val !== null && $val !== false && $val !== '') {
+                $ufFields[$fieldName] = is_array($val) ? implode(', ', $val) : (string)$val;
             }
         }
+    } catch (\Exception $e) {
+        $result['company_uf_error'] = $e->getMessage();
+    }
 
-        $addressParts = array_filter([
-            trim($company['ADDRESS']             ?? ''),
-            trim($company['ADDRESS_2']           ?? ''),
-            trim($company['ADDRESS_POSTAL_CODE'] ?? '') . ' ' . trim($company['ADDRESS_CITY'] ?? ''),
-            trim($company['ADDRESS_COUNTRY']     ?? ''),
-        ]);
+    if ($companyRow) {
+        $city    = trim($companyRow['ADDRESS_CITY']        ?? '');
+        $zip     = trim($companyRow['ADDRESS_POSTAL_CODE'] ?? '');
+        $street  = trim($companyRow['ADDRESS']             ?? '');
+        $country = trim($companyRow['ADDRESS_COUNTRY']     ?? '');
 
         $result['company'] = [
-            'id'      => $company['ID'],
-            'name'    => $company['TITLE'] ?? '',
-            'address' => implode(', ', array_filter(array_map('trim', $addressParts))),
-            'uf'      => $ufFields,
+            'id'      => $companyRow['ID'],
+            'name'    => $companyRow['TITLE'] ?? '',
+            'address' => implode(', ', array_filter([
+                $street,
+                trim($zip . ' ' . $city),
+                $country,
+            ])),
+            'uf' => $ufFields,
         ];
     }
 }
@@ -76,28 +105,22 @@ if ($companyId > 0) {
 // ── Contact card ─────────────────────────────────────────────
 $contactId = (int)($deal['CONTACT_ID'] ?? 0);
 if ($contactId > 0) {
-    $res = CCrmContact::GetList(
-        [],
-        ['=ID' => $contactId],
-        false,
-        false,
-        ['*', 'UF_*']
-    );
-    $contact = $res->Fetch();
+    try {
+        $contactRow = \Bitrix\Crm\ContactTable::getList([
+            'filter' => ['=ID' => $contactId],
+            'select' => ['ID', 'NAME', 'LAST_NAME', 'POST'],
+            'limit'  => 1,
+        ])->fetch();
+    } catch (\Exception $e) {
+        $contactRow = null;
+        $result['contact_error'] = $e->getMessage();
+    }
 
-    if ($contact) {
-        $ufContact = [];
-        foreach ($contact as $k => $v) {
-            if (strpos($k, 'UF_') === 0) {
-                $ufContact[$k] = $v;
-            }
-        }
-
+    if ($contactRow) {
         $result['contact'] = [
-            'id'   => $contact['ID'],
-            'name' => trim(trim($contact['NAME'] ?? '') . ' ' . trim($contact['LAST_NAME'] ?? ''), " '\""),
-            'post' => $contact['POST'] ?? '',
-            'uf'   => $ufContact,
+            'id'   => $contactRow['ID'],
+            'name' => trim(($contactRow['NAME'] ?? '') . ' ' . ($contactRow['LAST_NAME'] ?? ''), " '\""),
+            'post' => $contactRow['POST'] ?? '',
         ];
     }
 }
