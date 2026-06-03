@@ -61,11 +61,7 @@ $result = [
 // Company linked to deal
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
-    $dbRes   = CCrmCompany::GetList([], ['=ID' => $companyId], false, false, [
-        'ID', 'TITLE', 'ADDRESS', 'ADDRESS_CITY', 'ADDRESS_POSTAL_CODE', 'ADDRESS_COUNTRY',
-        'UF_CRM_1717094608804', 'UF_CRM_1718030299507',
-    ]);
-    $company = $dbRes ? $dbRes->GetNext() : null;
+    $company = CCrmCompany::GetByID($companyId);
 
     if ($company) {
         $phone = '';
