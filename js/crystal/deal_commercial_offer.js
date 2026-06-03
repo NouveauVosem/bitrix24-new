@@ -66,6 +66,27 @@
         .catch(function (err) { callback(err, null); });
     }
 
+    // ===== DOM ADDRESS READER =====
+
+    function readDeliveryAddressFromDom() {
+        function txt(cid) {
+            var el = document.querySelector('[data-cid="' + cid + '"] .field-item');
+            return el ? el.textContent.trim() : '';
+        }
+        var street  = txt('UF_CRM_1720604937540');
+        var house   = txt('UF_CRM_1720604951910');
+        var city    = txt('UF_CRM_1720604913416');
+        var zip     = txt('UF_CRM_1720604926030');
+        var country = txt('UF_CRM_67BF208ADD735');
+
+        var streetLine = street + (house ? ', ' + house : '');
+        var cityLine   = zip ? zip + ' ' + city : city;
+        var line = [streetLine, cityLine, country].filter(Boolean).join(', ');
+
+        console.log('[КП] address from DOM:', { street: streetLine, city: city, zip: zip, country: country, line: line });
+        return line;
+    }
+
     // ===== MODAL =====
 
     function openModal() {
@@ -85,24 +106,25 @@
                 return;
             }
 
-            console.log('[КП] full response:', resp);
+            console.log('[КП] deal:', resp.deal);
+            console.log('[КП] company:', resp.company);
+            console.log('[КП] contact:', resp.contact);
 
-            var dealData     = resp.deal;
-            var companyData  = resp.company  || {};
-            var contactData  = resp.contact  || {};
-            var deliveryData = resp.delivery || {};
-            var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
-            var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
+            var dealData    = resp.deal;
+            var companyData = resp.company || {};
+            var contactData = resp.contact || {};
+            var sellerKey   = dealData.seller || DEFAULT_SELLER_KEY;
+            var seller      = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
             var items = [];
             if (window.CrystalHierarchyPanel) {
                 items = window.CrystalHierarchyPanel.getItems();
-                console.log('[КП] items from hierarchy (' + items.length + '):', items);
+                console.log('[КП] items (' + items.length + '):', items);
             } else {
                 console.warn('[КП] CrystalHierarchyPanel не найден');
             }
 
-            renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
+            renderForm(modal, dealData, seller, companyData, contactData, items);
         });
     }
 
@@ -208,18 +230,18 @@
 
     // ===== FORM RENDERING =====
 
-    function renderForm(modal, deal, seller, company, contact, delivery, rawItems) {
+    function renderForm(modal, deal, seller, company, contact, rawItems) {
         var body = modal.body;
         body.innerHTML = '';
 
-        // Delivery address takes priority; fall back to company address
-        var address = delivery.line || company.address || '';
+        // VAT field ID — update once identified from console log company.uf
+        var VAT_FIELD = 'UF_CRM_1_VAT_ID';
 
         var formState = {
             buyerName:    company.name || '',
             buyerContact: contact.name || '',
-            buyerAddress: address,
-            buyerVat:     company.vat  || '',
+            buyerAddress: readDeliveryAddressFromDom() || company.address || '',
+            buyerVat:     (company.uf && company.uf[VAT_FIELD]) ? company.uf[VAT_FIELD] : '',
             notes:        '',
             validUntil:   defaultValidUntil(),
             items:        rawItems.map(function (it) {

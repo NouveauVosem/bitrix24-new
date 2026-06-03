@@ -24,76 +24,65 @@ if (!$deal) {
     die();
 }
 
-// Delivery address from deal UF_ fields
-$deliveryCity    = trim($deal['UF_CRM_1720604913416'] ?? '');
-$deliveryStreet  = trim($deal['UF_CRM_1720604937540'] ?? '');
-$deliveryHouse   = trim($deal['UF_CRM_1720604951910'] ?? '');
-$deliveryZip     = trim($deal['UF_CRM_1720604926030'] ?? '');
-$deliveryCountry = trim($deal['UF_CRM_67BF208ADD735']  ?? '');
-
-$deliveryLine = implode(', ', array_filter([
-    $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
-    $deliveryZip ? $deliveryZip . ' ' . $deliveryCity : $deliveryCity,
-    $deliveryCountry,
-]));
-
 $result = [
     'status' => 'success',
-    '_deal_raw' => $deal, // debug: full deal dump
-    'deal'   => [
-        'id'        => $deal['ID'],
-        'title'     => $deal['TITLE'],
-        'currency'  => $deal['CURRENCY_ID'] ?: 'EUR',
-        'seller'    => $deal['UF_CRM_1718209313308'] ?? '',
-        'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
-        'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
-    ],
-    'delivery' => [
-        'street'  => $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
-        'city'    => $deliveryCity,
-        'zip'     => $deliveryZip,
-        'country' => $deliveryCountry,
-        'line'    => $deliveryLine,
+    'deal' => [
+        'id'       => $deal['ID'],
+        'title'    => $deal['TITLE'],
+        'currency' => $deal['CURRENCY_ID'] ?: 'EUR',
+        'seller'   => $deal['UF_CRM_1718209313308'] ?? '',
     ],
     'company' => null,
     'contact' => null,
 ];
 
-// Company linked to deal
+// ── Company card ─────────────────────────────────────────────
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
     $company = CCrmCompany::GetByID($companyId);
     if ($company) {
-        // Collect all UF_ fields to find VAT (log them for debugging)
+        // Separate UF_ fields for debug — helps find VAT field ID
         $ufFields = [];
         foreach ($company as $k => $v) {
-            if (strpos($k, 'UF_') === 0 && !empty($v) && is_string($v)) {
+            if (strpos($k, 'UF_') === 0) {
                 $ufFields[$k] = $v;
             }
         }
 
+        // Standard address fields from company card
+        $addressParts = array_filter([
+            trim($company['ADDRESS']             ?? ''),
+            trim($company['ADDRESS_2']           ?? ''),
+            trim($company['ADDRESS_POSTAL_CODE'] ?? '') . ' ' . trim($company['ADDRESS_CITY'] ?? ''),
+            trim($company['ADDRESS_COUNTRY']     ?? ''),
+        ]);
+
         $result['company'] = [
             'id'       => $company['ID'],
-            'name'     => $company['TITLE'],
-            'address'  => implode(', ', array_filter([
-                $company['ADDRESS']             ?? '',
-                $company['ADDRESS_CITY']        ?? '',
-                $company['ADDRESS_POSTAL_CODE'] ?? '',
-                $company['ADDRESS_COUNTRY']     ?? '',
-            ])),
-            'uf_fields' => $ufFields, // debug — see which field holds VAT
+            'name'     => $company['TITLE'] ?? '',
+            'address'  => implode(', ', array_filter(array_map('trim', $addressParts))),
+            'uf'       => $ufFields, // full dump — find VAT field here
         ];
     }
 }
 
-// Contact linked to deal
+// ── Contact card ─────────────────────────────────────────────
 $contactId = (int)($deal['CONTACT_ID'] ?? 0);
 if ($contactId > 0) {
     $contact = CCrmContact::GetByID($contactId);
     if ($contact) {
+        $ufContact = [];
+        foreach ($contact as $k => $v) {
+            if (strpos($k, 'UF_') === 0) {
+                $ufContact[$k] = $v;
+            }
+        }
+
         $result['contact'] = [
             'id'   => $contact['ID'],
-            'name' => trim(($contact['NAME'] ?? '') . ' ' . ($contact['LAST_NAME'] ?? '')),
+            'name' => trim(trim($contact['NAME'] ?? '') . ' ' . trim($contact['LAST_NAME'] ?? ''), " '\""),
+            'post' => $contact['POST'] ?? '',
+            'uf'   => $ufContact,
         ];
     }
 }
