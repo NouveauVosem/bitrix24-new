@@ -61,10 +61,11 @@ $result = [
 // Company linked to deal
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
-    $company = \Bitrix\Crm\CompanyTable::getList([
-        'filter' => ['=ID' => $companyId],
-        'select' => ['ID', 'TITLE', 'ADDRESS', 'ADDRESS_CITY', 'ADDRESS_POSTAL_CODE', 'ADDRESS_COUNTRY', 'UF_*'],
-    ])->fetch();
+    $dbRes   = CCrmCompany::GetList([], ['=ID' => $companyId], false, false, [
+        'ID', 'TITLE', 'ADDRESS', 'ADDRESS_CITY', 'ADDRESS_POSTAL_CODE', 'ADDRESS_COUNTRY',
+        'UF_CRM_1717094608804', 'UF_CRM_1718030299507',
+    ]);
+    $company = $dbRes ? $dbRes->GetNext() : null;
 
     if ($company) {
         $phone = '';
