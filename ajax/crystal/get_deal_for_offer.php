@@ -161,6 +161,12 @@ if (!empty($allBitrixIds)) {
     }
 }
 
+$result['_debug'] = [
+    'allBitrixIds' => $allBitrixIds,
+    'nameMapKeys'  => array_keys($nameMap),
+    'nameMap'      => $nameMap,
+];
+
 foreach ($items as &$item) {
     $bid = (int)($item['bitrixId'] ?? 0);
     if ($bid && isset($nameMap[$bid])) {
