@@ -109,4 +109,10 @@ if ($contactId > 0) {
     }
 }
 
+// Hierarchy items from crm_deal_hierarchy table
+$connection = \Bitrix\Main\Application::getConnection();
+$res        = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEAL_ID = " . $dealId);
+$row        = $res->fetch();
+$result['items'] = $row ? (json_decode($row['ITEMS'], true) ?: []) : [];
+
 echo json_encode($result, JSON_UNESCAPED_UNICODE);

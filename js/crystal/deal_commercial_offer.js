@@ -115,13 +115,8 @@
             var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
             var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
-            var items = [];
-            if (window.CrystalHierarchyPanel) {
-                items = window.CrystalHierarchyPanel.getItems();
-                console.log('[КП] items from hierarchy (' + items.length + '):', items);
-            } else {
-                console.warn('[КП] CrystalHierarchyPanel не найден');
-            }
+            var items = resp.items || [];
+            console.log('[КП] items (' + items.length + '):', items);
 
             renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
         });
