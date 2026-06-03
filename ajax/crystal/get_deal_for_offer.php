@@ -63,24 +63,24 @@ $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
     $company = CCrmCompany::GetByID($companyId);
     if ($company) {
-        // Collect all UF_ fields to find VAT (log them for debugging)
-        $ufFields = [];
-        foreach ($company as $k => $v) {
-            if (strpos($k, 'UF_') === 0 && !empty($v) && is_string($v)) {
-                $ufFields[$k] = $v;
-            }
-        }
+        $phones = $company['PHONE'] ?? [];
+        $emails = $company['EMAIL'] ?? [];
+        $phone  = is_array($phones) && !empty($phones) ? $phones[0]['VALUE'] : '';
+        $email  = is_array($emails) && !empty($emails) ? $emails[0]['VALUE'] : '';
 
         $result['company'] = [
-            'id'       => $company['ID'],
-            'name'     => $company['TITLE'],
-            'address'  => implode(', ', array_filter([
+            'id'      => $company['ID'],
+            'name'    => $company['TITLE'],
+            'vat'            => trim($company['UF_CRM_1717094608804'] ?? ''),
+            'legal_address'  => trim($company['UF_CRM_1718030299507'] ?? ''),
+            'phone'          => $phone,
+            'email'          => $email,
+            'address'        => implode(', ', array_filter([
                 $company['ADDRESS']             ?? '',
                 $company['ADDRESS_CITY']        ?? '',
                 $company['ADDRESS_POSTAL_CODE'] ?? '',
                 $company['ADDRESS_COUNTRY']     ?? '',
             ])),
-            'uf_fields' => $ufFields, // debug — see which field holds VAT
         ];
     }
 }
