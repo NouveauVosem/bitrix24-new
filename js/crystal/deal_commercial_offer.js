@@ -237,10 +237,13 @@
         var address = readDeliveryAddressFromDom() || delivery.line || company.address || '';
 
         var formState = {
-            buyerName:    company.name || '',
-            buyerContact: contact.name || '',
-            buyerAddress: address,
-            buyerVat:     company.vat  || '',
+            buyerName:         company.name          || '',
+            buyerContact:      contact.name          || '',
+            buyerAddress:      address,
+            buyerLegalAddress: company.legal_address || '',
+            buyerPhone:        company.phone         || '',
+            buyerEmail:        company.email         || '',
+            buyerVat:          company.vat           || '',
             notes:        '',
             validUntil:   defaultValidUntil(),
             items:        rawItems.map(function (it) {
@@ -326,13 +329,22 @@
 
     function buildBuyerFields(state) {
         var wrap = document.createElement('div');
-        wrap.appendChild(fieldRow('Компания', textInput(state.buyerName,    function (v) { state.buyerName    = v; })));
+        wrap.appendChild(fieldRow('Компания',       textInput(state.buyerName,         function (v) { state.buyerName         = v; })));
         if (state.buyerContact) {
-            wrap.appendChild(fieldRow('Контакт', textInput(state.buyerContact, function (v) { state.buyerContact = v; })));
+            wrap.appendChild(fieldRow('Контакт',    textInput(state.buyerContact,      function (v) { state.buyerContact      = v; })));
         }
-        wrap.appendChild(fieldRow('Адрес доставки', textInput(state.buyerAddress, function (v) { state.buyerAddress = v; })));
+        if (state.buyerLegalAddress) {
+            wrap.appendChild(fieldRow('Юр. адрес',  textInput(state.buyerLegalAddress, function (v) { state.buyerLegalAddress = v; })));
+        }
+        wrap.appendChild(fieldRow('Адрес доставки', textInput(state.buyerAddress,      function (v) { state.buyerAddress      = v; })));
+        if (state.buyerPhone) {
+            wrap.appendChild(fieldRow('Телефон',    textInput(state.buyerPhone,        function (v) { state.buyerPhone        = v; })));
+        }
+        if (state.buyerEmail) {
+            wrap.appendChild(fieldRow('Email',      textInput(state.buyerEmail,        function (v) { state.buyerEmail        = v; })));
+        }
         if (state.buyerVat) {
-            wrap.appendChild(fieldRow('VAT №', textInput(state.buyerVat, function (v) { state.buyerVat = v; })));
+            wrap.appendChild(fieldRow('VAT №',      textInput(state.buyerVat,          function (v) { state.buyerVat          = v; })));
         }
         return wrap;
     }
@@ -525,8 +537,11 @@
             + '<div style="flex:1;">'
             + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">Buyer</div>'
             + '<p style="font-weight:700;font-size:10pt;margin-bottom:4px;">' + esc(state.buyerName) + '</p>'
-            + (state.buyerContact ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Attn.: </span>' + esc(state.buyerContact) + '</p>' : '')
-            + '<p style="margin:3px 0;font-size:10pt;color:#374151;">' + esc(state.buyerAddress) + '</p>'
+            + (state.buyerContact      ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Attn.: </span>' + esc(state.buyerContact) + '</p>' : '')
+            + (state.buyerLegalAddress ? '<p style="margin:3px 0;font-size:10pt;color:#374151;">' + esc(state.buyerLegalAddress) + '</p>' : '')
+            + (state.buyerAddress && state.buyerAddress !== state.buyerLegalAddress ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Delivery: </span>' + esc(state.buyerAddress) + '</p>' : '')
+            + (state.buyerPhone        ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Tel.: </span>' + esc(state.buyerPhone) + '</p>' : '')
+            + (state.buyerEmail        ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Email: </span>' + esc(state.buyerEmail) + '</p>' : '')
             + vatRow
             + '</div>\n</div>\n'
 
