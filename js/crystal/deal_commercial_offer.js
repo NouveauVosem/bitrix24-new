@@ -247,6 +247,7 @@
                     name:     it.nameEn || it.name,
                     nameFull: it.name,
                     article:  it.article || '',
+                    bitrixId: it.bitrixId || null,
                     qty:      it.qty  || 1,
                     price:    it.price || 0,
                     included: true
@@ -383,10 +384,14 @@
         });
 
         // Name
-        var nameEl = document.createElement('span');
-        nameEl.style.cssText = 'flex:1;font-size:13px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;';
+        var nameEl = item.bitrixId ? document.createElement('a') : document.createElement('span');
+        if (item.bitrixId) {
+            nameEl.href   = '/crm/catalog/14/product/' + item.bitrixId + '/';
+            nameEl.target = '_blank';
+        }
+        nameEl.style.cssText = 'flex:1;font-size:13px;color:' + (item.bitrixId ? '#2563EB' : '#111827') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-decoration:none;';
         nameEl.textContent   = item.name;
-        nameEl.title         = item.name;
+        nameEl.title         = item.bitrixId ? 'Открыть карточку товара' : item.name;
 
         // Qty
         var qtyEl = document.createElement('span');

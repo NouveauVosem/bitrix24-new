@@ -322,8 +322,14 @@
                 priceWrap.appendChild(priceUnit);
                 artLine.appendChild(priceWrap);
 
-                var nameLine = document.createElement('div');
-                nameLine.style.cssText = 'font-size:14px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                var nameLine = item.bitrixId ? document.createElement('a') : document.createElement('div');
+                if (item.bitrixId) {
+                    nameLine.href   = CATALOG + item.bitrixId + '/';
+                    nameLine.target = '_blank';
+                    nameLine.addEventListener('click', function (e) { e.stopPropagation(); });
+                }
+                nameLine.style.cssText = 'font-size:14px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;'
+                    + (item.bitrixId ? 'color:#1d4ed8;' : 'color:#6b7280;');
                 nameLine.title = item.name;
                 nameLine.textContent = item.name;
 
