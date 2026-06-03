@@ -471,6 +471,7 @@
             loadItems(function () { renderBody(); });
         });
 
+        btns.id = 'cdh-header-btns';
         btns.appendChild(addBtn);
         btns.appendChild(refreshBtn);
         panelHdr.appendChild(title);
@@ -524,7 +525,7 @@
         loadItems(function () { renderBody(); });
     }
 
-    window.CrystalHierarchyPanel = { addItem: addItem, updateItemRowId: updateItemRowId, refresh: refresh };
+    window.CrystalHierarchyPanel = { addItem: addItem, updateItemRowId: updateItemRowId, refresh: refresh, getItems: function () { return _items ? _items.slice() : []; } };
 
     // ===== INIT =====
 
