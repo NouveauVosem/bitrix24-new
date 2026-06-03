@@ -375,10 +375,10 @@
                 row.style.cssText = 'display:flex;align-items:center;padding:3px 14px 3px 38px;border-top:1px solid #f3f4f6;'
                     + (item.included ? '' : 'opacity:0.45;');
                 var nameEl = document.createElement('span');
-                nameEl.style.cssText = 'flex:1;font-size:12px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                nameEl.style.cssText = 'flex:1;font-size:12px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
                 nameEl.textContent = '· ' + (c.article ? c.article + '  ' : '') + c.name;
                 var qtyEl = document.createElement('span');
-                qtyEl.style.cssText = 'font-size:12px;color:#9ca3af;flex-shrink:0;margin-left:8px;';
+                qtyEl.style.cssText = 'font-size:12px;color:#111827;flex-shrink:0;margin-left:8px;';
                 qtyEl.textContent = '×' + c.baseQty + '/set';
                 row.appendChild(nameEl);
                 row.appendChild(qtyEl);
@@ -501,11 +501,11 @@
                 return [
                     '<tr style="background:' + bg + ';">',
                     '<td style="' + tdStyle('center') + 'border-top:none;"></td>',
-                    '<td style="' + tdStyle('left') + 'border-top:none;padding-left:22px;font-size:9pt;color:#9ca3af;" colspan="5">',
+                    '<td style="' + tdStyle('left') + 'border-top:none;padding-left:22px;font-size:9pt;" colspan="5">',
                     '&middot;&nbsp;',
                     (c.article ? '<span style="font-weight:600;margin-right:6px;">' + esc(c.article) + '</span>' : ''),
                     esc(c.name),
-                    '&nbsp;&nbsp;<span style="color:#d1d5db;">&times;' + c.baseQty + '/set</span>',
+                    '&nbsp;&nbsp;&times;' + c.baseQty + '/set',
                     '</td>',
                     '</tr>'
                 ].join('');
