@@ -65,26 +65,6 @@ if ($action === 'get') {
     }
     unset($item);
 
-    // Enrich with English name (PROPERTY_74) from catalog
-    $bitrixIds = array_values(array_unique(array_filter(
-        array_map(function ($i) { return (int)($i['bitrixId'] ?? 0); }, $items)
-    )));
-    if (!empty($bitrixIds)) {
-        \CModule::IncludeModule('iblock');
-        $nameMap = [];
-        $dbEl = \CIBlockElement::GetList([], ['ID' => $bitrixIds, 'IBLOCK_ID' => 14], false, false, ['ID', 'PROPERTY_74']);
-        while ($el = $dbEl->GetNext()) {
-            $nameMap[(int)$el['ID']] = $el['PROPERTY_74_VALUE'] ?? '';
-        }
-        foreach ($items as &$item) {
-            $bid = (int)($item['bitrixId'] ?? 0);
-            if ($bid && !empty($nameMap[$bid])) {
-                $item['nameEn'] = $nameMap[$bid];
-            }
-        }
-        unset($item);
-    }
-
     echo json_encode([
         'status'     => 'success',
         'items'      => $items,

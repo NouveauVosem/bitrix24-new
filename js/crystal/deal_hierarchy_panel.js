@@ -330,8 +330,8 @@
                 }
                 nameLine.style.cssText = 'font-size:14px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;'
                     + (item.bitrixId ? 'color:#1d4ed8;' : 'color:#6b7280;');
-                nameLine.title = item.nameEn || item.name;
-                nameLine.textContent = item.nameEn || item.name;
+                nameLine.title = item.name;
+                nameLine.textContent = item.name;
 
                 info.appendChild(artLine);
                 info.appendChild(nameLine);

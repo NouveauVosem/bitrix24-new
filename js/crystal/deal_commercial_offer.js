@@ -254,6 +254,7 @@
                     components: (it.components || []).map(function (c) {
                         return {
                             name:    c.name    || '',
+                            nameEn:  c.nameEn  || c.name || '',
                             article: c.article || '',
                             baseQty: c.baseQty || c.qty || 1
                         };
@@ -504,7 +505,7 @@
                     '<td style="' + tdStyle('left') + 'border-top:none;padding-left:22px;font-size:9pt;" colspan="5">',
                     '&middot;&nbsp;',
                     (c.article ? '<span style="font-weight:600;margin-right:6px;">' + esc(c.article) + '</span>' : ''),
-                    esc(c.name),
+                    esc(c.nameEn || c.name),
                     '&nbsp;&nbsp;&times;' + c.baseQty + '/set',
                     '</td>',
                     '</tr>'

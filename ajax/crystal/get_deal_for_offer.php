@@ -138,30 +138,45 @@ foreach ($items as &$item) {
 }
 unset($item);
 
-// Enrich items with multilingual names from catalog (PROPERTY_73 = CZ, PROPERTY_74 = EN)
-$bitrixIds = array_values(array_unique(array_filter(
-    array_map(function ($i) { return (int)($i['bitrixId'] ?? 0); }, $items)
-)));
+// Collect all bitrixIds — from items and their components
+\CModule::IncludeModule('iblock');
+$allBitrixIds = [];
+foreach ($items as $item) {
+    if (!empty($item['bitrixId'])) $allBitrixIds[] = (int)$item['bitrixId'];
+    foreach ($item['components'] ?? [] as $c) {
+        if (!empty($c['bitrixId'])) $allBitrixIds[] = (int)$c['bitrixId'];
+    }
+}
+$allBitrixIds = array_values(array_unique(array_filter($allBitrixIds)));
 
-if (!empty($bitrixIds)) {
-    \CModule::IncludeModule('iblock');
-    $nameMap = [];
-    $dbEl = \CIBlockElement::GetList([], ['ID' => $bitrixIds, 'IBLOCK_ID' => 14], false, false, ['ID', 'PROPERTY_73', 'PROPERTY_74']);
+// Enrich with multilingual names (PROPERTY_73 = CZ, PROPERTY_74 = EN)
+$nameMap = [];
+if (!empty($allBitrixIds)) {
+    $dbEl = \CIBlockElement::GetList([], ['ID' => $allBitrixIds, 'IBLOCK_ID' => 14], false, false, ['ID', 'PROPERTY_73', 'PROPERTY_74']);
     while ($el = $dbEl->GetNext()) {
         $nameMap[(int)$el['ID']] = [
             'nameCz' => $el['PROPERTY_73_VALUE'] ?? '',
             'nameEn' => $el['PROPERTY_74_VALUE'] ?? '',
         ];
     }
-    foreach ($items as &$item) {
-        $bid = (int)($item['bitrixId'] ?? 0);
-        if ($bid && isset($nameMap[$bid])) {
-            $item['nameCz'] = $nameMap[$bid]['nameCz'];
-            $item['nameEn'] = $nameMap[$bid]['nameEn'];
+}
+
+foreach ($items as &$item) {
+    $bid = (int)($item['bitrixId'] ?? 0);
+    if ($bid && isset($nameMap[$bid])) {
+        $item['nameCz'] = $nameMap[$bid]['nameCz'];
+        $item['nameEn'] = $nameMap[$bid]['nameEn'];
+    }
+    foreach ($item['components'] ?? [] as &$c) {
+        $cbid = (int)($c['bitrixId'] ?? 0);
+        if ($cbid && isset($nameMap[$cbid])) {
+            $c['nameCz'] = $nameMap[$cbid]['nameCz'];
+            $c['nameEn'] = $nameMap[$cbid]['nameEn'];
         }
     }
-    unset($item);
+    unset($c);
 }
+unset($item);
 
 $result['items'] = $items;
 
