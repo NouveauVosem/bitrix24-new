@@ -436,6 +436,7 @@
                     qty: currentQty,
                     price: currentPrice,
                     normId: normId || null,
+                    bitrixId: form.bitrixId || null,
                     slotSnapshot: normSlotSnapshot,
                     components: components
                 };

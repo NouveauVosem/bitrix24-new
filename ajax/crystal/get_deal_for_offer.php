@@ -115,8 +115,34 @@ $res        = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEA
 $row        = $res->fetch();
 $items      = $row ? (json_decode($row['ITEMS'], true) ?: []) : [];
 
+// Resolve missing bitrixId via Crystal API (norm → template.bitrixId)
+$crystalBase = 'https://crystal.alvla.tools';
+$crystalKey  = 'legenda';
+
+foreach ($items as &$item) {
+    if (!empty($item['bitrixId'])) continue;
+    $normId = $item['normId'] ?? null;
+    if (!$normId) continue;
+
+    $ctx = stream_context_create(['http' => [
+        'method'  => 'GET',
+        'header'  => 'X-Api-Key: ' . $crystalKey . "\r\n",
+        'timeout' => 5,
+    ]]);
+    $raw = @file_get_contents($crystalBase . '/api/product-form-norms/' . urlencode($normId), false, $ctx);
+    if ($raw) {
+        $norm = json_decode($raw, true);
+        $bid  = (int)($norm['template']['bitrixId'] ?? 0);
+        if ($bid) $item['bitrixId'] = $bid;
+    }
+}
+unset($item);
+
 // Enrich items with multilingual names from catalog (PROPERTY_73 = CZ, PROPERTY_74 = EN)
-$bitrixIds = array_values(array_filter(array_map(function ($i) { return (int)($i['bitrixId'] ?? 0); }, $items)));
+$bitrixIds = array_values(array_unique(array_filter(
+    array_map(function ($i) { return (int)($i['bitrixId'] ?? 0); }, $items)
+)));
+
 if (!empty($bitrixIds)) {
     \CModule::IncludeModule('iblock');
     $nameMap = [];
