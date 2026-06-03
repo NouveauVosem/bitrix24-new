@@ -152,7 +152,7 @@ $allBitrixIds = array_values(array_unique(array_filter($allBitrixIds)));
 // Enrich with multilingual names (PROPERTY_73 = CZ, PROPERTY_74 = EN)
 $nameMap = [];
 if (!empty($allBitrixIds)) {
-    $dbEl = \CIBlockElement::GetList([], ['ID' => $allBitrixIds, 'IBLOCK_ID' => 14], false, false, ['ID', 'PROPERTY_73', 'PROPERTY_74']);
+    $dbEl = \CIBlockElement::GetList([], ['ID' => $allBitrixIds], false, false, ['ID', 'PROPERTY_73', 'PROPERTY_74']);
     while ($el = $dbEl->GetNext()) {
         $nameMap[(int)$el['ID']] = [
             'nameCz' => $el['PROPERTY_73_VALUE'] ?? '',
