@@ -61,21 +61,31 @@ $result = [
 // Company linked to deal
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
-    $company = CCrmCompany::GetByID($companyId);
+    $company = \Bitrix\Crm\CompanyTable::getList([
+        'filter' => ['=ID' => $companyId],
+        'select' => ['ID', 'TITLE', 'ADDRESS', 'ADDRESS_CITY', 'ADDRESS_POSTAL_CODE', 'ADDRESS_COUNTRY', 'UF_*'],
+    ])->fetch();
+
     if ($company) {
-        $phones = $company['PHONE'] ?? [];
-        $emails = $company['EMAIL'] ?? [];
-        $phone  = is_array($phones) && !empty($phones) ? $phones[0]['VALUE'] : '';
-        $email  = is_array($emails) && !empty($emails) ? $emails[0]['VALUE'] : '';
+        $phone = '';
+        $email = '';
+        $dbMulti = CCrmFieldMulti::GetList(
+            ['ID' => 'asc'],
+            ['ENTITY_ID' => 'COMPANY', 'ELEMENT_ID' => $companyId]
+        );
+        while ($row = $dbMulti->Fetch()) {
+            if ($row['TYPE_ID'] === 'PHONE' && !$phone) $phone = $row['VALUE'];
+            if ($row['TYPE_ID'] === 'EMAIL' && !$email) $email = $row['VALUE'];
+        }
 
         $result['company'] = [
-            'id'      => $company['ID'],
-            'name'    => $company['TITLE'],
-            'vat'            => trim($company['UF_CRM_1717094608804'] ?? ''),
-            'legal_address'  => trim($company['UF_CRM_1718030299507'] ?? ''),
-            'phone'          => $phone,
-            'email'          => $email,
-            'address'        => implode(', ', array_filter([
+            'id'            => $company['ID'],
+            'name'          => $company['TITLE'],
+            'vat'           => trim($company['UF_CRM_1717094608804'] ?? ''),
+            'legal_address' => trim($company['UF_CRM_1718030299507'] ?? ''),
+            'phone'         => $phone,
+            'email'         => $email,
+            'address'       => implode(', ', array_filter([
                 $company['ADDRESS']             ?? '',
                 $company['ADDRESS_CITY']        ?? '',
                 $company['ADDRESS_POSTAL_CODE'] ?? '',
