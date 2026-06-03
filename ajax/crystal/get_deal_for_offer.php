@@ -75,11 +75,16 @@ if ($companyId > 0) {
             if ($row['TYPE_ID'] === 'EMAIL' && !$email) $email = $row['VALUE'];
         }
 
+        global $USER_FIELD_MANAGER;
+        $ufFields     = $USER_FIELD_MANAGER->GetUserFields('CRM_COMPANY', $companyId, LANGUAGE_ID);
+        $vat          = trim($ufFields['UF_CRM_1717094608804']['VALUE'] ?? '');
+        $legalAddress = trim($ufFields['UF_CRM_1718030299507']['VALUE'] ?? '');
+
         $result['company'] = [
             'id'            => $company['ID'],
             'name'          => $company['TITLE'],
-            'vat'           => trim($company['UF_CRM_1717094608804'] ?? ''),
-            'legal_address' => trim($company['UF_CRM_1718030299507'] ?? ''),
+            'vat'           => $vat,
+            'legal_address' => $legalAddress,
             'phone'         => $phone,
             'email'         => $email,
             'address'       => implode(', ', array_filter([
