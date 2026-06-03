@@ -161,11 +161,6 @@ if (!empty($allBitrixIds)) {
     }
 }
 
-$result['_debug'] = [
-    'allBitrixIds' => $allBitrixIds,
-    'nameMapKeys'  => array_keys($nameMap),
-    'nameMap'      => $nameMap,
-];
 
 foreach ($items as &$item) {
     $bid = (int)($item['bitrixId'] ?? 0);
@@ -173,14 +168,16 @@ foreach ($items as &$item) {
         $item['nameCz'] = $nameMap[$bid]['nameCz'];
         $item['nameEn'] = $nameMap[$bid]['nameEn'];
     }
-    foreach ($item['components'] ?? [] as &$c) {
-        $cbid = (int)($c['bitrixId'] ?? 0);
-        if ($cbid && isset($nameMap[$cbid])) {
-            $c['nameCz'] = $nameMap[$cbid]['nameCz'];
-            $c['nameEn'] = $nameMap[$cbid]['nameEn'];
+    if (!empty($item['components'])) {
+        foreach ($item['components'] as &$c) {
+            $cbid = (int)($c['bitrixId'] ?? 0);
+            if ($cbid && isset($nameMap[$cbid])) {
+                $c['nameCz'] = $nameMap[$cbid]['nameCz'];
+                $c['nameEn'] = $nameMap[$cbid]['nameEn'];
+            }
         }
+        unset($c);
     }
-    unset($c);
 }
 unset($item);
 
