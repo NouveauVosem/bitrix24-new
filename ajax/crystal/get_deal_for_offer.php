@@ -113,6 +113,30 @@ if ($contactId > 0) {
 $connection = \Bitrix\Main\Application::getConnection();
 $res        = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEAL_ID = " . $dealId);
 $row        = $res->fetch();
-$result['items'] = $row ? (json_decode($row['ITEMS'], true) ?: []) : [];
+$items      = $row ? (json_decode($row['ITEMS'], true) ?: []) : [];
+
+// Enrich items with multilingual names from catalog (PROPERTY_73 = CZ, PROPERTY_74 = EN)
+$bitrixIds = array_values(array_filter(array_map(function ($i) { return (int)($i['bitrixId'] ?? 0); }, $items)));
+if (!empty($bitrixIds)) {
+    \CModule::IncludeModule('iblock');
+    $nameMap = [];
+    $dbEl = \CIBlockElement::GetList([], ['ID' => $bitrixIds, 'IBLOCK_ID' => 14], false, false, ['ID', 'PROPERTY_73', 'PROPERTY_74']);
+    while ($el = $dbEl->GetNext()) {
+        $nameMap[(int)$el['ID']] = [
+            'nameCz' => $el['PROPERTY_73_VALUE'] ?? '',
+            'nameEn' => $el['PROPERTY_74_VALUE'] ?? '',
+        ];
+    }
+    foreach ($items as &$item) {
+        $bid = (int)($item['bitrixId'] ?? 0);
+        if ($bid && isset($nameMap[$bid])) {
+            $item['nameCz'] = $nameMap[$bid]['nameCz'];
+            $item['nameEn'] = $nameMap[$bid]['nameEn'];
+        }
+    }
+    unset($item);
+}
+
+$result['items'] = $items;
 
 echo json_encode($result, JSON_UNESCAPED_UNICODE);

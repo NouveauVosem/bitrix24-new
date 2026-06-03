@@ -244,7 +244,8 @@
             items:        rawItems.map(function (it) {
                 return {
                     id:       it.id,
-                    name:     it.name,
+                    name:     it.nameEn || it.name,
+                    nameFull: it.name,
                     article:  it.article || '',
                     qty:      it.qty  || 1,
                     price:    it.price || 0,
