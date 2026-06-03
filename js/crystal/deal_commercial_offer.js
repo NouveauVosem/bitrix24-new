@@ -85,18 +85,22 @@
                 return;
             }
 
+            console.log('[КП] full response:', resp);
+
             var dealData     = resp.deal;
             var companyData  = resp.company  || {};
             var contactData  = resp.contact  || {};
             var deliveryData = resp.delivery || {};
-            var items        = window.CrystalHierarchyPanel ? window.CrystalHierarchyPanel.getItems() : [];
             var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
             var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
-            console.log('[КП] deal:', dealData);
-            console.log('[КП] company:', companyData);
-            console.log('[КП] contact:', contactData);
-            console.log('[КП] delivery:', deliveryData);
+            var items = [];
+            if (window.CrystalHierarchyPanel) {
+                items = window.CrystalHierarchyPanel.getItems();
+                console.log('[КП] items from hierarchy (' + items.length + '):', items);
+            } else {
+                console.warn('[КП] CrystalHierarchyPanel не найден');
+            }
 
             renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
         });

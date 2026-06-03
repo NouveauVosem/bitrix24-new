@@ -39,6 +39,7 @@ $deliveryLine = implode(', ', array_filter([
 
 $result = [
     'status' => 'success',
+    '_deal_raw' => $deal, // debug: full deal dump
     'deal'   => [
         'id'        => $deal['ID'],
         'title'     => $deal['TITLE'],
