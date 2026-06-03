@@ -243,14 +243,21 @@
             validUntil:   defaultValidUntil(),
             items:        rawItems.map(function (it) {
                 return {
-                    id:       it.id,
-                    name:     it.nameEn || it.name,
-                    nameFull: it.name,
-                    article:  it.article || '',
-                    bitrixId: it.bitrixId || null,
-                    qty:      it.qty  || 1,
-                    price:    it.price || 0,
-                    included: true
+                    id:         it.id,
+                    name:       it.nameEn || it.name,
+                    nameFull:   it.name,
+                    article:    it.article || '',
+                    bitrixId:   it.bitrixId || null,
+                    qty:        it.qty   || 1,
+                    price:      it.price || 0,
+                    included:   true,
+                    components: (it.components || []).map(function (c) {
+                        return {
+                            name:    c.name    || '',
+                            article: c.article || '',
+                            baseQty: c.baseQty || c.qty || 1
+                        };
+                    })
                 };
             })
         };
@@ -363,6 +370,20 @@
         // Rows
         state.items.forEach(function (item, idx) {
             wrap.appendChild(buildItemRow(item, idx, state));
+            (item.components || []).forEach(function (c) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;padding:3px 14px 3px 38px;border-top:1px solid #f3f4f6;'
+                    + (item.included ? '' : 'opacity:0.45;');
+                var nameEl = document.createElement('span');
+                nameEl.style.cssText = 'flex:1;font-size:12px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                nameEl.textContent = '· ' + (c.article ? c.article + '  ' : '') + c.name;
+                var qtyEl = document.createElement('span');
+                qtyEl.style.cssText = 'font-size:12px;color:#9ca3af;flex-shrink:0;margin-left:8px;';
+                qtyEl.textContent = '×' + c.baseQty + '/set';
+                row.appendChild(nameEl);
+                row.appendChild(qtyEl);
+                wrap.appendChild(row);
+            });
         });
 
         return wrap;
@@ -476,6 +497,19 @@
         var rowsHtml = includedItems.map(function (it, i) {
             var total = (it.price || 0) * (it.qty || 1);
             var bg    = i % 2 === 1 ? '#f9fafb' : '#fff';
+            var compRows = (it.components || []).map(function (c) {
+                return [
+                    '<tr style="background:' + bg + ';">',
+                    '<td style="' + tdStyle('center') + 'border-top:none;"></td>',
+                    '<td style="' + tdStyle('left') + 'border-top:none;padding-left:22px;font-size:9pt;color:#9ca3af;" colspan="5">',
+                    '&middot;&nbsp;',
+                    (c.article ? '<span style="font-weight:600;margin-right:6px;">' + esc(c.article) + '</span>' : ''),
+                    esc(c.name),
+                    '&nbsp;&nbsp;<span style="color:#d1d5db;">&times;' + c.baseQty + '/set</span>',
+                    '</td>',
+                    '</tr>'
+                ].join('');
+            }).join('');
             return [
                 '<tr style="background:' + bg + ';">',
                 '<td style="' + tdStyle('center') + '">' + (i + 1) + '</td>',
@@ -486,7 +520,8 @@
                 '<td style="' + tdStyle('right') + '">' + formatMoney(it.price) + '</td>',
                 '<td style="' + tdStyle('center') + '">0%</td>',
                 '<td style="' + tdStyle('right') + 'font-weight:600;">' + formatMoney(total) + '</td>',
-                '</tr>'
+                '</tr>',
+                compRows
             ].join('');
         }).join('');
 
