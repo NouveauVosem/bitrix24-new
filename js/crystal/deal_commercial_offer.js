@@ -85,13 +85,20 @@
                 return;
             }
 
-            var dealData    = resp.deal;
-            var companyData = resp.company || {};
-            var items       = window.CrystalHierarchyPanel ? window.CrystalHierarchyPanel.getItems() : [];
-            var sellerKey   = dealData.seller || DEFAULT_SELLER_KEY;
-            var seller      = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
+            var dealData     = resp.deal;
+            var companyData  = resp.company  || {};
+            var contactData  = resp.contact  || {};
+            var deliveryData = resp.delivery || {};
+            var items        = window.CrystalHierarchyPanel ? window.CrystalHierarchyPanel.getItems() : [];
+            var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
+            var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
-            renderForm(modal, dealData, companyData, seller, items);
+            console.log('[КП] deal:', dealData);
+            console.log('[КП] company:', companyData);
+            console.log('[КП] contact:', contactData);
+            console.log('[КП] delivery:', deliveryData);
+
+            renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
         });
     }
 
@@ -197,14 +204,18 @@
 
     // ===== FORM RENDERING =====
 
-    function renderForm(modal, deal, company, seller, rawItems) {
+    function renderForm(modal, deal, seller, company, contact, delivery, rawItems) {
         var body = modal.body;
         body.innerHTML = '';
 
+        // Delivery address takes priority; fall back to company address
+        var address = delivery.line || company.address || '';
+
         var formState = {
-            buyerName:    company.name    || '',
-            buyerAddress: company.address || '',
-            buyerVat:     company.vat     || '',
+            buyerName:    company.name || '',
+            buyerContact: contact.name || '',
+            buyerAddress: address,
+            buyerVat:     company.vat  || '',
             notes:        '',
             validUntil:   defaultValidUntil(),
             items:        rawItems.map(function (it) {
@@ -291,7 +302,10 @@
     function buildBuyerFields(state) {
         var wrap = document.createElement('div');
         wrap.appendChild(fieldRow('Компания', textInput(state.buyerName,    function (v) { state.buyerName    = v; })));
-        wrap.appendChild(fieldRow('Адрес',    textInput(state.buyerAddress, function (v) { state.buyerAddress = v; })));
+        if (state.buyerContact) {
+            wrap.appendChild(fieldRow('Контакт', textInput(state.buyerContact, function (v) { state.buyerContact = v; })));
+        }
+        wrap.appendChild(fieldRow('Адрес доставки', textInput(state.buyerAddress, function (v) { state.buyerAddress = v; })));
         if (state.buyerVat) {
             wrap.appendChild(fieldRow('VAT №', textInput(state.buyerVat, function (v) { state.buyerVat = v; })));
         }
@@ -486,6 +500,7 @@
             + '<div style="flex:1;">'
             + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">Buyer</div>'
             + '<p style="font-weight:700;font-size:10pt;margin-bottom:4px;">' + esc(state.buyerName) + '</p>'
+            + (state.buyerContact ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Attn.: </span>' + esc(state.buyerContact) + '</p>' : '')
             + '<p style="margin:3px 0;font-size:10pt;color:#374151;">' + esc(state.buyerAddress) + '</p>'
             + vatRow
             + '</div>\n</div>\n'

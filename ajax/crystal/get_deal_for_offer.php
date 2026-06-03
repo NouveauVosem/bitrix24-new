@@ -24,6 +24,19 @@ if (!$deal) {
     die();
 }
 
+// Delivery address from deal UF_ fields
+$deliveryCity    = trim($deal['UF_CRM_1720604913416'] ?? '');
+$deliveryStreet  = trim($deal['UF_CRM_1720604937540'] ?? '');
+$deliveryHouse   = trim($deal['UF_CRM_1720604951910'] ?? '');
+$deliveryZip     = trim($deal['UF_CRM_1720604926030'] ?? '');
+$deliveryCountry = trim($deal['UF_CRM_67BF208ADD735']  ?? '');
+
+$deliveryLine = implode(', ', array_filter([
+    $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
+    $deliveryZip ? $deliveryZip . ' ' . $deliveryCity : $deliveryCity,
+    $deliveryCountry,
+]));
+
 $result = [
     'status' => 'success',
     'deal'   => [
@@ -34,26 +47,52 @@ $result = [
         'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
         'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
     ],
+    'delivery' => [
+        'street'  => $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
+        'city'    => $deliveryCity,
+        'zip'     => $deliveryZip,
+        'country' => $deliveryCountry,
+        'line'    => $deliveryLine,
+    ],
     'company' => null,
+    'contact' => null,
 ];
 
+// Company linked to deal
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
     $company = CCrmCompany::GetByID($companyId);
     if ($company) {
-        $addressParts = array_filter([
-            $company['ADDRESS']             ?? '',
-            $company['ADDRESS_2']           ?? '',
-            $company['ADDRESS_CITY']        ?? '',
-            $company['ADDRESS_POSTAL_CODE'] ?? '',
-            $company['ADDRESS_COUNTRY']     ?? '',
-        ]);
+        // Collect all UF_ fields to find VAT (log them for debugging)
+        $ufFields = [];
+        foreach ($company as $k => $v) {
+            if (strpos($k, 'UF_') === 0 && !empty($v) && is_string($v)) {
+                $ufFields[$k] = $v;
+            }
+        }
 
         $result['company'] = [
-            'id'      => $company['ID'],
-            'name'    => $company['TITLE'],
-            'address' => implode(', ', $addressParts),
-            'vat'     => $company['UF_CRM_1_VAT_ID'] ?? ($company['UF_CRM_COMPANY_VAT'] ?? ''),
+            'id'       => $company['ID'],
+            'name'     => $company['TITLE'],
+            'address'  => implode(', ', array_filter([
+                $company['ADDRESS']             ?? '',
+                $company['ADDRESS_CITY']        ?? '',
+                $company['ADDRESS_POSTAL_CODE'] ?? '',
+                $company['ADDRESS_COUNTRY']     ?? '',
+            ])),
+            'uf_fields' => $ufFields, // debug — see which field holds VAT
+        ];
+    }
+}
+
+// Contact linked to deal
+$contactId = (int)($deal['CONTACT_ID'] ?? 0);
+if ($contactId > 0) {
+    $contact = CCrmContact::GetByID($contactId);
+    if ($contact) {
+        $result['contact'] = [
+            'id'   => $contact['ID'],
+            'name' => trim(($contact['NAME'] ?? '') . ' ' . ($contact['LAST_NAME'] ?? '')),
         ];
     }
 }
