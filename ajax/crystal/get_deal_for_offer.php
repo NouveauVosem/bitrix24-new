@@ -39,9 +39,17 @@ $result = [
 // ── Company card ─────────────────────────────────────────────
 $companyId = (int)($deal['COMPANY_ID'] ?? 0);
 if ($companyId > 0) {
-    $company = CCrmCompany::GetByID($companyId);
+    // GetByID doesn't load UF_ fields — use GetList with UF_* select
+    $res = CCrmCompany::GetList(
+        [],
+        ['=ID' => $companyId],
+        false,
+        false,
+        ['*', 'UF_*']
+    );
+    $company = $res->Fetch();
+
     if ($company) {
-        // Separate UF_ fields for debug — helps find VAT field ID
         $ufFields = [];
         foreach ($company as $k => $v) {
             if (strpos($k, 'UF_') === 0) {
@@ -49,7 +57,6 @@ if ($companyId > 0) {
             }
         }
 
-        // Standard address fields from company card
         $addressParts = array_filter([
             trim($company['ADDRESS']             ?? ''),
             trim($company['ADDRESS_2']           ?? ''),
@@ -58,10 +65,10 @@ if ($companyId > 0) {
         ]);
 
         $result['company'] = [
-            'id'       => $company['ID'],
-            'name'     => $company['TITLE'] ?? '',
-            'address'  => implode(', ', array_filter(array_map('trim', $addressParts))),
-            'uf'       => $ufFields, // full dump — find VAT field here
+            'id'      => $company['ID'],
+            'name'    => $company['TITLE'] ?? '',
+            'address' => implode(', ', array_filter(array_map('trim', $addressParts))),
+            'uf'      => $ufFields,
         ];
     }
 }
@@ -69,7 +76,15 @@ if ($companyId > 0) {
 // ── Contact card ─────────────────────────────────────────────
 $contactId = (int)($deal['CONTACT_ID'] ?? 0);
 if ($contactId > 0) {
-    $contact = CCrmContact::GetByID($contactId);
+    $res = CCrmContact::GetList(
+        [],
+        ['=ID' => $contactId],
+        false,
+        false,
+        ['*', 'UF_*']
+    );
+    $contact = $res->Fetch();
+
     if ($contact) {
         $ufContact = [];
         foreach ($contact as $k => $v) {
