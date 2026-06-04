@@ -734,7 +734,7 @@
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         var modal = document.createElement('div');
-        modal.style.cssText = 'background:#fff;border-radius:8px;padding:20px;max-width:420px;width:90vw;max-height:75vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;';
+        modal.style.cssText = 'background:#fff;border-radius:8px;padding:20px;max-width:420px;width:90vw;max-height:75vh;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;';
 
         var closeBtn = document.createElement('button');
         closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:2px 6px;line-height:1;';
@@ -785,9 +785,22 @@
                 return;
             }
 
+            var searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Поиск формы...';
+            searchInput.style.cssText = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;margin-bottom:8px;outline:none;';
+            listDiv.appendChild(searchInput);
+
+            var itemsContainer = document.createElement('div');
+            itemsContainer.style.cssText = 'max-height:350px;overflow-y:auto;';
+            listDiv.appendChild(itemsContainer);
+
+            var allItems = [];
+
             forms.forEach(function (form) {
                 var item = document.createElement('div');
                 item.style.cssText = 'padding:9px 11px;margin-bottom:5px;background:#f5f7fa;border-radius:5px;cursor:pointer;border:1px solid #e5e7eb;';
+                item._searchText = (form.name || '').toLowerCase();
 
                 var r1 = document.createElement('div');
                 r1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
@@ -815,15 +828,25 @@
                 item.addEventListener('mouseleave', function () { item.style.borderColor = '#e5e7eb'; item.style.background = '#f5f7fa'; });
                 item.addEventListener('click', function () { showNormsView(form); });
 
-                listDiv.appendChild(item);
+                allItems.push(item);
+                itemsContainer.appendChild(item);
             });
+
+            searchInput.addEventListener('input', function () {
+                var query = searchInput.value.toLowerCase().trim();
+                allItems.forEach(function (item) {
+                    item.style.display = (!query || item._searchText.indexOf(query) !== -1) ? '' : 'none';
+                });
+            });
+
+            setTimeout(function () { searchInput.focus(); }, 50);
         }
 
         function showNormsView(form) {
             titleEl.textContent = form.name;
             manageBtn.style.display = 'none';
             listDiv.innerHTML = '';
-            listDiv.style.cssText = '';
+            listDiv.style.cssText = 'overflow-y:auto;max-height:calc(75vh - 100px);';
 
             var backBtn = document.createElement('button');
             backBtn.textContent = '← Назад к формам';
