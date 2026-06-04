@@ -15,7 +15,7 @@
         };
         if (body !== undefined) opts.body = JSON.stringify(body);
         return fetch(CRYSTAL_BASE + path, opts).then(function (r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.ok) return r.json().then(function (b) { throw new Error(b && b.message ? b.message : 'HTTP ' + r.status); }, function () { throw new Error('HTTP ' + r.status); });
             if (r.status === 204) return null;
             return r.json();
         });
@@ -457,11 +457,11 @@
                         onBack();
                     }, 900);
                 },
-                function () {
+                function (err) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = isNew ? 'Создать форму' : 'Сохранить изменения';
                     saveStatus.className = 'cfe-save-status cfe-save-status--err';
-                    saveStatus.textContent = 'Ошибка сохранения';
+                    saveStatus.textContent = (err && err.message && !/^HTTP \d/.test(err.message)) ? err.message : 'Ошибка сохранения';
                 }
             );
         });

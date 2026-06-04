@@ -850,7 +850,16 @@
             loadingEl.textContent = 'Загрузка норм...';
             listDiv.appendChild(loadingEl);
 
-            fetch(CRYSTAL_BASE + '/api/product-form-norms?baseNormArticle=' + encodeURIComponent(form.article || ''), {
+            if (!form.article) {
+                listDiv.removeChild(loadingEl);
+                var emptyEl = document.createElement('div');
+                emptyEl.style.cssText = 'font-size:14px;color:#9ca3af;padding:4px 0;';
+                emptyEl.textContent = 'Сохранённых норм нет';
+                listDiv.appendChild(emptyEl);
+                return;
+            }
+
+            fetch(CRYSTAL_BASE + '/api/product-form-norms?baseNormArticle=' + encodeURIComponent(form.article), {
                 headers: { 'X-Api-Key': API_KEY }
             })
             .then(function (r) { return r.json(); })
