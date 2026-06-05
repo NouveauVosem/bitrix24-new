@@ -366,8 +366,25 @@
                     }
                 });
 
+                var crystalBtn = document.createElement('button');
+                crystalBtn.title = 'Crystal параметры';
+                crystalBtn.style.cssText = [
+                    'background:none;border:1px solid #bfdbfe;',
+                    'color:#1d4ed8;border-radius:4px;',
+                    'font-size:11px;font-weight:700;padding:2px 6px;',
+                    'cursor:pointer;flex-shrink:0;line-height:1.4;'
+                ].join('');
+                crystalBtn.textContent = '⚙';
+                crystalBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (window.CrystalProductParams) {
+                        window.CrystalProductParams.open(item.article || '', item.name || '', item.bitrixId || 0);
+                    }
+                });
+
                 hdr.appendChild(arrow);
                 hdr.appendChild(info);
+                hdr.appendChild(crystalBtn);
                 hdr.appendChild(delBtn);
 
                 // --- components ---

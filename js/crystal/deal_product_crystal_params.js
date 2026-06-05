@@ -80,7 +80,7 @@
 
     // ===== POPUP =====
 
-    function openPopup(article, productName) {
+    function openPopup(article, productName, bitrixId) {
         var existing = document.getElementById('ccp-overlay');
         if (existing) existing.remove();
 
@@ -95,10 +95,18 @@
 
         var modal = document.createElement('div');
         modal.style.cssText = [
-            'background:#fff;border-radius:8px;padding:24px;',
-            'width:580px;max-width:94vw;',
-            'max-height:90vh;overflow-y:auto;',
-            'position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.22);'
+            'background:#fff;border-radius:8px;',
+            'width:960px;max-width:96vw;',
+            'max-height:92vh;',
+            'position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.22);',
+            'display:flex;flex-direction:column;'
+        ].join('');
+
+        // Header bar
+        var header = document.createElement('div');
+        header.style.cssText = [
+            'padding:18px 24px 14px;border-bottom:1px solid #f3f4f6;',
+            'flex-shrink:0;position:relative;'
         ].join('');
 
         var closeBtn = document.createElement('button');
@@ -107,33 +115,134 @@
         closeBtn.addEventListener('click', function () { overlay.remove(); });
 
         var titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:17px;font-weight:700;color:#222;margin-bottom:3px;padding-right:36px;';
+        titleEl.style.cssText = 'font-size:17px;font-weight:700;color:#222;margin-bottom:2px;padding-right:36px;';
         titleEl.textContent = 'Crystal: ' + article;
 
         var subtitleEl = document.createElement('div');
-        subtitleEl.style.cssText = 'font-size:14px;color:#9ca3af;margin-bottom:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        subtitleEl.style.cssText = 'font-size:14px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         subtitleEl.textContent = productName || '';
+
+        header.appendChild(closeBtn);
+        header.appendChild(titleEl);
+        header.appendChild(subtitleEl);
+
+        // Split body
+        var body = document.createElement('div');
+        body.style.cssText = 'display:flex;flex:1;min-height:0;';
+
+        // Left: drawing panel
+        var drawingPanel = document.createElement('div');
+        drawingPanel.style.cssText = [
+            'width:44%;flex-shrink:0;',
+            'border-right:1px solid #f3f4f6;',
+            'display:flex;flex-direction:column;',
+            'background:#f9fafb;'
+        ].join('');
+
+        var drawingHeader = document.createElement('div');
+        drawingHeader.style.cssText = 'padding:10px 14px;font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #f3f4f6;flex-shrink:0;';
+        drawingHeader.textContent = 'Чертёж';
+
+        var drawingContent = document.createElement('div');
+        drawingContent.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;min-height:0;';
+        drawingContent.innerHTML = '<span style="font-size:13px;color:#9ca3af;">Загрузка чертежа...</span>';
+
+        drawingPanel.appendChild(drawingHeader);
+        drawingPanel.appendChild(drawingContent);
+
+        // Right: form panel
+        var formPanel = document.createElement('div');
+        formPanel.style.cssText = 'flex:1;overflow-y:auto;padding:18px 22px;';
 
         var statusEl = document.createElement('div');
         statusEl.style.cssText = 'font-size:14px;color:#6b7280;padding:30px;text-align:center;';
         statusEl.textContent = 'Загрузка...';
+        formPanel.appendChild(statusEl);
 
-        modal.appendChild(closeBtn);
-        modal.appendChild(titleEl);
-        modal.appendChild(subtitleEl);
-        modal.appendChild(statusEl);
+        body.appendChild(drawingPanel);
+        body.appendChild(formPanel);
+
+        modal.appendChild(header);
+        modal.appendChild(body);
+
+        // Load drawing in parallel
+        var drawingParam = bitrixId ? 'bitrixId=' + bitrixId : 'article=' + encodeURIComponent(article);
+        fetch('/local/ajax/crystal/get_product_drawing.php?' + drawingParam)
+            .then(function (r) { return r.json(); })
+            .then(function (resp) { renderDrawing(drawingContent, resp); })
+            .catch(function () { renderDrawing(drawingContent, null); });
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
         Promise.all([findProductByArticle(article), loadTypes(), loadSpecKeys()])
             .then(function (results) {
-                modal.removeChild(statusEl);
-                renderForm(modal, article, productName, results[0], results[1], results[2]);
+                formPanel.removeChild(statusEl);
+                renderForm(formPanel, article, productName, results[0], results[1], results[2]);
             })
             .catch(function (err) {
                 statusEl.style.color = '#dc2626';
                 statusEl.textContent = 'Ошибка загрузки: ' + (err.message || '');
             });
+    }
+
+    // ===== DRAWING PANEL =====
+
+    function renderDrawing(container, resp) {
+        container.innerHTML = '';
+
+        var file = resp && resp.found && resp.file ? resp.file : null;
+
+        if (!resp || !resp.found) {
+            var msg = document.createElement('span');
+            msg.style.cssText = 'font-size:13px;color:#9ca3af;text-align:center;';
+            msg.textContent = (resp && resp.message) ? resp.message : 'Чертёж не прикреплён';
+            container.appendChild(msg);
+            return;
+        }
+
+        if (!file) {
+            var msg2 = document.createElement('span');
+            msg2.style.cssText = 'font-size:13px;color:#9ca3af;text-align:center;';
+            msg2.textContent = 'Чертёж не прикреплён';
+            container.appendChild(msg2);
+            return;
+        }
+
+        if (file.ext === 'pdf') {
+            var iframe = document.createElement('iframe');
+            iframe.src = file.url;
+            iframe.style.cssText = 'width:100%;flex:1;border:none;border-radius:4px;min-height:0;';
+            iframe.setAttribute('title', file.name);
+            container.style.alignItems = 'stretch';
+            container.appendChild(iframe);
+        } else {
+            var icon = document.createElement('div');
+            icon.style.cssText = 'font-size:40px;margin-bottom:10px;';
+            icon.textContent = '📄';
+            var fmt = document.createElement('div');
+            fmt.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:6px;text-align:center;';
+            fmt.textContent = file.name;
+            var note = document.createElement('div');
+            note.style.cssText = 'font-size:12px;color:#9ca3af;margin-bottom:16px;text-align:center;';
+            note.textContent = 'Предпросмотр недоступен';
+            container.appendChild(icon);
+            container.appendChild(fmt);
+            container.appendChild(note);
+        }
+
+        var dlBtn = document.createElement('a');
+        dlBtn.href = file.url;
+        dlBtn.download = file.name;
+        dlBtn.target = '_blank';
+        dlBtn.style.cssText = [
+            'display:inline-flex;align-items:center;gap:5px;',
+            'margin-top:10px;padding:6px 14px;flex-shrink:0;',
+            'background:#f0f7ff;border:1px solid #bfdbfe;',
+            'color:#1d4ed8;border-radius:5px;',
+            'font-size:13px;font-weight:600;text-decoration:none;'
+        ].join('');
+        dlBtn.textContent = '⬇ Скачать ' + file.ext.toUpperCase();
+        container.appendChild(dlBtn);
     }
 
     // ===== FORM RENDER =====
@@ -386,7 +495,10 @@
         var cancelBtn = document.createElement('button');
         cancelBtn.className = 'ui-btn ui-btn-light ui-btn-sm';
         cancelBtn.textContent = 'Отмена';
-        cancelBtn.addEventListener('click', function () { overlay.remove(); });
+        cancelBtn.addEventListener('click', function () {
+            var ov = document.getElementById('ccp-overlay');
+            if (ov) ov.remove();
+        });
 
         var saveStatus = document.createElement('div');
         saveStatus.style.cssText = 'width:100%;font-size:13px;min-height:16px;text-align:center;';
@@ -395,9 +507,6 @@
         footer.appendChild(cancelBtn);
         footer.appendChild(saveStatus);
         modal.appendChild(footer);
-
-        // Need overlay ref in cancel listener — capture it
-        var overlay = document.getElementById('ccp-overlay');
 
         // ===== COLLECT DATA =====
 
@@ -516,7 +625,11 @@
         });
     }
 
-    // ===== BUTTON INJECTION =====
+    // ===== PUBLIC API =====
+
+    window.CrystalProductParams = { open: openPopup };
+
+    // ===== BUTTON INJECTION (legacy — Bitrix native grid) =====
 
     function injectProductButtons() {
         var gridNode = document.body.querySelector('[id^="CCrmEntityProductListComponent"]');
@@ -552,6 +665,11 @@
                     : (row.node.children[nameKey].textContent || '').trim();
             }
 
+            // bitrixId — из скрытого инпута PRODUCT_ID внутри строки
+            var bitrixId = 0;
+            var pidInput = row.node.querySelector('input[data-name="PRODUCT_ID"]');
+            if (pidInput && pidInput.value) bitrixId = parseInt(pidInput.value) || 0;
+
             var article = '';
             if (articleKey !== null && row.node.children[articleKey]) {
                 article = (row.node.children[articleKey].textContent || '').trim();
@@ -560,7 +678,7 @@
                 var m = productName.match(/\d+\.\d+\.\d+/);
                 if (m) article = m[0];
             }
-            if (!article) return;
+            if (!article && !bitrixId) return;
 
             var lastCell = row.node.cells[row.node.cells.length - 1];
             if (!lastCell) return;
@@ -589,7 +707,7 @@
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
-                openPopup(article, productName);
+                openPopup(article, productName, bitrixId);
             });
 
             lastCell.appendChild(document.createElement('br'));
@@ -601,9 +719,6 @@
 
     BX.ready(function () {
         if (!window.location.href.match(/crm\/deal\/details\/(\d+)/)) return;
-        var observer = new MutationObserver(function () { injectProductButtons(); });
-        observer.observe(document.body, { childList: true, subtree: true });
-        injectProductButtons();
     });
 
 })();
