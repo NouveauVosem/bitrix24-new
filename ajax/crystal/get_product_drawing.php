@@ -1,7 +1,17 @@
 <?php
-require_once($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php');
+define('NO_KEEP_STATISTIC', true);
+define('NOT_CHECK_PERMISSIONS', false);
+
+require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.php');
 
 header('Content-Type: application/json; charset=utf-8');
+
+if (!$USER->IsAuthorized()) {
+    echo json_encode(['found' => false, 'message' => 'Unauthorized']);
+    die();
+}
+
+CModule::IncludeModule('iblock');
 
 $bitrixId = (int)($_GET['bitrixId'] ?? 0);
 $article  = trim($_GET['article'] ?? '');
