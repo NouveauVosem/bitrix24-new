@@ -241,6 +241,7 @@
             buyerVat:          company.vat           || '',
             notes:        '',
             validUntil:   defaultValidUntil(),
+            includeSpecs: true,
             items:        rawItems.map(function (it) {
                 return {
                     id:         it.id,
@@ -251,6 +252,7 @@
                     qty:        it.qty   || 1,
                     price:      it.price || 0,
                     included:   true,
+                    specs:      it.specs  || [],
                     components: (it.components || []).map(function (c) {
                         return {
                             name:    c.name    || '',
@@ -454,6 +456,24 @@
         dateInp.addEventListener('change', function () { state.validUntil = dateInp.value; });
         wrap.appendChild(fieldRow('Действительно до', dateInp));
 
+        // Include Technical Specifications toggle
+        var hasSpecs = state.items.some(function (it) { return it.specs && it.specs.length; });
+        if (hasSpecs) {
+            var specsToggleRow = document.createElement('div');
+            specsToggleRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid #f9fafb;';
+            var specsToggleLbl = document.createElement('label');
+            specsToggleLbl.style.cssText = 'flex:1;font-size:13px;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;';
+            var specsChk = document.createElement('input');
+            specsChk.type = 'checkbox';
+            specsChk.checked = state.includeSpecs;
+            specsChk.style.cssText = 'width:15px;height:15px;accent-color:#2563EB;cursor:pointer;flex-shrink:0;';
+            specsChk.addEventListener('change', function () { state.includeSpecs = specsChk.checked; });
+            specsToggleLbl.appendChild(specsChk);
+            specsToggleLbl.appendChild(document.createTextNode('Technical Specifications'));
+            specsToggleRow.appendChild(specsToggleLbl);
+            wrap.appendChild(specsToggleRow);
+        }
+
         // Notes
         var noteRow = document.createElement('div');
         noteRow.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:8px 14px;';
@@ -472,6 +492,37 @@
     }
 
     // ===== HTML GENERATOR =====
+
+    function buildSpecsHtml(includedItems, state) {
+        if (!state.includeSpecs) return '';
+        var itemsWithSpecs = includedItems.filter(function (it) { return it.specs && it.specs.length; });
+        if (!itemsWithSpecs.length) return '';
+
+        var html = '<div style="margin-top:28px;page-break-inside:avoid;">';
+        html += '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;'
+              + 'color:#9ca3af;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #e5e7eb;">'
+              + 'Technical Specifications</div>';
+
+        itemsWithSpecs.forEach(function (it) {
+            var itemNo = includedItems.indexOf(it) + 1;
+            html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
+            html += '<div style="font-size:9.5pt;font-weight:700;color:#1e40af;margin-bottom:6px;">'
+                  + itemNo + '. ' + esc(it.name) + '</div>';
+            html += '<table style="width:56%;border-collapse:collapse;">';
+            it.specs.forEach(function (spec) {
+                html += '<tr>'
+                    + '<td style="padding:2px 14px 2px 0;font-size:8.5pt;color:#6b7280;width:46%;vertical-align:top;">'
+                    + esc(spec.label) + '</td>'
+                    + '<td style="padding:2px 0;font-size:8.5pt;color:#1f2937;font-weight:500;">'
+                    + esc(spec.value) + '</td>'
+                    + '</tr>';
+            });
+            html += '</table></div>';
+        });
+
+        html += '</div>';
+        return html;
+    }
 
     function formatMoney(val) {
         var n = parseFloat(val) || 0;
@@ -608,6 +659,7 @@
 
             + vatNote
             + notesHtml
+            + buildSpecsHtml(includedItems, state)
 
             // Footer
             + '<div style="margin-top:30px;padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">'

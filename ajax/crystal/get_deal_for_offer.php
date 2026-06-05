@@ -115,28 +115,128 @@ $res        = $connection->query("SELECT ITEMS FROM crm_deal_hierarchy WHERE DEA
 $row        = $res->fetch();
 $items      = $row ? (json_decode($row['ITEMS'], true) ?: []) : [];
 
-// Resolve missing bitrixId via Crystal API (norm → template.bitrixId)
+// Resolve missing bitrixId and get baseNormArticle via Crystal API
 $crystalBase = 'https://crystal.alvla.tools';
 $crystalKey  = 'legenda';
 
+$ctx = stream_context_create(['http' => [
+    'method'  => 'GET',
+    'header'  => 'X-Api-Key: ' . $crystalKey . "\r\n",
+    'timeout' => 3,
+]]);
+
 foreach ($items as &$item) {
-    if (!empty($item['bitrixId'])) continue;
     $normId = $item['normId'] ?? null;
     if (!$normId) continue;
+    if (!empty($item['bitrixId']) && !empty($item['baseNormArticle'])) continue;
 
-    $ctx = stream_context_create(['http' => [
-        'method'  => 'GET',
-        'header'  => 'X-Api-Key: ' . $crystalKey . "\r\n",
-        'timeout' => 5,
-    ]]);
     $raw = @file_get_contents($crystalBase . '/api/product-form-norms/' . urlencode($normId), false, $ctx);
     if ($raw) {
         $norm = json_decode($raw, true);
-        $bid  = (int)($norm['template']['bitrixId'] ?? 0);
-        if ($bid) $item['bitrixId'] = $bid;
+        if (empty($item['bitrixId'])) {
+            $bid = (int)($norm['template']['bitrixId'] ?? 0);
+            if ($bid) $item['bitrixId'] = $bid;
+        }
+        if (empty($item['baseNormArticle'])) {
+            $item['baseNormArticle'] = $norm['baseNormArticle'] ?? null;
+        }
     }
 }
 unset($item);
+
+// Fetch product specs from Crystal for items with baseNormArticle
+$specsPerArticle = [];
+$specKeysByCode  = [];
+$specValuesByKey = [];
+
+$uniqueArticles = [];
+foreach ($items as $item) {
+    $a = $item['baseNormArticle'] ?? null;
+    if ($a && !in_array($a, $uniqueArticles, true)) $uniqueArticles[] = $a;
+}
+
+foreach ($uniqueArticles as $article) {
+    $url = $crystalBase . '/api/products/getAll?search=' . urlencode($article) . '&limit=5';
+    $raw = @file_get_contents($url, false, $ctx);
+    if (!$raw) continue;
+    $resp     = json_decode($raw, true);
+    $products = is_array($resp['data'] ?? null) ? $resp['data'] : (is_array($resp) ? $resp : []);
+    foreach ($products as $prod) {
+        foreach ($prod['variants'] ?? [] as $v) {
+            if (($v['article'] ?? '') === $article && !empty($v['specs'])) {
+                $specsPerArticle[$article] = $v['specs'];
+                break 2;
+            }
+        }
+    }
+}
+
+if (!empty($specsPerArticle)) {
+    $skRaw = @file_get_contents($crystalBase . '/api/spec-keys/', false, $ctx);
+    if ($skRaw) {
+        foreach (json_decode($skRaw, true) ?: [] as $sk) {
+            $specKeysByCode[$sk['code']] = $sk;
+        }
+    }
+
+    $enumKeysDone = [];
+    foreach ($specsPerArticle as $specs) {
+        foreach ($specs as $code => $val) {
+            if (isset($enumKeysDone[$code])) continue;
+            $sk = $specKeysByCode[$code] ?? null;
+            if ($sk && in_array($sk['valueType'], ['enum', 'enum_rich'], true)) {
+                $svRaw = @file_get_contents($crystalBase . '/api/products/spec-values?specKey=' . urlencode($code), false, $ctx);
+                $specValuesByKey[$code] = [];
+                if ($svRaw) {
+                    foreach (json_decode($svRaw, true) ?: [] as $sv) {
+                        $specValuesByKey[$code][$sv['code']] = $sv['value']['en'] ?? $sv['value']['ru'] ?? $sv['code'];
+                    }
+                }
+                $enumKeysDone[$code] = true;
+            }
+        }
+    }
+
+    foreach ($items as &$item) {
+        $article = $item['baseNormArticle'] ?? null;
+        if (!$article || !isset($specsPerArticle[$article])) continue;
+
+        $rawSpecs = $specsPerArticle[$article];
+        uksort($rawSpecs, function ($a, $b) use ($specKeysByCode) {
+            return (int)($specKeysByCode[$a]['sortOrder'] ?? 999) - (int)($specKeysByCode[$b]['sortOrder'] ?? 999);
+        });
+
+        $resolved = [];
+        foreach ($rawSpecs as $code => $val) {
+            $sk = $specKeysByCode[$code] ?? null;
+            if (!$sk) continue;
+            $label = $sk['labels']['en'] ?? $sk['labels']['ru'] ?? $code;
+            $unit  = $sk['unit'] ?? null;
+            $vtype = $sk['valueType'] ?? 'text';
+
+            if (in_array($vtype, ['enum', 'enum_rich'], true)) {
+                $displayVal = $specValuesByKey[$code][$val] ?? $val;
+            } elseif ($vtype === 'float') {
+                if (is_array($val)) {
+                    $parts = array_values(array_filter($val, function ($v) { return $v !== null; }));
+                    $displayVal = implode('–', $parts);
+                } else {
+                    $displayVal = (string)$val;
+                }
+                if ($unit) $displayVal .= ' ' . $unit;
+            } else {
+                $displayVal = (string)$val;
+            }
+
+            if ($displayVal !== '') {
+                $resolved[] = ['label' => $label, 'value' => $displayVal];
+            }
+        }
+
+        if (!empty($resolved)) $item['specs'] = $resolved;
+    }
+    unset($item);
+}
 
 // Collect all bitrixIds — from items and their components
 \CModule::IncludeModule('iblock');
