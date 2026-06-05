@@ -97,7 +97,7 @@
         modal.style.cssText = [
             'background:#fff;border-radius:8px;',
             'width:95vw;max-width:95vw;',
-            'max-height:92vh;',
+            'min-height:70vh;max-height:92vh;',
             'position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.22);',
             'display:flex;flex-direction:column;'
         ].join('');
@@ -130,11 +130,11 @@
         var body = document.createElement('div');
         body.style.cssText = 'display:flex;flex:1;min-height:0;';
 
-        // Left: drawing panel
+        // Right: drawing panel
         var drawingPanel = document.createElement('div');
         drawingPanel.style.cssText = [
             'width:63%;flex-shrink:0;',
-            'border-right:1px solid #f3f4f6;',
+            'border-left:1px solid #f3f4f6;',
             'display:flex;flex-direction:column;',
             'background:#f9fafb;'
         ].join('');
@@ -159,8 +159,8 @@
         statusEl.textContent = 'Загрузка...';
         formPanel.appendChild(statusEl);
 
-        body.appendChild(drawingPanel);
         body.appendChild(formPanel);
+        body.appendChild(drawingPanel);
 
         modal.appendChild(header);
         modal.appendChild(body);
