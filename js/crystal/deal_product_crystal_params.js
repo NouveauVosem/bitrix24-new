@@ -96,7 +96,7 @@
         var modal = document.createElement('div');
         modal.style.cssText = [
             'background:#fff;border-radius:8px;',
-            'width:960px;max-width:96vw;',
+            'width:95vw;max-width:95vw;',
             'max-height:92vh;',
             'position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.22);',
             'display:flex;flex-direction:column;'
@@ -133,7 +133,7 @@
         // Left: drawing panel
         var drawingPanel = document.createElement('div');
         drawingPanel.style.cssText = [
-            'width:44%;flex-shrink:0;',
+            'width:63%;flex-shrink:0;',
             'border-right:1px solid #f3f4f6;',
             'display:flex;flex-direction:column;',
             'background:#f9fafb;'
