@@ -46,9 +46,11 @@ if ($action === 'get') {
         }
     }
 
-    // Resolve missing bitrixId via Crystal API
+    // Resolve missing bitrixId / baseArticle via Crystal API
     foreach ($items as &$item) {
-        if (!empty($item['bitrixId'])) continue;
+        $needsBitrixId    = empty($item['bitrixId']);
+        $needsBaseArticle = empty($item['baseArticle']);
+        if (!$needsBitrixId && !$needsBaseArticle) continue;
         $normId = $item['normId'] ?? null;
         if (!$normId) continue;
         $ctx = stream_context_create(['http' => [
@@ -59,8 +61,14 @@ if ($action === 'get') {
         $raw = @file_get_contents('https://crystal.alvla.tools/api/product-form-norms/' . urlencode($normId), false, $ctx);
         if ($raw) {
             $norm = json_decode($raw, true);
-            $bid  = (int)($norm['template']['bitrixId'] ?? 0);
-            if ($bid) $item['bitrixId'] = $bid;
+            if ($needsBitrixId) {
+                $bid = (int)($norm['template']['bitrixId'] ?? 0);
+                if ($bid) $item['bitrixId'] = $bid;
+            }
+            if ($needsBaseArticle) {
+                $ba = $norm['template']['article'] ?? '';
+                if ($ba) $item['baseArticle'] = $ba;
+            }
         }
     }
     unset($item);
