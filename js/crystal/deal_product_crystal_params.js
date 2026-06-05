@@ -7,7 +7,7 @@
 
     var typesCache = null;
     var specKeysCache = null;
-    var specValuesCache = null;
+    var specValuesCache = {}; // keyed by specKey code
 
     // ===== API HELPERS =====
 
@@ -56,9 +56,10 @@
         return apiGet('/spec-keys/').then(function (d) { specKeysCache = d; return d; });
     }
 
-    function loadSpecValues() {
-        if (specValuesCache) return Promise.resolve(specValuesCache);
-        return apiGet('/products/spec-values').then(function (d) { specValuesCache = d; return d; });
+    function loadSpecValuesFor(specKeyCode) {
+        if (specValuesCache[specKeyCode]) return Promise.resolve(specValuesCache[specKeyCode]);
+        return apiGet('/products/spec-values?specKey=' + encodeURIComponent(specKeyCode))
+            .then(function (d) { specValuesCache[specKeyCode] = d; return d; });
     }
 
     function findProductByArticle(article) {
@@ -124,10 +125,10 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        Promise.all([findProductByArticle(article), loadTypes(), loadSpecKeys(), loadSpecValues()])
+        Promise.all([findProductByArticle(article), loadTypes(), loadSpecKeys()])
             .then(function (results) {
                 modal.removeChild(statusEl);
-                renderForm(modal, article, productName, results[0], results[1], results[2], results[3]);
+                renderForm(modal, article, productName, results[0], results[1], results[2]);
             })
             .catch(function (err) {
                 statusEl.style.color = '#dc2626';
@@ -137,7 +138,7 @@
 
     // ===== FORM RENDER =====
 
-    function renderForm(modal, article, productName, found, types, specKeys, specValues) {
+    function renderForm(modal, article, productName, found, types, specKeys) {
         var existingProduct = found ? found.product : null;
         var existingVariant = found ? found.variant : null;
 
@@ -278,18 +279,31 @@
                     sel.dataset.specKey = sk.code;
                     sel.dataset.vtype = 'enum';
                     sel.style.cssText = 'width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;background:#fff;';
-                    var emptyO = document.createElement('option');
-                    emptyO.value = '';
-                    emptyO.textContent = '—';
-                    sel.appendChild(emptyO);
-                    (specValues || []).filter(function (sv) { return sv.specKey === sk.code; }).forEach(function (sv) {
-                        var o = document.createElement('option');
-                        o.value = sv.code;
-                        o.textContent = (sv.value && (sv.value.ru || sv.value.en)) || sv.code;
-                        if (currentVal === sv.code) o.selected = true;
-                        sel.appendChild(o);
-                    });
+                    var loadingO = document.createElement('option');
+                    loadingO.textContent = 'Загрузка...';
+                    loadingO.disabled = true;
+                    sel.appendChild(loadingO);
                     content = sel;
+
+                    loadSpecValuesFor(sk.code).then(function (vals) {
+                        sel.innerHTML = '';
+                        var emptyO = document.createElement('option');
+                        emptyO.value = '';
+                        emptyO.textContent = '—';
+                        sel.appendChild(emptyO);
+                        (vals || []).forEach(function (sv) {
+                            var o = document.createElement('option');
+                            o.value = sv.code;
+                            o.textContent = (sv.value && (sv.value.ru || sv.value.en)) || sv.code;
+                            if (currentVal === sv.code) o.selected = true;
+                            sel.appendChild(o);
+                        });
+                    }).catch(function () {
+                        sel.innerHTML = '';
+                        var errO = document.createElement('option');
+                        errO.textContent = 'Ошибка загрузки';
+                        sel.appendChild(errO);
+                    });
 
                 } else if (sk.valueType === 'float') {
                     if (sk.allowRange) {
