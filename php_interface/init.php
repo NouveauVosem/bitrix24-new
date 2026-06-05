@@ -32,6 +32,7 @@ function addCustomAssets() {
 	$asset->addCss("/local/js/crystal/deal_crystal_btn.css");
 	$asset->addJs("/local/js/crystal/deal_reservation_status.js");
 	$asset->addJs("/local/js/crystal/deal_commercial_offer.js");
+	$asset->addJs("/local/js/crystal/deal_product_crystal_params.js");
 
 }
 
