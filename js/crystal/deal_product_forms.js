@@ -432,6 +432,7 @@
                 var newItem = {
                     id: 'item_' + Date.now(),
                     article: normArticle || form.article || '',
+                    baseArticle: form.article || '',
                     name: productName,
                     qty: currentQty,
                     price: currentPrice,

@@ -80,7 +80,7 @@
 
     // ===== POPUP =====
 
-    function openPopup(article, productName, bitrixId) {
+    function openPopup(baseArticle, productName, bitrixId) {
         var existing = document.getElementById('ccp-overlay');
         if (existing) existing.remove();
 
@@ -116,7 +116,7 @@
 
         var titleEl = document.createElement('div');
         titleEl.style.cssText = 'font-size:17px;font-weight:700;color:#222;margin-bottom:2px;padding-right:36px;';
-        titleEl.textContent = 'Crystal: ' + article;
+        titleEl.textContent = 'Crystal: ' + baseArticle;
 
         var subtitleEl = document.createElement('div');
         subtitleEl.style.cssText = 'font-size:14px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
@@ -166,7 +166,7 @@
         modal.appendChild(body);
 
         // Load drawing in parallel
-        var drawingParam = bitrixId ? 'bitrixId=' + bitrixId : 'article=' + encodeURIComponent(article);
+        var drawingParam = bitrixId ? 'bitrixId=' + bitrixId : 'article=' + encodeURIComponent(baseArticle);
         fetch('/local/ajax/crystal/get_product_drawing.php?' + drawingParam)
             .then(function (r) { return r.json(); })
             .then(function (resp) { renderDrawing(drawingContent, resp); })
@@ -174,10 +174,10 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        Promise.all([findProductByArticle(article), loadTypes(), loadSpecKeys()])
+        Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys()])
             .then(function (results) {
                 formPanel.removeChild(statusEl);
-                renderForm(formPanel, article, productName, results[0], results[1], results[2]);
+                renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2]);
             })
             .catch(function (err) {
                 statusEl.style.color = '#dc2626';
@@ -247,7 +247,7 @@
 
     // ===== FORM RENDER =====
 
-    function renderForm(modal, article, productName, found, types, specKeys) {
+    function renderForm(modal, baseArticle, productName, found, types, specKeys) {
         var existingProduct = found ? found.product : null;
         var existingVariant = found ? found.variant : null;
 
@@ -571,8 +571,8 @@
 
             var data = collectData();
             var variantDto = {
-                article: article,
-                name: { ru: productName || article, en: productName || article },
+                article: baseArticle,
+                name: { ru: productName || baseArticle, en: productName || baseArticle },
                 weight: data.weight,
                 dimensions: Object.keys(data.dims).length ? data.dims : undefined,
                 specs: data.specs,
@@ -600,8 +600,8 @@
             } else {
                 promise = apiPost('/products/create', {
                     productTypeCode: typeCode,
-                    name: { ru: productName || article, en: productName || article },
-                    article: article,
+                    name: { ru: productName || baseArticle, en: productName || baseArticle },
+                    article: baseArticle,
                     variants: [variantDto]
                 });
             }

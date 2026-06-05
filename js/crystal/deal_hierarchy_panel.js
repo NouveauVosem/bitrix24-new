@@ -378,7 +378,7 @@
                 crystalBtn.addEventListener('click', function (e) {
                     e.stopPropagation();
                     if (window.CrystalProductParams) {
-                        window.CrystalProductParams.open(item.article || '', item.name || '', item.bitrixId || 0);
+                        window.CrystalProductParams.open(item.baseArticle || item.article || '', item.name || '', item.bitrixId || 0);
                     }
                 });
 
