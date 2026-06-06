@@ -37,21 +37,27 @@ $deliveryLine = implode(', ', array_filter([
     $deliveryCountry,
 ]));
 
-// DEBUG: dump raw seller field value
-$_dbgSellerRaw = $deal['UF_CRM_1718209313308'] ?? '__KEY_MISSING__';
-$_dbgSellerKeys = array_keys(array_filter($deal, function($v, $k) {
-    return strpos($k, 'UF_') === 0 && $v !== '' && $v !== null && $v !== false;
-}, ARRAY_FILTER_USE_BOTH));
+// Resolve seller via USER_FIELD_MANAGER (CCrmDeal::GetByID does not return UF_ fields)
+global $USER_FIELD_MANAGER;
+$dealUfFields = $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $deal['ID'], LANGUAGE_ID);
+$sellerField  = $dealUfFields['UF_CRM_1718209313308'] ?? [];
+$sellerValue  = '';
+if (!empty($sellerField['VALUE'])) {
+    if (($sellerField['USER_TYPE_ID'] ?? '') === 'enumeration') {
+        $enumRes = CUserFieldEnum::GetList([], ['ID' => $sellerField['VALUE']]);
+        if ($enumRow = $enumRes->Fetch()) $sellerValue = $enumRow['VALUE'];
+    } else {
+        $sellerValue = (string)$sellerField['VALUE'];
+    }
+}
 
 $result = [
     'status' => 'success',
-    '_debug_seller_raw'  => $_dbgSellerRaw,
-    '_debug_uf_nonempty' => $_dbgSellerKeys,
     'deal'   => [
         'id'        => $deal['ID'],
         'title'     => $deal['TITLE'],
         'currency'  => $deal['CURRENCY_ID'] ?: 'EUR',
-        'seller'    => $deal['UF_CRM_1718209313308'] ?? '',
+        'seller'    => $sellerValue,
         'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
         'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
     ],
