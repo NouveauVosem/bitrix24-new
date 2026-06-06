@@ -144,10 +144,11 @@ foreach ($items as &$item) {
 }
 unset($item);
 
-// Fetch product specs from Crystal for items with baseNormArticle
-$specsPerArticle = [];
-$specKeysByCode  = [];
-$specValuesByKey = [];
+// Fetch product specs and physical params from Crystal for items with baseNormArticle
+$specsPerArticle   = [];
+$physicalPerArticle = [];
+$specKeysByCode    = [];
+$specValuesByKey   = [];
 
 $uniqueArticles = [];
 foreach ($items as $item) {
@@ -163,8 +164,11 @@ foreach ($uniqueArticles as $article) {
     $products = is_array($resp['data'] ?? null) ? $resp['data'] : (is_array($resp) ? $resp : []);
     foreach ($products as $prod) {
         foreach ($prod['variants'] ?? [] as $v) {
-            if (($v['article'] ?? '') === $article && !empty($v['specs'])) {
-                $specsPerArticle[$article] = $v['specs'];
+            if (($v['article'] ?? '') === $article) {
+                if (!empty($v['specs'])) $specsPerArticle[$article] = $v['specs'];
+                $w = isset($v['weight']) && $v['weight'] !== null ? (float)$v['weight'] : null;
+                $d = !empty($v['dimensions']) ? $v['dimensions'] : null;
+                if ($w !== null || $d) $physicalPerArticle[$article] = ['weight' => $w, 'dimensions' => $d];
                 break 2;
             }
         }
@@ -234,6 +238,17 @@ if (!empty($specsPerArticle)) {
         }
 
         if (!empty($resolved)) $item['specs'] = $resolved;
+    }
+    unset($item);
+}
+
+// Assign physical params (weight / dimensions) to items
+if (!empty($physicalPerArticle)) {
+    foreach ($items as &$item) {
+        $article = $item['baseNormArticle'] ?? null;
+        if ($article && isset($physicalPerArticle[$article])) {
+            $item['physical'] = $physicalPerArticle[$article];
+        }
     }
     unset($item);
 }

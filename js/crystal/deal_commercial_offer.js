@@ -252,7 +252,8 @@
                     qty:        it.qty   || 1,
                     price:      it.price || 0,
                     included:   true,
-                    specs:      it.specs  || [],
+                    specs:      it.specs    || [],
+                    physical:   it.physical || null,
                     components: (it.components || []).map(function (c) {
                         return {
                             name:    c.name    || '',
@@ -495,28 +496,63 @@
 
     function buildSpecsHtml(includedItems, state) {
         if (!state.includeSpecs) return '';
-        var itemsWithSpecs = includedItems.filter(function (it) { return it.specs && it.specs.length; });
-        if (!itemsWithSpecs.length) return '';
+        var itemsWithData = includedItems.filter(function (it) {
+            return (it.specs && it.specs.length) || it.physical;
+        });
+        if (!itemsWithData.length) return '';
 
         var html = '<div style="margin-top:28px;page-break-inside:avoid;">';
         html += '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;'
               + 'color:#9ca3af;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #e5e7eb;">'
               + 'Technical Specifications</div>';
 
-        itemsWithSpecs.forEach(function (it) {
+        var labelTd = 'padding:2px 14px 2px 0;font-size:8.5pt;color:#6b7280;width:46%;vertical-align:top;';
+        var valueTd = 'padding:2px 0;font-size:8.5pt;color:#1f2937;font-weight:500;';
+
+        function dimStr(d) {
+            var parts = [];
+            if (d.width)  parts.push(d.width);
+            if (d.depth)  parts.push(d.depth);
+            if (d.height) parts.push(d.height);
+            return parts.length ? parts.join(' × ') + ' mm' : '';
+        }
+
+        itemsWithData.forEach(function (it) {
             var itemNo = includedItems.indexOf(it) + 1;
             html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
             html += '<div style="font-size:9.5pt;font-weight:700;color:#1e40af;margin-bottom:6px;">'
                   + itemNo + '. ' + esc(it.name) + '</div>';
             html += '<table style="width:56%;border-collapse:collapse;">';
-            it.specs.forEach(function (spec) {
+
+            // Technical specs rows
+            (it.specs || []).forEach(function (spec) {
                 html += '<tr>'
-                    + '<td style="padding:2px 14px 2px 0;font-size:8.5pt;color:#6b7280;width:46%;vertical-align:top;">'
-                    + esc(spec.label) + '</td>'
-                    + '<td style="padding:2px 0;font-size:8.5pt;color:#1f2937;font-weight:500;">'
-                    + esc(spec.value) + '</td>'
+                    + '<td style="' + labelTd + '">' + esc(spec.label) + '</td>'
+                    + '<td style="' + valueTd + '">' + esc(spec.value) + '</td>'
                     + '</tr>';
             });
+
+            // Physical params rows
+            var phys = it.physical;
+            if (phys) {
+                var physRows = '';
+                if (phys.dimensions) {
+                    var ext = phys.dimensions.external;
+                    var inn = phys.dimensions.internal;
+                    if (ext) { var s = dimStr(ext); if (s) physRows += '<tr><td style="' + labelTd + '">External dimensions (W×D×H)</td><td style="' + valueTd + '">' + s + '</td></tr>'; }
+                    if (inn) { var s = dimStr(inn); if (s) physRows += '<tr><td style="' + labelTd + '">Internal dimensions (W×D×H)</td><td style="' + valueTd + '">' + s + '</td></tr>'; }
+                }
+                if (phys.weight !== null && phys.weight !== undefined) {
+                    physRows += '<tr><td style="' + labelTd + '">Net weight</td><td style="' + valueTd + '">' + phys.weight + ' kg</td></tr>';
+                }
+                if (physRows) {
+                    if (it.specs && it.specs.length) {
+                        html += '<tr><td colspan="2" style="padding:5px 0 3px;font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">Physical Parameters</td></tr>';
+                    }
+                    html += physRows;
+                }
+            }
+
             html += '</table></div>';
         });
 
