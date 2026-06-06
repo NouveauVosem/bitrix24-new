@@ -37,8 +37,16 @@ $deliveryLine = implode(', ', array_filter([
     $deliveryCountry,
 ]));
 
+// DEBUG: dump raw seller field value
+$_dbgSellerRaw = $deal['UF_CRM_1718209313308'] ?? '__KEY_MISSING__';
+$_dbgSellerKeys = array_keys(array_filter($deal, function($v, $k) {
+    return strpos($k, 'UF_') === 0 && $v !== '' && $v !== null && $v !== false;
+}, ARRAY_FILTER_USE_BOTH));
+
 $result = [
     'status' => 'success',
+    '_debug_seller_raw'  => $_dbgSellerRaw,
+    '_debug_uf_nonempty' => $_dbgSellerKeys,
     'deal'   => [
         'id'        => $deal['ID'],
         'title'     => $deal['TITLE'],
