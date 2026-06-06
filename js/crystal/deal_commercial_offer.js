@@ -25,6 +25,17 @@
 
     var DEFAULT_SELLER_KEY = 'ALVLA, s.r.o.';
 
+    function resolveSellerKey(raw) {
+        if (!raw) return DEFAULT_SELLER_KEY;
+        if (SELLERS[raw]) return raw;
+        var lower = String(raw).toLowerCase();
+        var keys = Object.keys(SELLERS);
+        for (var i = 0; i < keys.length; i++) {
+            if (lower.indexOf(keys[i].toLowerCase()) !== -1 || keys[i].toLowerCase().indexOf(lower) !== -1) return keys[i];
+        }
+        return DEFAULT_SELLER_KEY;
+    }
+
     function getDealId() {
         var m = window.location.href.match(/crm\/deal\/details\/(\d+)/);
         return m ? m[1] : null;
@@ -112,13 +123,12 @@
             var companyData  = resp.company  || {};
             var contactData  = resp.contact  || {};
             var deliveryData = resp.delivery || {};
-            var sellerKey    = dealData.seller || DEFAULT_SELLER_KEY;
-            var seller       = SELLERS[sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
 
             var items = resp.items || [];
+            console.log('[КП] deal.seller raw:', dealData.seller);
             console.log('[КП] items (' + items.length + '):', items);
 
-            renderForm(modal, dealData, seller, companyData, contactData, deliveryData, items);
+            renderForm(modal, dealData, companyData, contactData, deliveryData, items);
         });
     }
 
@@ -224,7 +234,7 @@
 
     // ===== FORM RENDERING =====
 
-    function renderForm(modal, deal, seller, company, contact, delivery, rawItems) {
+    function renderForm(modal, deal, company, contact, delivery, rawItems) {
         var body = modal.body;
         body.innerHTML = '';
 
@@ -232,6 +242,7 @@
         var address = readDeliveryAddressFromDom() || delivery.line || company.address || '';
 
         var formState = {
+            sellerKey:         resolveSellerKey(deal.seller),
             buyerName:         company.name          || '',
             buyerContact:      contact.name          || '',
             buyerAddress:      address,
@@ -277,7 +288,7 @@
 
         // ── Footer actions ───────────────────────────────────
         modal.previewBtn.onclick = function () {
-            var html = generateHTML(deal, seller, formState);
+            var html = generateHTML(deal, formState);
             var win = window.open('', '_blank');
             win.document.open();
             win.document.write(html);
@@ -285,7 +296,7 @@
         };
 
         modal.generateBtn.onclick = function () {
-            var html = generateHTML(deal, seller, formState);
+            var html = generateHTML(deal, formState);
             var win = window.open('', '_blank');
             win.document.open();
             win.document.write(html);
@@ -449,6 +460,37 @@
     function buildSettings(state) {
         var wrap = document.createElement('div');
 
+        // Seller selector
+        var sellerRow = document.createElement('div');
+        sellerRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid #f9fafb;';
+        var sellerLbl = document.createElement('span');
+        sellerLbl.style.cssText = 'width:90px;flex-shrink:0;font-size:13px;color:#6b7280;';
+        sellerLbl.textContent = 'Продавец';
+        var sellerBtns = document.createElement('div');
+        sellerBtns.style.cssText = 'display:flex;gap:6px;';
+        Object.keys(SELLERS).forEach(function (key) {
+            var btn = document.createElement('button');
+            btn.style.cssText = 'padding:4px 10px;border-radius:5px;font-size:12px;cursor:pointer;border:1px solid #d1d5db;font-family:inherit;transition:background 0.1s;';
+            btn.textContent = SELLERS[key].name;
+            function applyActive(active) {
+                btn.style.background = active ? '#2563EB' : '#f9fafb';
+                btn.style.color      = active ? '#fff'    : '#374151';
+                btn.style.borderColor = active ? '#2563EB' : '#d1d5db';
+                btn.style.fontWeight = active ? '600' : '400';
+            }
+            applyActive(state.sellerKey === key);
+            btn.addEventListener('click', function () {
+                state.sellerKey = key;
+                sellerBtns.querySelectorAll('button').forEach(function (b) {
+                    applyActive(b === btn);
+                }.bind(null));
+            });
+            sellerBtns.appendChild(btn);
+        });
+        sellerRow.appendChild(sellerLbl);
+        sellerRow.appendChild(sellerBtns);
+        wrap.appendChild(sellerRow);
+
         // Valid until
         var dateInp = document.createElement('input');
         dateInp.type  = 'date';
@@ -575,7 +617,8 @@
         return formatDateDisplay(new Date().toISOString().slice(0, 10));
     }
 
-    function generateHTML(deal, seller, state) {
+    function generateHTML(deal, state) {
+        var seller = SELLERS[state.sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
         var includedItems = state.items.filter(function (it) { return it.included; });
         var currency      = deal.currency || 'EUR';
 
