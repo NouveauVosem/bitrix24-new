@@ -468,22 +468,23 @@
         sellerLbl.textContent = 'Продавец';
         var sellerBtns = document.createElement('div');
         sellerBtns.style.cssText = 'display:flex;gap:6px;';
+        function styleSellerBtn(b, active) {
+            b.style.background  = active ? '#2563EB' : '#f9fafb';
+            b.style.color       = active ? '#fff'    : '#374151';
+            b.style.borderColor = active ? '#2563EB' : '#d1d5db';
+            b.style.fontWeight  = active ? '600'     : '400';
+        }
         Object.keys(SELLERS).forEach(function (key) {
             var btn = document.createElement('button');
             btn.style.cssText = 'padding:4px 10px;border-radius:5px;font-size:12px;cursor:pointer;border:1px solid #d1d5db;font-family:inherit;transition:background 0.1s;';
-            btn.textContent = SELLERS[key].name;
-            function applyActive(active) {
-                btn.style.background = active ? '#2563EB' : '#f9fafb';
-                btn.style.color      = active ? '#fff'    : '#374151';
-                btn.style.borderColor = active ? '#2563EB' : '#d1d5db';
-                btn.style.fontWeight = active ? '600' : '400';
-            }
-            applyActive(state.sellerKey === key);
+            btn.textContent    = SELLERS[key].name;
+            btn.dataset.seller = key;
+            styleSellerBtn(btn, state.sellerKey === key);
             btn.addEventListener('click', function () {
                 state.sellerKey = key;
                 sellerBtns.querySelectorAll('button').forEach(function (b) {
-                    applyActive(b === btn);
-                }.bind(null));
+                    styleSellerBtn(b, b.dataset.seller === key);
+                });
             });
             sellerBtns.appendChild(btn);
         });
