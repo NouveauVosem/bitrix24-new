@@ -301,7 +301,7 @@
 
     function buildSection(label, content) {
         var sec = document.createElement('div');
-        sec.style.cssText = 'background:#fff;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;';
+        sec.style.cssText = 'background:#fff;border-radius:8px;border:1px solid #e5e7eb;';
 
         var head = document.createElement('div');
         head.style.cssText = 'padding:8px 14px;border-bottom:1px solid #f3f4f6;';
