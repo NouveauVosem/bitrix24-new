@@ -40,8 +40,10 @@ $deliveryLine = implode(', ', array_filter([
 // Resolve seller via USER_FIELD_MANAGER (CCrmDeal::GetByID does not return UF_ fields)
 global $USER_FIELD_MANAGER;
 $dealUfFields = $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $deal['ID'], LANGUAGE_ID);
-$sellerField  = $dealUfFields['UF_CRM_1718209313308'] ?? [];
-$sellerValue  = '';
+
+// Seller
+$sellerField = $dealUfFields['UF_CRM_1718209313308'] ?? [];
+$sellerValue = '';
 if (!empty($sellerField['VALUE'])) {
     if (($sellerField['USER_TYPE_ID'] ?? '') === 'enumeration') {
         $enumRes = CUserFieldEnum::GetList([], ['ID' => $sellerField['VALUE']]);
@@ -51,6 +53,19 @@ if (!empty($sellerField['VALUE'])) {
     }
 }
 
+// KP language (e.g. "EN английский" → "EN")
+$langField = $dealUfFields['UF_CRM_6634E9B2269F2'] ?? [];
+$langRaw   = '';
+if (!empty($langField['VALUE'])) {
+    if (($langField['USER_TYPE_ID'] ?? '') === 'enumeration') {
+        $enumRes = CUserFieldEnum::GetList([], ['ID' => $langField['VALUE']]);
+        if ($enumRow = $enumRes->Fetch()) $langRaw = $enumRow['VALUE'];
+    } else {
+        $langRaw = (string)$langField['VALUE'];
+    }
+}
+$langCode = strtoupper(trim(explode(' ', trim($langRaw))[0]));
+
 $result = [
     'status' => 'success',
     'deal'   => [
@@ -58,6 +73,7 @@ $result = [
         'title'     => $deal['TITLE'],
         'currency'  => $deal['CURRENCY_ID'] ?: 'EUR',
         'seller'    => $sellerValue,
+        'lang'      => $langCode ?: 'EN',
         'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
         'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
     ],

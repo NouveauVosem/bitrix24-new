@@ -6,6 +6,49 @@
     var AJAX_URL     = '/local/ajax/crystal/get_deal_for_offer.php';
     var LOGO_URL     = '/local/images/alvla-clear-820px-01.png';
 
+    var LATE_PAYMENT = {
+        EN: {
+            title: 'Late Payment Clause',
+            text:  'In case of payment delay exceeding 20 working days, the Buyer is obliged, in accordance with EU Directive 2011/7/EU, to pay late interest at the base rate of the European Central Bank plus 8 percentage points per annum, calculated daily from the due date until the date of actual payment. Additionally, the Buyer must pay a fixed compensation of 40 EUR to cover debt collection costs.'
+        },
+        RU: {
+            title: 'Условие о просрочке платежа',
+            text:  'В случае нарушения сроков оплаты более чем на 20 рабочих дней, Покупатель обязан в соответствии с Директивой ЕС 2011/7/EU уплатить проценты за просрочку в размере базовой ставки Европейского Центрального Банка плюс 8 процентных пунктов годовых, начисляемых ежедневно с даты наступления просрочки до даты фактической оплаты. Дополнительно, Покупатель обязан оплатить фиксированную компенсацию в размере 40 EUR в счёт покрытия расходов по взысканию долга.'
+        },
+        DE: {
+            title: 'Klausel zum Zahlungsverzug',
+            text:  'Bei Zahlungsverzug von mehr als 20 Werktagen ist der Käufer verpflichtet, gemäß EU-Richtlinie 2011/7/EU Verzugszinsen in Höhe des Basiszinssatzes der Europäischen Zentralbank zuzüglich 8 Prozentpunkte Jahreszinsen zu zahlen, die täglich ab dem Tag des Verzugs bis zum Tag der tatsächlichen Zahlung berechnet werden. Darüber hinaus ist der Käufer verpflichtet, eine pauschale Entschädigung in Höhe von 40 EUR zur Deckung der Inkassokosten zu zahlen.'
+        },
+        FR: {
+            title: 'Clause de retard de paiement',
+            text:  "En cas de retard du paiement de plus de 20 jours ouvrables, l'Acheteur est tenu, conformément à la Directive UE 2011/7/UE, de payer des intérêts de retard à hauteur du taux de base de la Banque Centrale Européenne majoré de 8 points de pourcentage par an, calculés quotidiennement à compter de la date du retard jusqu'à la date du paiement effectif. En outre, l'acheteur est tenu de payer une indemnité forfaitaire de 40 EUR pour couvrir les frais de recouvrement des créances."
+        },
+        ES: {
+            title: 'Cláusula de mora en el pago',
+            text:  'En caso de incumplimiento de los plazos de pago por más de 20 días hábiles, el Comprador estará obligado, de conformidad con la Directiva de la UE 2011/7/UE, a abonar intereses de demora equivalentes al tipo de interés básico del Banco Central Europeo más 8 puntos porcentuales anuales, calculados diariamente desde la fecha de vencimiento hasta la fecha del pago efectivo.'
+        },
+        PL: {
+            title: 'Klauzula o opóźnieniu płatności',
+            text:  'W przypadku opóźnienia w płatności przekraczającego 20 dni roboczych, Kupujący zobowiązany jest, zgodnie z Dyrektywą UE 2011/7/UE, do zapłaty odsetek za zwłokę w wysokości stopy bazowej Europejskiego Banku Centralnego powiększonej o 8 punktów procentowych rocznie, naliczanych codziennie od dnia opóźnienia do dnia faktycznej zapłaty. Dodatkowo Kupujący zobowiązany jest do zapłaty kwoty w wysokości 40 EUR na pokrycie kosztów windykacji.'
+        },
+        CS: {
+            title: 'Doložka o prodlení s platbou',
+            text:  'V případě prodlení s platbou delším než 20 pracovních dnů je Kupující povinen podle Směrnice EU 2011/7/EU zaplatit úroky z prodlení ve výši základní sazby Evropské centrální banky zvýšené o 8 procentních bodů ročně, počítané denně od data vzniku prodlení až do data skutečné úhrady. Kromě toho je Kupující povinen uhradit pevnou náhradu ve výši 40 EUR na pokrytí nákladů spojených s vymáháním pohledávky.'
+        },
+        HU: {
+            title: 'Késedelmes fizetésre vonatkozó záradék',
+            text:  'Ha a fizetési határidő több mint 20 munkanappal túllépődik, a Vevő köteles az EU 2011/7/EU irányelvnek megfelelően késedelmi kamatot fizetni az Európai Központi Bank alapkamatának plusz 8 százalékponttal növelt mértékében, amelyet naponta számítanak fel a késedelem bekövetkezésének napjától a tényleges fizetés napjáig. Ezen felül a Vevő köteles 40 euró összegű fix kártérítést fizetni a követelés behajtásával kapcsolatos költségek fedezésére.'
+        },
+        IT: {
+            title: 'Clausola di ritardo nel pagamento',
+            text:  "In caso di ritardo nel pagamento superiore a 20 giorni lavorativi, l'Acquirente è tenuto, conformemente alla Direttiva UE 2011/7/UE, a pagare gli interessi di mora pari al tasso base della Banca Centrale Europea più 8 punti percentuali annui, calcolati giornalmente dalla data di scadenza del pagamento fino alla data effettiva di saldo. Inoltre, l'Acquirente è obbligato a corrispondere un'indennità forfettaria di 40 EUR a copertura delle spese di recupero crediti."
+        },
+        EL: {
+            title: 'Ρήτρα καθυστέρησης πληρωμής',
+            text:  'Σε περίπτωση καθυστέρησης πληρωμής άνω των 20 εργάσιμων ημερών, ο Αγοραστής υποχρεούται, σύμφωνα με την Οδηγία 2011/7/ΕΕ, να καταβάλει τόκους καθυστέρησης ισοδύναμους με το βασικό επιτόκιο της Ευρωπαϊκής Κεντρικής Τράπεζας συν 8 ετήσια ποσοστιαία μονάδα, υπολογιζόμενους ημερησίως από την ημερομηνία λήξης μέχρι την ημερομηνία πραγματικής πληρωμής. Επιπλέον, ο Αγοραστής οφείλει να πληρώσει σταθερή αποζημίωση ύψους 40 ΕΥΡΩ για την κάλυψη δαπανών είσπραξης.'
+        }
+    };
+
     var SELLERS = {
         'ALVLA, s.r.o.': {
             name:    'ALVLA, s.r.o.',
@@ -250,9 +293,11 @@
             buyerPhone:        company.phone         || '',
             buyerEmail:        company.email         || '',
             buyerVat:          company.vat           || '',
-            notes:        '',
-            validUntil:   defaultValidUntil(),
-            includeSpecs: true,
+            notes:           '',
+            validUntil:      defaultValidUntil(),
+            includeSpecs:    true,
+            latePayment:     false,
+            latePaymentLang: (deal.lang && LATE_PAYMENT[deal.lang]) ? deal.lang : 'EN',
             items:        rawItems.map(function (it) {
                 return {
                     id:         it.id,
@@ -532,10 +577,55 @@
         noteRow.appendChild(noteArea);
         wrap.appendChild(noteRow);
 
+        // Late Payment Clause toggle + language selector
+        var lpRow = document.createElement('div');
+        lpRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-top:1px solid #f9fafb;flex-wrap:wrap;';
+
+        var lpLabel = document.createElement('label');
+        lpLabel.style.cssText = 'font-size:13px;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;';
+        var lpChk = document.createElement('input');
+        lpChk.type    = 'checkbox';
+        lpChk.checked = state.latePayment;
+        lpChk.style.cssText = 'width:15px;height:15px;accent-color:#2563EB;cursor:pointer;flex-shrink:0;';
+        lpLabel.appendChild(lpChk);
+        lpLabel.appendChild(document.createTextNode('Late Payment Clause'));
+        lpRow.appendChild(lpLabel);
+
+        var lpLangSel = document.createElement('select');
+        lpLangSel.style.cssText = 'padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-family:inherit;color:#374151;background:#f9fafb;cursor:pointer;';
+        Object.keys(LATE_PAYMENT).forEach(function (lang) {
+            var opt = document.createElement('option');
+            opt.value       = lang;
+            opt.textContent = lang;
+            opt.selected    = lang === state.latePaymentLang;
+            lpLangSel.appendChild(opt);
+        });
+        lpLangSel.style.display = state.latePayment ? '' : 'none';
+        lpRow.appendChild(lpLangSel);
+
+        lpChk.addEventListener('change', function () {
+            state.latePayment         = lpChk.checked;
+            lpLangSel.style.display   = lpChk.checked ? '' : 'none';
+        });
+        lpLangSel.addEventListener('change', function () { state.latePaymentLang = lpLangSel.value; });
+
+        wrap.appendChild(lpRow);
+
         return wrap;
     }
 
     // ===== HTML GENERATOR =====
+
+    function buildLatePaymentHtml(state) {
+        if (!state.latePayment) return '';
+        var lp = LATE_PAYMENT[state.latePaymentLang] || LATE_PAYMENT['EN'];
+        return '<div style="margin-top:20px;page-break-inside:avoid;">'
+            + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;'
+            + 'color:#9ca3af;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #e5e7eb;">'
+            + esc(lp.title) + '</div>'
+            + '<p style="font-size:8.5pt;color:#374151;line-height:1.55;">' + esc(lp.text) + '</p>'
+            + '</div>';
+    }
 
     function buildSpecsHtml(includedItems, state) {
         if (!state.includeSpecs) return '';
@@ -739,6 +829,7 @@
 
             + vatNote
             + notesHtml
+            + buildLatePaymentHtml(state)
             + buildSpecsHtml(includedItems, state)
 
             // Footer
