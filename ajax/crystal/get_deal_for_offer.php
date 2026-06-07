@@ -245,7 +245,8 @@ if (!empty($specsPerArticle)) {
             $sk = $specKeysByCode[$code] ?? null;
             if (!$sk) continue;
             $label = $sk['labels']['en'] ?? $sk['labels']['ru'] ?? $code;
-            $unit  = $sk['unit'] ?? null;
+            $rawUnit = $sk['unit'] ?? null;
+            $unit = is_array($rawUnit) ? ($rawUnit['en'] ?? $rawUnit['ru'] ?? null) : $rawUnit;
             $vtype = $sk['valueType'] ?? 'text';
 
             if (in_array($vtype, ['enum', 'enum_rich'], true)) {
