@@ -254,12 +254,25 @@
         if (existingVariant) {
             var badge = document.createElement('div');
             badge.style.cssText = [
-                'font-size:13px;padding:6px 10px;margin-bottom:14px;',
+                'font-size:13px;padding:6px 10px;margin-bottom:6px;',
                 'background:#f0fdf4;border:1px solid #86efac;',
                 'color:#166534;border-radius:5px;font-weight:600;'
             ].join('');
             badge.textContent = '✓ Вариант найден в Crystal — редактирование';
             modal.appendChild(badge);
+
+            if (existingVariant.updatedByName || existingVariant.updatedAt) {
+                var metaRow = document.createElement('div');
+                metaRow.style.cssText = 'font-size:12px;color:#6b7280;margin-bottom:14px;padding:0 2px;';
+                var parts = [];
+                if (existingVariant.updatedByName) parts.push('Последнее изменение: ' + existingVariant.updatedByName);
+                if (existingVariant.updatedAt) {
+                    var d = new Date(existingVariant.updatedAt);
+                    parts.push(d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+                }
+                metaRow.textContent = parts.join(' · ');
+                modal.appendChild(metaRow);
+            }
         }
 
         // Type selector
