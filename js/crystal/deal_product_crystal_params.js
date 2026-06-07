@@ -11,7 +11,7 @@
 
     function resolveUnit(unit) {
         if (!unit) return '';
-        if (typeof unit === 'object') return unit['en'] || unit['ru'] || '';
+        if (typeof unit === 'object') return unit['ru'] || unit['en'] || '';
         return unit;
     }
 
