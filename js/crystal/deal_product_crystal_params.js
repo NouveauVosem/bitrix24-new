@@ -606,15 +606,17 @@
             console.log('[Crystal save] Bitrix user id:', bxUserId, '| name:', bxUserName);
 
             var data = collectData();
+            var editorMeta = {
+                bitrixUserId:   bxUserId   ? Number(bxUserId)  : undefined,
+                bitrixUserName: bxUserName || undefined
+            };
             var variantDto = {
                 article: baseArticle,
                 name: { ru: productName || baseArticle, en: productName || baseArticle },
                 weight: data.weight,
                 dimensions: Object.keys(data.dims).length ? data.dims : undefined,
                 specs: data.specs,
-                isActive: true,
-                bitrixUserId:   bxUserId   ? Number(bxUserId)  : undefined,
-                bitrixUserName: bxUserName || undefined
+                isActive: true
             };
 
             saveBtn.disabled = true;
@@ -629,12 +631,12 @@
                     if (v.id === existingVariant.id) return Object.assign({}, v, variantDto, { id: v.id });
                     return v;
                 });
-                promise = apiPatch('/products/update/' + existingProduct.id, {
+                promise = apiPatch('/products/update/' + existingProduct.id, Object.assign({
                     productTypeCode: typeCode,
                     variants: updatedVariants
-                });
+                }, editorMeta));
             } else if (existingProduct) {
-                promise = apiPost('/products/addVariant/' + existingProduct.id, variantDto);
+                promise = apiPost('/products/addVariant/' + existingProduct.id, Object.assign({}, variantDto, editorMeta));
             } else {
                 promise = apiPost('/products/create', {
                     productTypeCode: typeCode,
