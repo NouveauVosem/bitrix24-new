@@ -589,6 +589,10 @@
                 return;
             }
 
+            var bxUserId   = (window.BX && BX.message) ? BX.message('USER_ID')    : null;
+            var bxUserName = (window.BX && BX.message) ? BX.message('USER_LOGIN') : null;
+            console.log('[Crystal save] BX user id:', bxUserId, '| login:', bxUserName);
+
             var data = collectData();
             var variantDto = {
                 article: baseArticle,
@@ -596,7 +600,9 @@
                 weight: data.weight,
                 dimensions: Object.keys(data.dims).length ? data.dims : undefined,
                 specs: data.specs,
-                isActive: true
+                isActive: true,
+                bitrixUserId:   bxUserId   ? Number(bxUserId)  : undefined,
+                bitrixUserName: bxUserName || undefined
             };
 
             saveBtn.disabled = true;
