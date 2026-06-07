@@ -7,7 +7,19 @@
 
     var typesCache = null;
     var specKeysCache = null;
-    var specValuesCache = {}; // keyed by specKey code
+    var specValuesCache = {};
+    var currentBitrixUser = null;
+
+    function loadCurrentUser() {
+        if (currentBitrixUser) return Promise.resolve(currentBitrixUser);
+        return fetch('/local/ajax/crystal/get_current_user.php')
+            .then(function (r) { return r.json(); })
+            .then(function (u) {
+                currentBitrixUser = u;
+                console.log('[Crystal] current Bitrix user:', u);
+                return u;
+            });
+    }
 
     function resolveUnit(unit) {
         if (!unit) return '';
@@ -181,7 +193,7 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys()])
+        Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys(), loadCurrentUser()])
             .then(function (results) {
                 formPanel.removeChild(statusEl);
                 renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2]);
@@ -589,9 +601,9 @@
                 return;
             }
 
-            var bxUserId   = (window.BX && BX.message) ? BX.message('USER_ID')    : null;
-            var bxUserName = (window.BX && BX.message) ? BX.message('USER_LOGIN') : null;
-            console.log('[Crystal save] BX user id:', bxUserId, '| login:', bxUserName);
+            var bxUserId   = currentBitrixUser ? currentBitrixUser.id   : null;
+            var bxUserName = currentBitrixUser ? currentBitrixUser.name : null;
+            console.log('[Crystal save] Bitrix user id:', bxUserId, '| name:', bxUserName);
 
             var data = collectData();
             var variantDto = {
