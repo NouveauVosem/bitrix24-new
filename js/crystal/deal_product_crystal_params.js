@@ -9,6 +9,12 @@
     var specKeysCache = null;
     var specValuesCache = {}; // keyed by specKey code
 
+    function resolveUnit(unit) {
+        if (!unit) return '';
+        if (typeof unit === 'object') return unit['en'] || unit['ru'] || '';
+        return unit;
+    }
+
     // ===== API HELPERS =====
 
     function apiGet(path) {
@@ -454,7 +460,7 @@
                         if (sk.unit) {
                             var ru = document.createElement('span');
                             ru.style.cssText = 'font-size:13px;color:#9ca3af;flex-shrink:0;';
-                            ru.textContent = sk.unit;
+                            ru.textContent = resolveUnit(sk.unit);
                             rw.appendChild(ru);
                         }
                         content = rw;
@@ -472,7 +478,7 @@
                         if (sk.unit) {
                             var nUnit = document.createElement('span');
                             nUnit.style.cssText = 'position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:#9ca3af;pointer-events:none;';
-                            nUnit.textContent = sk.unit;
+                            nUnit.textContent = resolveUnit(sk.unit);
                             nw.appendChild(nUnit);
                         }
                         content = nw;
@@ -488,7 +494,7 @@
                 }
 
                 var lbl = (sk.labels && (sk.labels.ru || sk.labels.en)) || sk.code;
-                if (sk.unit && sk.valueType === 'float' && !sk.allowRange) lbl += ', ' + sk.unit;
+                if (sk.unit && sk.valueType === 'float' && !sk.allowRange) lbl += ', ' + resolveUnit(sk.unit);
                 specsContainer.appendChild(fieldRow(lbl, content));
             });
         }
