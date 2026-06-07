@@ -76,6 +76,7 @@
                     var variants = products[i].variants || [];
                     for (var j = 0; j < variants.length; j++) {
                         if (variants[j].article === article) {
+                            console.log('[Crystal] variant found:', variants[j].article, '| updatedByName:', variants[j].updatedByName, '| updatedAt:', variants[j].updatedAt);
                             return { product: products[i], variant: variants[j] };
                         }
                     }
