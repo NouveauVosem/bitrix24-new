@@ -271,7 +271,6 @@
             validUntil:        defaultValidUntil(),
             includeSpecs:      true,
             latePayment:       false,
-            latePaymentLang:   LATE_PAYMENT[lang] ? lang : 'EN',
             items: rawItems.map(function (it) {
                 return {
                     id:         it.id,
@@ -471,9 +470,6 @@
     function buildSettings(state) {
         var wrap = document.createElement('div');
 
-        // lpLangSel referenced in lang button click handler — declared here, assigned below
-        var lpLangSel;
-
         // ── Language selector ────────────────────────────────
         var langRow = document.createElement('div');
         langRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid #f9fafb;';
@@ -502,11 +498,6 @@
                 langBtns.querySelectorAll('button').forEach(function (b) {
                     styleLangBtn(b, b.dataset.lang === lang);
                 });
-                // sync latePaymentLang when language changes
-                if (LATE_PAYMENT[lang] && lpLangSel) {
-                    state.latePaymentLang = lang;
-                    lpLangSel.value = lang;
-                }
             });
             langBtns.appendChild(btn);
         });
@@ -589,36 +580,18 @@
 
         // ── Late Payment Clause ──────────────────────────────
         var lpRow = document.createElement('div');
-        lpRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-top:1px solid #f9fafb;flex-wrap:wrap;';
+        lpRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-top:1px solid #f9fafb;';
 
         var lpLabel = document.createElement('label');
-        lpLabel.style.cssText = 'font-size:13px;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;';
+        lpLabel.style.cssText = 'font-size:13px;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;';
         var lpChk = document.createElement('input');
         lpChk.type    = 'checkbox';
         lpChk.checked = state.latePayment;
         lpChk.style.cssText = 'width:15px;height:15px;accent-color:#2563EB;cursor:pointer;flex-shrink:0;';
+        lpChk.addEventListener('change', function () { state.latePayment = lpChk.checked; });
         lpLabel.appendChild(lpChk);
         lpLabel.appendChild(document.createTextNode('Late Payment Clause'));
         lpRow.appendChild(lpLabel);
-
-        lpLangSel = document.createElement('select');
-        lpLangSel.style.cssText = 'padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-family:inherit;color:#374151;background:#f9fafb;cursor:pointer;';
-        LANG_ORDER.forEach(function (lang) {
-            if (!LATE_PAYMENT[lang]) return;
-            var opt = document.createElement('option');
-            opt.value       = lang;
-            opt.textContent = lang;
-            opt.selected    = lang === state.latePaymentLang;
-            lpLangSel.appendChild(opt);
-        });
-        lpLangSel.style.display = state.latePayment ? '' : 'none';
-        lpRow.appendChild(lpLangSel);
-
-        lpChk.addEventListener('change', function () {
-            state.latePayment         = lpChk.checked;
-            lpLangSel.style.display   = lpChk.checked ? '' : 'none';
-        });
-        lpLangSel.addEventListener('change', function () { state.latePaymentLang = lpLangSel.value; });
 
         wrap.appendChild(lpRow);
 
@@ -629,7 +602,7 @@
 
     function buildLatePaymentHtml(state) {
         if (!state.latePayment) return '';
-        var lp = LATE_PAYMENT[state.latePaymentLang] || LATE_PAYMENT['EN'];
+        var lp = LATE_PAYMENT[state.lang] || LATE_PAYMENT['EN'];
         return '<div style="margin-top:20px;page-break-inside:avoid;">'
             + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;'
             + 'color:#9ca3af;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #e5e7eb;">'
