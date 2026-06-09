@@ -32,11 +32,16 @@ if ($action === 'get') {
     $row   = $res->fetch();
     $items = $row ? json_decode($row['ITEMS'], true) : [];
 
+    \CModule::IncludeModule('crm');
+
+    // Валюта сделки
+    $dealFields = \CCrmDeal::GetByID($dealId);
+    $currency   = $dealFields['CURRENCY_ID'] ?: 'EUR';
+
     // Грузим строки Битрикс только если есть элементы без rowId
     $bitrixRows = [];
     $needsSync  = !empty(array_filter($items, function ($i) { return empty($i['rowId']); }));
     if ($needsSync) {
-        \CModule::IncludeModule('crm');
         foreach ((\CCrmDeal::LoadProductRows($dealId) ?: []) as $r) {
             $bitrixRows[] = [
                 'rowId'       => (int)$r['ID'],
@@ -77,6 +82,7 @@ if ($action === 'get') {
         'status'     => 'success',
         'items'      => $items,
         'bitrixRows' => $bitrixRows,
+        'currency'   => $currency,
     ]);
 
 } elseif ($action === 'save') {

@@ -7,6 +7,7 @@
 
     var _dealId     = null;
     var _items      = null; // null = not loaded yet
+    var _currency   = 'EUR';
     var _articleMap = {};   // article → bitrix product ID
 
     function getDealId() {
@@ -35,7 +36,8 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (resp) {
-            _items = (resp.status === 'success') ? (resp.items || []) : [];
+            _items    = (resp.status === 'success') ? (resp.items || []) : [];
+            _currency = resp.currency || 'EUR';
             var bitrixRows = (resp.bitrixRows || []).slice();
 
             // Авто-матчим rowId для элементов у которых его нет
@@ -316,7 +318,7 @@
 
                 var priceUnit = document.createElement('span');
                 priceUnit.style.cssText = 'font-size:14px;color:#166534;';
-                priceUnit.textContent = 'EUR';
+                priceUnit.textContent = _currency;
 
                 priceWrap.appendChild(priceInput);
                 priceWrap.appendChild(priceUnit);
