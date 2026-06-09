@@ -6,48 +6,9 @@
     var AJAX_URL     = '/local/ajax/crystal/get_deal_for_offer.php';
     var LOGO_URL     = '/local/images/alvla-clear-820px-01.png';
 
-    var LATE_PAYMENT = {
-        EN: {
-            title: 'Late Payment Clause',
-            text:  'In case of payment delay exceeding 20 working days, the Buyer is obliged, in accordance with EU Directive 2011/7/EU, to pay late interest at the base rate of the European Central Bank plus 8 percentage points per annum, calculated daily from the due date until the date of actual payment. Additionally, the Buyer must pay a fixed compensation of 40 EUR to cover debt collection costs.'
-        },
-        RU: {
-            title: 'Условие о просрочке платежа',
-            text:  'В случае нарушения сроков оплаты более чем на 20 рабочих дней, Покупатель обязан в соответствии с Директивой ЕС 2011/7/EU уплатить проценты за просрочку в размере базовой ставки Европейского Центрального Банка плюс 8 процентных пунктов годовых, начисляемых ежедневно с даты наступления просрочки до даты фактической оплаты. Дополнительно, Покупатель обязан оплатить фиксированную компенсацию в размере 40 EUR в счёт покрытия расходов по взысканию долга.'
-        },
-        DE: {
-            title: 'Klausel zum Zahlungsverzug',
-            text:  'Bei Zahlungsverzug von mehr als 20 Werktagen ist der Käufer verpflichtet, gemäß EU-Richtlinie 2011/7/EU Verzugszinsen in Höhe des Basiszinssatzes der Europäischen Zentralbank zuzüglich 8 Prozentpunkte Jahreszinsen zu zahlen, die täglich ab dem Tag des Verzugs bis zum Tag der tatsächlichen Zahlung berechnet werden. Darüber hinaus ist der Käufer verpflichtet, eine pauschale Entschädigung in Höhe von 40 EUR zur Deckung der Inkassokosten zu zahlen.'
-        },
-        FR: {
-            title: 'Clause de retard de paiement',
-            text:  "En cas de retard du paiement de plus de 20 jours ouvrables, l'Acheteur est tenu, conformément à la Directive UE 2011/7/UE, de payer des intérêts de retard à hauteur du taux de base de la Banque Centrale Européenne majoré de 8 points de pourcentage par an, calculés quotidiennement à compter de la date du retard jusqu'à la date du paiement effectif. En outre, l'acheteur est tenu de payer une indemnité forfaitaire de 40 EUR pour couvrir les frais de recouvrement des créances."
-        },
-        ES: {
-            title: 'Cláusula de mora en el pago',
-            text:  'En caso de incumplimiento de los plazos de pago por más de 20 días hábiles, el Comprador estará obligado, de conformidad con la Directiva de la UE 2011/7/UE, a abonar intereses de demora equivalentes al tipo de interés básico del Banco Central Europeo más 8 puntos porcentuales anuales, calculados diariamente desde la fecha de vencimiento hasta la fecha del pago efectivo.'
-        },
-        PL: {
-            title: 'Klauzula o opóźnieniu płatności',
-            text:  'W przypadku opóźnienia w płatności przekraczającego 20 dni roboczych, Kupujący zobowiązany jest, zgodnie z Dyrektywą UE 2011/7/UE, do zapłaty odsetek za zwłokę w wysokości stopy bazowej Europejskiego Banku Centralnego powiększonej o 8 punktów procentowych rocznie, naliczanych codziennie od dnia opóźnienia do dnia faktycznej zapłaty. Dodatkowo Kupujący zobowiązany jest do zapłaty kwoty w wysokości 40 EUR na pokrycie kosztów windykacji.'
-        },
-        CS: {
-            title: 'Doložka o prodlení s platbou',
-            text:  'V případě prodlení s platbou delším než 20 pracovních dnů je Kupující povinen podle Směrnice EU 2011/7/EU zaplatit úroky z prodlení ve výši základní sazby Evropské centrální banky zvýšené o 8 procentních bodů ročně, počítané denně od data vzniku prodlení až do data skutečné úhrady. Kromě toho je Kupující povinen uhradit pevnou náhradu ve výši 40 EUR na pokrytí nákladů spojených s vymáháním pohledávky.'
-        },
-        HU: {
-            title: 'Késedelmes fizetésre vonatkozó záradék',
-            text:  'Ha a fizetési határidő több mint 20 munkanappal túllépődik, a Vevő köteles az EU 2011/7/EU irányelvnek megfelelően késedelmi kamatot fizetni az Európai Központi Bank alapkamatának plusz 8 százalékponttal növelt mértékében, amelyet naponta számítanak fel a késedelem bekövetkezésének napjától a tényleges fizetés napjáig. Ezen felül a Vevő köteles 40 euró összegű fix kártérítést fizetni a követelés behajtásával kapcsolatos költségek fedezésére.'
-        },
-        IT: {
-            title: 'Clausola di ritardo nel pagamento',
-            text:  "In caso di ritardo nel pagamento superiore a 20 giorni lavorativi, l'Acquirente è tenuto, conformemente alla Direttiva UE 2011/7/UE, a pagare gli interessi di mora pari al tasso base della Banca Centrale Europea più 8 punti percentuali annui, calcolati giornalmente dalla data di scadenza del pagamento fino alla data effettiva di saldo. Inoltre, l'Acquirente è obbligato a corrispondere un'indennità forfettaria di 40 EUR a copertura delle spese di recupero crediti."
-        },
-        EL: {
-            title: 'Ρήτρα καθυστέρησης πληρωμής',
-            text:  'Σε περίπτωση καθυστέρησης πληρωμής άνω των 20 εργάσιμων ημερών, ο Αγοραστής υποχρεούται, σύμφωνα με την Οδηγία 2011/7/ΕΕ, να καταβάλει τόκους καθυστέρησης ισοδύναμους με το βασικό επιτόκιο της Ευρωπαϊκής Κεντρικής Τράπεζας συν 8 ετήσια ποσοστιαία μονάδα, υπολογιζόμενους ημερησίως από την ημερομηνία λήξης μέχρι την ημερομηνία πραγματικής πληρωμής. Επιπλέον, ο Αγοραστής οφείλει να πληρώσει σταθερή αποζημίωση ύψους 40 ΕΥΡΩ για την κάλυψη δαπανών είσπραξης.'
-        }
-    };
+    var LATE_PAYMENT = window.OFFER_LATE_PAYMENT || {};
+    var DOC_STRINGS  = window.OFFER_DOC_STRINGS  || {};
+    var LANG_ORDER   = ['EN', 'DE', 'RU', 'CZ', 'FR', 'ES', 'PL', 'HU', 'IT', 'EL'];
 
     var SELLERS = {
         'ALVLA, s.r.o.': {
@@ -77,6 +38,17 @@
             if (lower.indexOf(keys[i].toLowerCase()) !== -1 || keys[i].toLowerCase().indexOf(lower) !== -1) return keys[i];
         }
         return DEFAULT_SELLER_KEY;
+    }
+
+    function normalizeLang(code) {
+        var c = String(code || '').toUpperCase().trim();
+        return DOC_STRINGS[c] ? c : 'EN';
+    }
+
+    function resolveItemName(item, lang) {
+        if (lang === 'CZ' && item.nameCz) return item.nameCz;
+        if (lang === 'RU' && item.nameRu) return item.nameRu;
+        return item.nameEn || item.nameRu || item.name || '';
     }
 
     function getDealId() {
@@ -169,6 +141,7 @@
 
             var items = resp.items || [];
             console.log('[КП] deal.seller raw:', dealData.seller);
+            console.log('[КП] deal.lang:', dealData.lang);
             console.log('[КП] items (' + items.length + '):', items);
 
             renderForm(modal, dealData, companyData, contactData, deliveryData, items);
@@ -281,10 +254,11 @@
         var body = modal.body;
         body.innerHTML = '';
 
-        // DOM is the reliable source for delivery address
         var address = readDeliveryAddressFromDom() || delivery.line || company.address || '';
+        var lang    = normalizeLang(deal.lang);
 
         var formState = {
+            lang:              lang,
             sellerKey:         resolveSellerKey(deal.seller),
             buyerName:         company.name          || '',
             buyerContact:      contact.name          || '',
@@ -293,16 +267,18 @@
             buyerPhone:        company.phone         || '',
             buyerEmail:        company.email         || '',
             buyerVat:          company.vat           || '',
-            notes:           '',
-            validUntil:      defaultValidUntil(),
-            includeSpecs:    true,
-            latePayment:     false,
-            latePaymentLang: (deal.lang && LATE_PAYMENT[deal.lang]) ? deal.lang : 'EN',
-            items:        rawItems.map(function (it) {
+            notes:             '',
+            validUntil:        defaultValidUntil(),
+            includeSpecs:      true,
+            latePayment:       false,
+            latePaymentLang:   LATE_PAYMENT[lang] ? lang : 'EN',
+            items: rawItems.map(function (it) {
                 return {
                     id:         it.id,
-                    name:       it.nameEn || it.name,
-                    nameFull:   it.name,
+                    name:       it.nameEn || it.name,   // modal display name (EN fallback)
+                    nameEn:     it.nameEn  || '',
+                    nameCz:     it.nameCz  || '',
+                    nameRu:     it.name    || '',
                     article:    it.article || '',
                     bitrixId:   it.bitrixId || null,
                     qty:        it.qty   || 1,
@@ -314,6 +290,8 @@
                         return {
                             name:    c.name    || '',
                             nameEn:  c.nameEn  || c.name || '',
+                            nameCz:  c.nameCz  || '',
+                            nameRu:  c.name    || '',
                             article: c.article || '',
                             baseQty: c.baseQty || c.qty || 1
                         };
@@ -416,7 +394,6 @@
     function buildItemsTable(state) {
         var wrap = document.createElement('div');
 
-        // Table head
         var thead = document.createElement('div');
         thead.style.cssText = 'display:flex;align-items:center;padding:6px 14px;background:#f3f4f6;gap:0;';
         [['', 24], ['Название', 0], ['Кол-во', 52], ['Цена', 76], ['Сумма', 80]].forEach(function (col) {
@@ -427,7 +404,6 @@
         });
         wrap.appendChild(thead);
 
-        // Rows
         state.items.forEach(function (item, idx) {
             wrap.appendChild(buildItemRow(item, idx, state));
             (item.components || []).forEach(function (c) {
@@ -453,7 +429,6 @@
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:0;padding:7px 14px;border-top:1px solid #f3f4f6;' + (item.included ? '' : 'opacity:0.45;');
 
-        // Checkbox
         var chk = document.createElement('input');
         chk.type    = 'checkbox';
         chk.checked = item.included;
@@ -461,10 +436,8 @@
         chk.addEventListener('change', function () {
             item.included = chk.checked;
             row.style.opacity = chk.checked ? '1' : '0.45';
-            updateTotals(state);
         });
 
-        // Name
         var nameEl = item.bitrixId ? document.createElement('a') : document.createElement('span');
         if (item.bitrixId) {
             nameEl.href   = '/crm/catalog/14/product/' + item.bitrixId + '/';
@@ -474,17 +447,14 @@
         nameEl.textContent   = item.name;
         nameEl.title         = item.bitrixId ? 'Открыть карточку товара' : item.name;
 
-        // Qty
         var qtyEl = document.createElement('span');
         qtyEl.style.cssText  = 'width:52px;font-size:13px;color:#374151;flex-shrink:0;';
         qtyEl.textContent    = item.qty + ' шт';
 
-        // Price
         var priceEl = document.createElement('span');
         priceEl.style.cssText = 'width:76px;font-size:13px;color:#374151;flex-shrink:0;';
         priceEl.textContent   = formatMoney(item.price);
 
-        // Total
         var totalEl = document.createElement('span');
         totalEl.style.cssText = 'width:80px;font-size:13px;font-weight:600;color:#111827;flex-shrink:0;text-align:right;';
         totalEl.textContent   = formatMoney(item.price * item.qty);
@@ -498,14 +468,54 @@
         return row;
     }
 
-    function updateTotals() {
-        // totals are recalculated at generation time; row subtotals are static display
-    }
-
     function buildSettings(state) {
         var wrap = document.createElement('div');
 
-        // Seller selector
+        // lpLangSel referenced in lang button click handler — declared here, assigned below
+        var lpLangSel;
+
+        // ── Language selector ────────────────────────────────
+        var langRow = document.createElement('div');
+        langRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid #f9fafb;';
+        var langLbl = document.createElement('span');
+        langLbl.style.cssText = 'width:90px;flex-shrink:0;font-size:13px;color:#6b7280;';
+        langLbl.textContent = 'Язык КП';
+        var langBtns = document.createElement('div');
+        langBtns.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+
+        function styleLangBtn(b, active) {
+            b.style.background  = active ? '#2563EB' : '#f9fafb';
+            b.style.color       = active ? '#fff'    : '#374151';
+            b.style.borderColor = active ? '#2563EB' : '#d1d5db';
+            b.style.fontWeight  = active ? '600'     : '400';
+        }
+
+        LANG_ORDER.forEach(function (lang) {
+            if (!DOC_STRINGS[lang]) return;
+            var btn = document.createElement('button');
+            btn.style.cssText = 'padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;border:1px solid #d1d5db;font-family:inherit;';
+            btn.textContent   = lang;
+            btn.dataset.lang  = lang;
+            styleLangBtn(btn, state.lang === lang);
+            btn.addEventListener('click', function () {
+                state.lang = lang;
+                langBtns.querySelectorAll('button').forEach(function (b) {
+                    styleLangBtn(b, b.dataset.lang === lang);
+                });
+                // sync latePaymentLang when language changes
+                if (LATE_PAYMENT[lang] && lpLangSel) {
+                    state.latePaymentLang = lang;
+                    lpLangSel.value = lang;
+                }
+            });
+            langBtns.appendChild(btn);
+        });
+
+        langRow.appendChild(langLbl);
+        langRow.appendChild(langBtns);
+        wrap.appendChild(langRow);
+
+        // ── Seller selector ──────────────────────────────────
         var sellerRow = document.createElement('div');
         sellerRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid #f9fafb;';
         var sellerLbl = document.createElement('span');
@@ -537,7 +547,7 @@
         sellerRow.appendChild(sellerBtns);
         wrap.appendChild(sellerRow);
 
-        // Valid until
+        // ── Valid until ──────────────────────────────────────
         var dateInp = document.createElement('input');
         dateInp.type  = 'date';
         dateInp.value = state.validUntil;
@@ -545,7 +555,7 @@
         dateInp.addEventListener('change', function () { state.validUntil = dateInp.value; });
         wrap.appendChild(fieldRow('Действительно до', dateInp));
 
-        // Include Technical Specifications toggle
+        // ── Technical Specifications toggle ──────────────────
         var hasSpecs = state.items.some(function (it) { return it.specs && it.specs.length; });
         if (hasSpecs) {
             var specsToggleRow = document.createElement('div');
@@ -558,12 +568,12 @@
             specsChk.style.cssText = 'width:15px;height:15px;accent-color:#2563EB;cursor:pointer;flex-shrink:0;';
             specsChk.addEventListener('change', function () { state.includeSpecs = specsChk.checked; });
             specsToggleLbl.appendChild(specsChk);
-            specsToggleLbl.appendChild(document.createTextNode('Technical Specifications'));
+            specsToggleLbl.appendChild(document.createTextNode('Технические характеристики'));
             specsToggleRow.appendChild(specsToggleLbl);
             wrap.appendChild(specsToggleRow);
         }
 
-        // Notes
+        // ── Notes ────────────────────────────────────────────
         var noteRow = document.createElement('div');
         noteRow.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:8px 14px;';
         var noteLbl = document.createElement('span');
@@ -577,7 +587,7 @@
         noteRow.appendChild(noteArea);
         wrap.appendChild(noteRow);
 
-        // Late Payment Clause toggle + language selector
+        // ── Late Payment Clause ──────────────────────────────
         var lpRow = document.createElement('div');
         lpRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 14px;border-top:1px solid #f9fafb;flex-wrap:wrap;';
 
@@ -591,9 +601,10 @@
         lpLabel.appendChild(document.createTextNode('Late Payment Clause'));
         lpRow.appendChild(lpLabel);
 
-        var lpLangSel = document.createElement('select');
+        lpLangSel = document.createElement('select');
         lpLangSel.style.cssText = 'padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-family:inherit;color:#374151;background:#f9fafb;cursor:pointer;';
-        Object.keys(LATE_PAYMENT).forEach(function (lang) {
+        LANG_ORDER.forEach(function (lang) {
+            if (!LATE_PAYMENT[lang]) return;
             var opt = document.createElement('option');
             opt.value       = lang;
             opt.textContent = lang;
@@ -629,6 +640,7 @@
 
     function buildSpecsHtml(includedItems, state) {
         if (!state.includeSpecs) return '';
+        var s = DOC_STRINGS[state.lang] || DOC_STRINGS['EN'] || {};
         var itemsWithData = includedItems.filter(function (it) {
             return (it.specs && it.specs.length) || it.physical;
         });
@@ -637,7 +649,7 @@
         var html = '<div style="margin-top:28px;page-break-inside:avoid;">';
         html += '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;'
               + 'color:#9ca3af;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #e5e7eb;">'
-              + 'Technical Specifications</div>';
+              + esc(s.techSpecs || 'Technical Specifications') + '</div>';
 
         var labelTd = 'padding:2px 14px 2px 0;font-size:8.5pt;color:#6b7280;width:46%;vertical-align:top;';
         var valueTd = 'padding:2px 0;font-size:8.5pt;color:#1f2937;font-weight:500;';
@@ -654,10 +666,9 @@
             var itemNo = includedItems.indexOf(it) + 1;
             html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
             html += '<div style="font-size:9.5pt;font-weight:700;color:#1e40af;margin-bottom:6px;">'
-                  + itemNo + '. ' + esc(it.name) + '</div>';
+                  + itemNo + '. ' + esc(resolveItemName(it, state.lang)) + '</div>';
             html += '<table style="width:56%;border-collapse:collapse;">';
 
-            // Technical specs rows
             (it.specs || []).forEach(function (spec) {
                 html += '<tr>'
                     + '<td style="' + labelTd + '">' + esc(spec.label) + '</td>'
@@ -665,22 +676,21 @@
                     + '</tr>';
             });
 
-            // Physical params rows
             var phys = it.physical;
             if (phys) {
                 var physRows = '';
                 if (phys.dimensions) {
                     var ext = phys.dimensions.external;
                     var inn = phys.dimensions.internal;
-                    if (ext) { var s = dimStr(ext); if (s) physRows += '<tr><td style="' + labelTd + '">External dimensions (W×D×H)</td><td style="' + valueTd + '">' + s + '</td></tr>'; }
-                    if (inn) { var s = dimStr(inn); if (s) physRows += '<tr><td style="' + labelTd + '">Internal dimensions (W×D×H)</td><td style="' + valueTd + '">' + s + '</td></tr>'; }
+                    if (ext) { var se = dimStr(ext); if (se) physRows += '<tr><td style="' + labelTd + '">' + esc(s.extDim || 'External dimensions (W×D×H)') + '</td><td style="' + valueTd + '">' + se + '</td></tr>'; }
+                    if (inn) { var si = dimStr(inn); if (si) physRows += '<tr><td style="' + labelTd + '">' + esc(s.intDim || 'Internal dimensions (W×D×H)') + '</td><td style="' + valueTd + '">' + si + '</td></tr>'; }
                 }
                 if (phys.weight !== null && phys.weight !== undefined) {
-                    physRows += '<tr><td style="' + labelTd + '">Net weight</td><td style="' + valueTd + '">' + phys.weight + ' kg</td></tr>';
+                    physRows += '<tr><td style="' + labelTd + '">' + esc(s.netWeight || 'Net weight') + '</td><td style="' + valueTd + '">' + phys.weight + ' kg</td></tr>';
                 }
                 if (physRows) {
                     if (it.specs && it.specs.length) {
-                        html += '<tr><td colspan="2" style="padding:5px 0 3px;font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">Physical Parameters</td></tr>';
+                        html += '<tr><td colspan="2" style="padding:5px 0 3px;font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">' + esc(s.physParams || 'Physical Parameters') + '</td></tr>';
                     }
                     html += physRows;
                 }
@@ -709,9 +719,11 @@
     }
 
     function generateHTML(deal, state) {
-        var seller = SELLERS[state.sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
+        var s        = DOC_STRINGS[state.lang] || DOC_STRINGS['EN'] || {};
+        var seller   = SELLERS[state.sellerKey] || SELLERS[DEFAULT_SELLER_KEY];
+        var currency = deal.currency || 'EUR';
+
         var includedItems = state.items.filter(function (it) { return it.included; });
-        var currency      = deal.currency || 'EUR';
 
         var subtotal = 0;
         includedItems.forEach(function (it) { subtotal += (it.price || 0) * (it.qty || 1); });
@@ -726,7 +738,7 @@
                     '<td style="' + tdStyle('left') + 'border-top:none;padding-left:22px;font-size:9pt;" colspan="5">',
                     '&middot;&nbsp;',
                     (c.article ? '<span style="font-weight:600;margin-right:6px;">' + esc(c.article) + '</span>' : ''),
-                    esc(c.nameEn || c.name),
+                    esc(resolveItemName(c, state.lang)),
                     '&nbsp;&nbsp;&times;' + c.baseQty + '/set',
                     '</td>',
                     '</tr>'
@@ -737,7 +749,7 @@
                 '<td style="' + tdStyle('center') + '">' + (i + 1) + '</td>',
                 '<td style="' + tdStyle('left') + '">'
                     + (it.article ? '<span style="font-size:9pt;color:#9ca3af;margin-right:6px;">' + esc(it.article) + '</span>' : '')
-                    + esc(it.name) + '</td>',
+                    + esc(resolveItemName(it, state.lang)) + '</td>',
                 '<td style="' + tdStyle('center') + '">' + it.qty + '</td>',
                 '<td style="' + tdStyle('right') + '">' + formatMoney(it.price) + '</td>',
                 '<td style="' + tdStyle('center') + '">0%</td>',
@@ -747,19 +759,21 @@
             ].join('');
         }).join('');
 
-        var vatNote = '<p style="font-size:8.5pt;color:#6b7280;margin:4px 0 0;">VAT 0% &ndash; Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)</p>';
+        var vatNote = '<p style="font-size:8.5pt;color:#6b7280;margin:4px 0 0;">'
+            + esc(s.vatNote || 'VAT 0% – Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)')
+            + '</p>';
 
         var notesHtml = state.notes
             ? '<div style="margin-top:20px;padding:12px 14px;background:#f9fafb;border-left:3px solid #2563EB;border-radius:3px;font-size:9.5pt;color:#374151;">' + esc(state.notes).replace(/\n/g, '<br>') + '</div>'
             : '';
 
         var vatRow = state.buyerVat
-            ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">VAT No.: </span>' + esc(state.buyerVat) + '</p>'
+            ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">' + esc(s.vatNo || 'VAT No.: ') + '</span>' + esc(state.buyerVat) + '</p>'
             : '';
 
-        return '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+        return '<!DOCTYPE html>\n<html lang="' + state.lang.toLowerCase() + '">\n<head>\n'
             + '<meta charset="UTF-8">\n'
-            + '<title>Commercial Offer — ' + esc(state.buyerName || deal.title) + '</title>\n'
+            + '<title>' + esc(s.docTitle || 'Commercial Offer') + ' — ' + esc(state.buyerName || deal.title) + '</title>\n'
             + '<style>\n'
             + '* { box-sizing: border-box; margin: 0; padding: 0; }\n'
             + 'body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #1f2937; background: #fff; }\n'
@@ -769,36 +783,42 @@
             + 'table { border-collapse: collapse; width: 100%; }\n'
             + '</style>\n</head>\n<body>\n<div class="page">\n'
 
-            // Print button (hidden on print)
+            // Print button
             + '<div class="no-print" style="text-align:right;margin-bottom:16px;">'
-            + '<button onclick="window.print()" style="padding:8px 20px;background:#2563EB;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700;">Печать / Сохранить PDF</button>'
-            + '</div>\n'
+            + '<button onclick="window.print()" style="padding:8px 20px;background:#2563EB;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700;">'
+            + esc(s.printSave || 'Print / Save PDF')
+            + '</button></div>\n'
 
             // Header
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #1e40af;margin-bottom:20px;">\n'
             + '<img src="' + LOGO_URL + '" alt="ALVLA" style="max-height:52px;max-width:160px;">\n'
             + '<div style="text-align:right;">'
-            + '<div style="font-size:18pt;font-weight:700;color:#1e40af;letter-spacing:-0.5px;">Commercial Offer</div>'
-            + '<div style="font-size:10pt;color:#6b7280;margin-top:4px;">No. CO-' + String(deal.id).padStart(4, '0') + '&nbsp;&nbsp;&middot;&nbsp;&nbsp;' + todayDisplay() + '</div>'
-            + '<div style="font-size:10pt;color:#6b7280;margin-top:2px;">Valid until: ' + formatDateDisplay(state.validUntil) + '</div>'
+            + '<div style="font-size:18pt;font-weight:700;color:#1e40af;letter-spacing:-0.5px;">' + esc(s.docTitle || 'Commercial Offer') + '</div>'
+            + '<div style="font-size:10pt;color:#6b7280;margin-top:4px;">'
+            + esc(s.offerLabel || 'No. ') + 'CO-' + String(deal.id).padStart(4, '0')
+            + '&nbsp;&nbsp;&middot;&nbsp;&nbsp;' + todayDisplay()
+            + '</div>'
+            + '<div style="font-size:10pt;color:#6b7280;margin-top:2px;">'
+            + esc(s.validUntil || 'Valid until: ') + formatDateDisplay(state.validUntil)
+            + '</div>'
             + '</div>\n</div>\n'
 
             // Parties
             + '<div style="display:flex;gap:30px;margin-bottom:22px;">\n'
             + '<div style="flex:1;">'
-            + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">Seller</div>'
+            + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">' + esc(s.seller || 'Seller') + '</div>'
             + '<p style="font-weight:700;font-size:10pt;margin-bottom:4px;">' + esc(seller.name) + '</p>'
             + '<p style="margin:3px 0;font-size:10pt;color:#374151;">' + esc(seller.address) + '</p>'
             + '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">IČO: </span>' + seller.ico + '</p>'
             + '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">DIČ: </span>' + seller.dic + '</p>'
             + '</div>\n'
             + '<div style="flex:1;">'
-            + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">Buyer</div>'
+            + '<div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:7px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">' + esc(s.buyer || 'Buyer') + '</div>'
             + '<p style="font-weight:700;font-size:10pt;margin-bottom:4px;">' + esc(state.buyerName) + '</p>'
-            + (state.buyerContact      ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Attn.: </span>' + esc(state.buyerContact) + '</p>' : '')
+            + (state.buyerContact      ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">' + esc(s.attn || 'Attn.: ') + '</span>' + esc(state.buyerContact) + '</p>' : '')
             + (state.buyerLegalAddress ? '<p style="margin:3px 0;font-size:10pt;color:#374151;">' + esc(state.buyerLegalAddress) + '</p>' : '')
-            + (state.buyerAddress && state.buyerAddress !== state.buyerLegalAddress ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Delivery: </span>' + esc(state.buyerAddress) + '</p>' : '')
-            + (state.buyerPhone        ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Tel.: </span>' + esc(state.buyerPhone) + '</p>' : '')
+            + (state.buyerAddress && state.buyerAddress !== state.buyerLegalAddress ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">' + esc(s.delivery || 'Delivery: ') + '</span>' + esc(state.buyerAddress) + '</p>' : '')
+            + (state.buyerPhone        ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">' + esc(s.tel || 'Tel.: ') + '</span>' + esc(state.buyerPhone) + '</p>' : '')
             + (state.buyerEmail        ? '<p style="margin:3px 0;font-size:10pt;"><span style="color:#6b7280;">Email: </span>' + esc(state.buyerEmail) + '</p>' : '')
             + vatRow
             + '</div>\n</div>\n'
@@ -806,12 +826,12 @@
             // Table
             + '<table>\n'
             + '<thead>\n<tr style="background:#1e40af;">\n'
-            + thCell('No.',         'center', '34px')
-            + thCell('Description', 'left',   '')
-            + thCell('Qty',         'center', '48px')
-            + thCell('Unit Price',  'right',  '90px')
-            + thCell('VAT',         'center', '48px')
-            + thCell('Total',       'right',  '90px')
+            + thCell(s.colNo    || 'No.',        'center', '34px')
+            + thCell(s.colDesc  || 'Description','left',   '')
+            + thCell(s.colQty   || 'Qty',        'center', '48px')
+            + thCell(s.colPrice || 'Unit Price', 'right',  '90px')
+            + thCell(s.colVat   || 'VAT',        'center', '48px')
+            + thCell(s.colTotal || 'Total',      'right',  '90px')
             + '</tr>\n</thead>\n<tbody>\n'
             + rowsHtml
             + '</tbody>\n</table>\n'
@@ -819,11 +839,11 @@
             // Totals
             + '<div style="display:flex;justify-content:flex-end;margin-top:12px;">\n'
             + '<table style="width:320px;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;">\n'
-            + '<tr><td style="padding:7px 12px;font-size:10pt;border-bottom:1px solid #e5e7eb;">Subtotal (excl. VAT)</td>'
+            + '<tr><td style="padding:7px 12px;font-size:10pt;border-bottom:1px solid #e5e7eb;">' + esc(s.subtotal || 'Subtotal (excl. VAT)') + '</td>'
             + '<td style="padding:7px 12px;font-size:10pt;text-align:right;font-weight:600;border-bottom:1px solid #e5e7eb;">' + formatMoney(subtotal) + ' ' + currency + '</td></tr>\n'
-            + '<tr><td style="padding:7px 12px;font-size:10pt;color:#6b7280;border-bottom:1px solid #e5e7eb;">VAT (0%)</td>'
+            + '<tr><td style="padding:7px 12px;font-size:10pt;color:#6b7280;border-bottom:1px solid #e5e7eb;">' + esc(s.vatZero || 'VAT (0%)') + '</td>'
             + '<td style="padding:7px 12px;font-size:10pt;text-align:right;color:#6b7280;border-bottom:1px solid #e5e7eb;">0.00 ' + currency + '</td></tr>\n'
-            + '<tr style="background:#1e40af;"><td style="padding:9px 12px;font-size:11pt;font-weight:700;color:#fff;">TOTAL</td>'
+            + '<tr style="background:#1e40af;"><td style="padding:9px 12px;font-size:11pt;font-weight:700;color:#fff;">' + esc(s.total || 'TOTAL') + '</td>'
             + '<td style="padding:9px 12px;font-size:11pt;font-weight:700;color:#fff;text-align:right;">' + formatMoney(subtotal) + ' ' + currency + '</td></tr>\n'
             + '</table>\n</div>\n'
 
