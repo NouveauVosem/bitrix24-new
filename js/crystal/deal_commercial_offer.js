@@ -259,6 +259,7 @@
 
         var formState = {
             lang:              lang,
+            currency:          deal.currency || 'EUR',
             sellerKey:         resolveSellerKey(deal.seller),
             buyerName:         company.name          || '',
             buyerContact:      contact.name          || '',
@@ -452,11 +453,11 @@
 
         var priceEl = document.createElement('span');
         priceEl.style.cssText = 'width:76px;font-size:13px;color:#374151;flex-shrink:0;';
-        priceEl.textContent   = formatMoney(item.price);
+        priceEl.textContent   = formatMoney(item.price) + ' ' + (state.currency || 'EUR');
 
         var totalEl = document.createElement('span');
         totalEl.style.cssText = 'width:80px;font-size:13px;font-weight:600;color:#111827;flex-shrink:0;text-align:right;';
-        totalEl.textContent   = formatMoney(item.price * item.qty);
+        totalEl.textContent   = formatMoney(item.price * item.qty) + ' ' + (state.currency || 'EUR');
         totalEl.setAttribute('data-offer-total-' + idx, '1');
 
         row.appendChild(chk);
