@@ -643,9 +643,10 @@
             return parts.length ? parts.join(' × ') + ' mm' : '';
         }
 
-        itemsWithData.forEach(function (it) {
+        itemsWithData.forEach(function (it, itIdx) {
             var itemNo = includedItems.indexOf(it) + 1;
-            html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
+            var sep = itIdx > 0 ? 'border-top:2px solid #e5e7eb;padding-top:18px;margin-top:4px;' : '';
+            html += '<div style="margin-bottom:20px;page-break-inside:avoid;' + sep + '">';
             html += '<div style="font-size:9.5pt;font-weight:700;color:#1e40af;margin-bottom:6px;">'
                   + itemNo + '. ' + esc(resolveItemName(it, state.lang)) + '</div>';
             html += '<div style="display:flex;gap:16px;align-items:flex-start;">';
