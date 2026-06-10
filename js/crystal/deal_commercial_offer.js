@@ -21,11 +21,13 @@
     }
 
     crystalGet('/api/semantics/regions').then(function (regions) {
+        console.log('[КП] regions raw:', regions);
         if (!regions || !Array.isArray(regions)) return;
         _regionsCache = regions
             .sort(function (a, b) { return (a.order || 0) - (b.order || 0); })
             .map(function (r) { return REGION_TO_LANG[r.code.toLowerCase()] || r.code.toUpperCase(); })
             .filter(function (code) { return DOC_STRINGS[code]; });
+        console.log('[КП] regions cache:', _regionsCache);
     });
 
     var SELLERS = {
