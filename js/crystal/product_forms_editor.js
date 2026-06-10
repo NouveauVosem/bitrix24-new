@@ -5,6 +5,18 @@
     var API_KEY = 'legenda';
 
     var _sectionsCache = null;
+    var _regionsLangsCache = null;
+
+    function getTranslateLangs() {
+        if (_regionsLangsCache) return Promise.resolve(_regionsLangsCache);
+        return crystalFetch('GET', '/api/semantics/regions').then(function (regions) {
+            _regionsLangsCache = (regions || [])
+                .sort(function (a, b) { return (a.order || 0) - (b.order || 0); })
+                .map(function (r) { return r.code; })
+                .filter(function (c) { return c !== 'ru'; });
+            return _regionsLangsCache;
+        });
+    }
 
     // ===== API =====
 
@@ -525,6 +537,29 @@
 
         var nameGroup = buildField('Название слота', slot.name.ru || '', 'Например: Пружина');
         nameGroup.input.addEventListener('input', function () { slot.name.ru = nameGroup.input.value; });
+
+        var aiBtn = el('button', 'cfe-ai-translate-btn', 'AI перевод');
+        aiBtn.addEventListener('click', function () {
+            var ru = slot.name.ru || '';
+            if (!ru.trim()) { alert('Введите название слота на русском'); return; }
+            aiBtn.disabled = true;
+            aiBtn.textContent = '...';
+            getTranslateLangs().then(function (langs) {
+                return crystalFetch('POST', '/api/translate', { data: slot.name, langs: langs });
+            }).then(function (result) {
+                Object.assign(slot.name, result);
+                var lines = Object.keys(result)
+                    .filter(function (k) { return k !== 'ru'; })
+                    .map(function (k) { return k.toUpperCase() + ': ' + result[k]; });
+                alert('Переводы добавлены:\n' + lines.join('\n'));
+            }).catch(function (err) {
+                alert('Ошибка перевода: ' + err.message);
+            }).finally(function () {
+                aiBtn.disabled = false;
+                aiBtn.textContent = 'AI перевод';
+            });
+        });
+        nameGroup.wrap.appendChild(aiBtn);
         card.appendChild(nameGroup.wrap);
 
         var row2 = el('div', 'cfe-slot-row2');
