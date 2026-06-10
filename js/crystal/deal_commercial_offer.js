@@ -24,7 +24,7 @@
         if (!regions || !Array.isArray(regions)) return;
         _regionsCache = regions
             .sort(function (a, b) { return (a.order || 0) - (b.order || 0); })
-            .map(function (r) { return r.code.toUpperCase(); })
+            .map(function (r) { return REGION_TO_LANG[r.code.toLowerCase()] || r.code.toUpperCase(); })
             .filter(function (code) { return DOC_STRINGS[code]; });
     });
 
@@ -63,9 +63,15 @@
         return DOC_STRINGS[c] ? c : 'EN';
     }
 
+    // region code (db) → DOC_STRINGS key (кнопка КП)
+    var REGION_TO_LANG = { cs: 'CZ' };
+    // DOC_STRINGS key (lowercase) → data key в локализованных объектах
+    var LANG_ALIASES   = { cz: 'cs' };
+
     function resolveLang(val, lang) {
         if (!val || typeof val !== 'object') return String(val || '');
         var l = lang.toLowerCase();
+        l = LANG_ALIASES[l] || l;
         return val[l] || val.en || val.ru || '';
     }
 
