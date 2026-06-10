@@ -478,7 +478,7 @@
                     if (c.slotName) {
                         var slotLabel = document.createElement('div');
                         slotLabel.style.cssText = 'font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;line-height:1.4;';
-                        slotLabel.textContent = c.slotName;
+                        slotLabel.textContent = c.slotName && typeof c.slotName === 'object' ? c.slotName.ru || '' : c.slotName || '';
                         inner.appendChild(slotLabel);
                     }
 

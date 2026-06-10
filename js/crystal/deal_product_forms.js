@@ -186,7 +186,7 @@
 
                 var slotName = document.createElement('span');
                 slotName.style.cssText = 'font-size:15px;font-weight:600;color:#111;flex-shrink:0;';
-                slotName.textContent = slot.name;
+                slotName.textContent = slot.name && typeof slot.name === 'object' ? slot.name.ru || '' : slot.name || '';
 
                 var badge = document.createElement('span');
                 badge.style.cssText = 'font-size:13px;padding:2px 6px;border-radius:8px;font-weight:600;flex-shrink:0;' +
@@ -409,7 +409,7 @@
                         qty: currentQty * slot.quantityPerUnit,
                         baseQty: slot.quantityPerUnit,
                         bitrixId: opt.bitrixId || null,
-                        slotName: slot.name || ''
+                        slotName: slot.name || {}
                     });
                 }
             });
@@ -937,7 +937,7 @@
                             line.style.cssText = 'font-size:14px;color:#374151;margin-top:3px;';
                             var slotSpan = document.createElement('span');
                             slotSpan.style.cssText = 'color:#9ca3af;';
-                            slotSpan.textContent = entry.slotName + ' — ';
+                            slotSpan.textContent = (entry.slotName && typeof entry.slotName === 'object' ? entry.slotName.ru || '' : entry.slotName || '') + ' — ';
                             var optSpan = document.createElement('span');
                             optSpan.textContent = entry.optionName;
                             line.appendChild(slotSpan);

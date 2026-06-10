@@ -378,7 +378,7 @@
                 return (a.order || 0) - (b.order || 0);
             }).forEach(function (s) {
                 slots.push({
-                    name: s.name || '',
+                    name: s.name && typeof s.name === 'object' ? s.name : { ru: s.name || '' },
                     required: s.required !== false,
                     quantityPerUnit: parseInt(s.quantityPerUnit) || 1,
                     options: (s.options || []).map(function (o) {
@@ -399,7 +399,7 @@
         // — wire preset callback now that slots + rebuildSlotsUI exist
         onAddPreset = function (preset) {
             slots.push({
-                name: preset.name,
+                name: { ru: typeof preset.name === 'string' ? preset.name : (preset.name && preset.name.ru) || '' },
                 required: preset.required !== undefined ? !!preset.required : true,
                 quantityPerUnit: parseInt(preset.quantityPerUnit) || 1,
                 options: (preset.options || []).map(function (o) {
@@ -412,7 +412,7 @@
 
         var addSlotBtn = el('button', 'cfe-add-slot-btn', '+ Добавить пустой слот');
         addSlotBtn.addEventListener('click', function () {
-            slots.push({ name: '', required: true, quantityPerUnit: 1, options: [] });
+            slots.push({ name: { ru: '' }, required: true, quantityPerUnit: 1, options: [] });
             rebuildSlotsUI();
         });
         slotsWrap.appendChild(addSlotBtn);
@@ -487,7 +487,7 @@
         if (onPresetSaved) {
             var savePresetBtn = el('button', 'cfe-save-preset-btn', 'Сохр. пресет');
             savePresetBtn.addEventListener('click', function () {
-                var defaultName = slot.name || ('Пресет ' + (idx + 1));
+                var defaultName = (slot.name && slot.name.ru) || ('Пресет ' + (idx + 1));
                 var name = window.prompt('Название пресета:', defaultName);
                 if (!name || !name.trim()) return;
                 savePresetBtn.disabled = true;
@@ -523,8 +523,8 @@
         cardHeader.appendChild(headerActions);
         card.appendChild(cardHeader);
 
-        var nameGroup = buildField('Название слота', slot.name, 'Например: Пружина');
-        nameGroup.input.addEventListener('input', function () { slot.name = nameGroup.input.value; });
+        var nameGroup = buildField('Название слота', slot.name.ru || '', 'Например: Пружина');
+        nameGroup.input.addEventListener('input', function () { slot.name.ru = nameGroup.input.value; });
         card.appendChild(nameGroup.wrap);
 
         var row2 = el('div', 'cfe-slot-row2');
