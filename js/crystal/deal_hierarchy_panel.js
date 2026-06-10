@@ -226,7 +226,7 @@
 
             _items.forEach(function (item, idx) {
                 var card = document.createElement('div');
-                card.style.cssText = 'width:360px;flex-shrink:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
+                card.style.cssText = 'width:240px;flex-shrink:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
 
                 // --- header ---
                 var hdr = document.createElement('div');
@@ -396,31 +396,42 @@
 
                 comps.forEach(function (c, ci) {
                     var row = document.createElement('div');
-                    row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:3px 0;font-size:14px;'
+                    row.style.cssText = 'display:flex;align-items:flex-start;gap:5px;padding:4px 0;'
                         + (ci < comps.length - 1 ? 'border-bottom:1px solid #f3f4f6;' : '');
 
                     var connector = document.createElement('span');
-                    connector.style.cssText = 'color:#d1d5db;flex-shrink:0;font-size:14px;';
+                    connector.style.cssText = 'color:#d1d5db;flex-shrink:0;font-size:14px;padding-top:2px;';
                     connector.textContent = ci === comps.length - 1 ? '└' : '├';
 
-                    var cInfo = document.createElement('div');
-                    cInfo.style.cssText = 'flex:1;min-width:0;display:flex;align-items:center;gap:5px;';
-                    cInfo.appendChild(articleElDirect(c.article, c.bitrixId, 'font-size:14px;'));
+                    var inner = document.createElement('div');
+                    inner.style.cssText = 'flex:1;min-width:0;';
+
+                    if (c.slotName) {
+                        var slotLabel = document.createElement('div');
+                        slotLabel.style.cssText = 'font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;line-height:1.4;';
+                        slotLabel.textContent = c.slotName;
+                        inner.appendChild(slotLabel);
+                    }
+
+                    var dataRow = document.createElement('div');
+                    dataRow.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:14px;';
+                    dataRow.appendChild(articleElDirect(c.article, c.bitrixId, 'font-size:14px;'));
 
                     var cName = document.createElement('span');
                     cName.style.cssText = 'color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
                     cName.title = c.name;
                     cName.textContent = c.name;
-                    cInfo.appendChild(cName);
+                    dataRow.appendChild(cName);
 
                     var cQty = document.createElement('span');
                     cQty.dataset.compIdx = ci;
                     cQty.style.cssText = 'color:#9ca3af;flex-shrink:0;margin-left:auto;';
                     cQty.textContent = '× ' + c.qty;
+                    dataRow.appendChild(cQty);
 
+                    inner.appendChild(dataRow);
                     row.appendChild(connector);
-                    row.appendChild(cInfo);
-                    row.appendChild(cQty);
+                    row.appendChild(inner);
                     compWrap.appendChild(row);
                 });
 

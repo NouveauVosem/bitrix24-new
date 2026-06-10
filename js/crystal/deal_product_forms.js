@@ -408,7 +408,8 @@
                         name: opt.name,
                         qty: currentQty * slot.quantityPerUnit,
                         baseQty: slot.quantityPerUnit,
-                        bitrixId: opt.bitrixId || null
+                        bitrixId: opt.bitrixId || null,
+                        slotName: slot.name || ''
                     });
                 }
             });
