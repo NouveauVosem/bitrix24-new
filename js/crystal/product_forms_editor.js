@@ -537,6 +537,88 @@
         var nameGroup = buildField('Название слота', slot.name.ru || '', 'Например: Пружина');
         nameGroup.input.addEventListener('input', function () { slot.name.ru = nameGroup.input.value; });
 
+        // ── Translations accordion ──
+        var transAccordion = document.createElement('div');
+        transAccordion.style.cssText = 'margin:4px 0 2px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;';
+
+        var transHeader = document.createElement('div');
+        transHeader.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;background:#f9fafb;user-select:none;font-size:13px;color:#374151;';
+
+        var transArrow = document.createElement('span');
+        transArrow.style.cssText = 'font-size:10px;color:#6b7280;display:inline-block;transition:transform 0.15s;';
+        transArrow.textContent = '▶';
+
+        var transLabel = document.createElement('span');
+
+        var transBody = document.createElement('div');
+        transBody.style.cssText = 'display:none;padding:8px 10px;flex-direction:column;gap:4px;';
+
+        var transIsOpen = false;
+
+        function countTranslations() {
+            var filled = Object.keys(slot.name).filter(function (k) { return k !== 'ru' && slot.name[k]; }).length;
+            var total = _regionsLangsCache ? _regionsLangsCache.length : '?';
+            return filled + '/' + total;
+        }
+
+        function updateTransLabel() {
+            transLabel.textContent = 'Переводы (' + countTranslations() + ')';
+        }
+        updateTransLabel();
+
+        function rebuildTranslationInputs() {
+            transBody.innerHTML = '';
+            var langs = _regionsLangsCache || [];
+            langs.forEach(function (lang) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:3px;';
+                var lbl = document.createElement('span');
+                lbl.style.cssText = 'width:28px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;flex-shrink:0;';
+                lbl.textContent = lang;
+                var inp = document.createElement('input');
+                inp.type = 'text';
+                inp.className = 'cfe-field-input';
+                inp.style.cssText = 'flex:1;padding:3px 7px;font-size:13px;';
+                inp.value = slot.name[lang] || '';
+                inp.addEventListener('input', function () {
+                    slot.name[lang] = inp.value;
+                    updateTransLabel();
+                });
+                row.appendChild(lbl);
+                row.appendChild(inp);
+                transBody.appendChild(row);
+            });
+            updateTransLabel();
+        }
+
+        function openTransAccordion() {
+            transIsOpen = true;
+            transArrow.style.transform = 'rotate(90deg)';
+            transBody.style.display = 'flex';
+            if (!_regionsLangsCache) {
+                transBody.innerHTML = '<span style="font-size:12px;color:#9ca3af;">Загрузка...</span>';
+                getTranslateLangs().then(function () { rebuildTranslationInputs(); });
+            } else {
+                rebuildTranslationInputs();
+            }
+        }
+
+        transHeader.addEventListener('click', function () {
+            if (transIsOpen) {
+                transIsOpen = false;
+                transArrow.style.transform = '';
+                transBody.style.display = 'none';
+            } else {
+                openTransAccordion();
+            }
+        });
+
+        transHeader.appendChild(transArrow);
+        transHeader.appendChild(transLabel);
+        transAccordion.appendChild(transHeader);
+        transAccordion.appendChild(transBody);
+
+        // ── AI translate button ──
         var aiBtn = el('button', 'cfe-ai-translate-btn', 'AI перевод');
         aiBtn.addEventListener('click', function () {
             var ru = slot.name.ru || '';
@@ -547,10 +629,7 @@
                 return crystalFetch('POST', '/api/translate', { data: slot.name, langs: langs });
             }).then(function (result) {
                 Object.assign(slot.name, result);
-                var lines = Object.keys(result)
-                    .filter(function (k) { return k !== 'ru'; })
-                    .map(function (k) { return k.toUpperCase() + ': ' + result[k]; });
-                alert('Переводы добавлены:\n' + lines.join('\n'));
+                openTransAccordion();
             }).catch(function (err) {
                 alert('Ошибка перевода: ' + err.message);
             }).finally(function () {
@@ -560,6 +639,7 @@
         });
         nameGroup.wrap.appendChild(aiBtn);
         card.appendChild(nameGroup.wrap);
+        card.appendChild(transAccordion);
 
         var row2 = el('div', 'cfe-slot-row2');
 
