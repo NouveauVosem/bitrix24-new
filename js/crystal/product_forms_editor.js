@@ -551,7 +551,7 @@
         var transLabel = document.createElement('span');
 
         var transBody = document.createElement('div');
-        transBody.style.cssText = 'display:none;padding:8px 10px;flex-direction:column;gap:4px;';
+        transBody.style.cssText = 'max-height:0;overflow:hidden;transition:max-height 0.25s ease;padding:0 10px;flex-direction:column;gap:4px;';
 
         var transIsOpen = false;
 
@@ -595,11 +595,16 @@
             transIsOpen = true;
             transArrow.style.transform = 'rotate(90deg)';
             transBody.style.display = 'flex';
+            transBody.style.padding = '8px 10px';
             if (!_regionsLangsCache) {
                 transBody.innerHTML = '<span style="font-size:12px;color:#9ca3af;">Загрузка...</span>';
-                getTranslateLangs().then(function () { rebuildTranslationInputs(); });
+                getTranslateLangs().then(function () {
+                    rebuildTranslationInputs();
+                    transBody.style.maxHeight = transBody.scrollHeight + 'px';
+                });
             } else {
                 rebuildTranslationInputs();
+                transBody.style.maxHeight = transBody.scrollHeight + 'px';
             }
         }
 
@@ -607,7 +612,8 @@
             if (transIsOpen) {
                 transIsOpen = false;
                 transArrow.style.transform = '';
-                transBody.style.display = 'none';
+                transBody.style.maxHeight = '0';
+                transBody.style.padding = '0 10px';
             } else {
                 openTransAccordion();
             }
@@ -637,7 +643,12 @@
                 aiBtn.textContent = 'AI перевод';
             });
         });
-        nameGroup.wrap.appendChild(aiBtn);
+
+        var nameRow = document.createElement('div');
+        nameRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        nameRow.appendChild(nameGroup.input);
+        nameRow.appendChild(aiBtn);
+        nameGroup.wrap.appendChild(nameRow);
         card.appendChild(nameGroup.wrap);
         card.appendChild(transAccordion);
 
