@@ -480,6 +480,56 @@
         var btns = document.createElement('div');
         btns.style.cssText = 'display:flex;gap:5px;';
 
+        var calcBtn = document.createElement('button');
+        calcBtn.title = 'Отправить на просчёт в Crystal';
+        calcBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 8px;cursor:pointer;font-size:13px;font-weight:600;line-height:1.4;white-space:nowrap;';
+        calcBtn.textContent = 'Просчёт';
+        calcBtn.addEventListener('click', function () {
+            var items = _items ? _items.filter(function (i) { return i.normId; }) : [];
+            if (items.length === 0) {
+                showCalcStatus('Нет позиций с нормой для просчёта', '#dc2626');
+                return;
+            }
+            calcBtn.disabled = true;
+            calcBtn.textContent = '⧗ Отправка...';
+
+            var promises = items.map(function (item) {
+                return fetch('https://crystal.alvla.tools/api/price-calculations/crm/from-form-norm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' },
+                    body: JSON.stringify({ formNormId: item.normId })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) { return { item: item, resp: resp }; })
+                .catch(function (e) { return { item: item, error: e.message || 'Ошибка сети' }; });
+            });
+
+            Promise.all(promises).then(function (results) {
+                calcBtn.disabled = false;
+                calcBtn.textContent = 'Просчёт';
+                var errors = results.filter(function (r) { return r.error || (r.resp && r.resp.status === 'error'); });
+                if (errors.length === 0) {
+                    showCalcStatus('✓ ' + results.length + ' просчёт(ов) создано', '#16a34a');
+                } else {
+                    var msg = errors.map(function (r) {
+                        return (r.item.article || r.item.name || '?') + ': ' + (r.error || (r.resp && r.resp.message) || 'ошибка');
+                    }).join('; ');
+                    showCalcStatus('Ошибка: ' + msg, '#dc2626');
+                }
+            });
+        });
+
+        function showCalcStatus(text, color) {
+            var existing = document.getElementById('cdh-calc-status');
+            if (existing) existing.remove();
+            var s = document.createElement('div');
+            s.id = 'cdh-calc-status';
+            s.style.cssText = 'padding:4px 10px;font-size:13px;background:#1e3a8a;color:' + color + ';border-top:1px solid rgba(255,255,255,0.1);';
+            s.textContent = text;
+            panelHdr.parentNode.insertBefore(s, panelHdr.nextSibling);
+            setTimeout(function () { if (s.parentNode) s.remove(); }, 4000);
+        }
+
         var addBtn = document.createElement('button');
         addBtn.title = 'Добавить товар';
         addBtn.style.cssText = 'background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:3px;padding:1px 7px;cursor:pointer;font-size:16px;font-weight:700;line-height:1.4;';
@@ -509,6 +559,7 @@
         });
 
         btns.id = 'cdh-header-btns';
+        btns.appendChild(calcBtn);
         btns.appendChild(addBtn);
         btns.appendChild(refreshBtn);
         panelHdr.appendChild(title);
