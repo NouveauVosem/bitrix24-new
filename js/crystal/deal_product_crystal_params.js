@@ -65,9 +65,28 @@
         });
     }
 
-    function apiGet(path)         { return apiFetch('GET',   path); }
-    function apiPost(path, data)  { return apiFetch('POST',  path, data); }
-    function apiPatch(path, data) { return apiFetch('PATCH', path, data); }
+    function apiFetchForm(method, path, dto, files) {
+        var fd = new FormData();
+        fd.append('data', JSON.stringify(dto));
+        files.forEach(function (f) { fd.append('files', f, f.name); });
+        return fetch(CRYSTAL_BASE + '/api' + path, {
+            method: method,
+            headers: { 'X-Api-Key': API_KEY },
+            body: fd
+        }).then(function (r) {
+            if (r.status === 204) return null;
+            return r.json().then(function (body) {
+                if (!r.ok) throw new Error((body && body.message) || 'HTTP ' + r.status);
+                return body;
+            });
+        });
+    }
+
+    function apiGet(path)                        { return apiFetch('GET',   path); }
+    function apiPost(path, data)                 { return apiFetch('POST',  path, data); }
+    function apiPatch(path, data)                { return apiFetch('PATCH', path, data); }
+    function apiPostForm(path, dto, files)       { return apiFetchForm('POST',  path, dto, files); }
+    function apiPatchForm(path, dto, files)      { return apiFetchForm('PATCH', path, dto, files); }
 
     // ===== DATA LOADERS =====
 
@@ -398,6 +417,90 @@
         return specsContainer;
     }
 
+    // ===== IMAGES SECTION =====
+
+    function renderImagesSection(modal, existingVariant) {
+        var keptMedia = (existingVariant && existingVariant.media)
+            ? existingVariant.media.filter(function (m) { return m.typeOfMedia === 'image'; }).slice()
+            : [];
+        var newFiles = []; // [{ file: File, previewUrl: string }]
+
+        modal.appendChild(sectionHead('Фотографии'));
+
+        var grid = el('div', 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:flex-start;');
+
+        function makeThumb(imgSrc, onDelete, isNew) {
+            var wrap = el('div', 'position:relative;width:80px;height:80px;flex-shrink:0;');
+            var img = document.createElement('img');
+            img.src = imgSrc;
+            img.style.cssText = 'width:80px;height:80px;object-fit:cover;border-radius:5px;display:block;' +
+                (isNew ? 'border:2px solid #93c5fd;' : 'border:1px solid #e5e7eb;');
+            var delBtn = el('button',
+                'position:absolute;top:2px;right:2px;' +
+                'background:rgba(0,0,0,0.55);color:#fff;border:none;' +
+                'border-radius:50%;width:18px;height:18px;font-size:10px;' +
+                'cursor:pointer;line-height:1;padding:0;',
+                '✕'
+            );
+            delBtn.addEventListener('click', function () { onDelete(); wrap.remove(); });
+            wrap.appendChild(img);
+            wrap.appendChild(delBtn);
+            return wrap;
+        }
+
+        var pasteZone = el('div',
+            'display:flex;align-items:center;justify-content:center;' +
+            'width:80px;height:80px;border:2px dashed #d1d5db;border-radius:6px;' +
+            'color:#9ca3af;text-align:center;cursor:default;flex-shrink:0;' +
+            'padding:6px;box-sizing:border-box;line-height:1.3;font-size:11px;'
+        );
+        pasteZone.innerHTML = '<span>Ctrl+V<br><span style="font-size:10px">вставить<br>скриншот</span></span>';
+
+        keptMedia.forEach(function (m) {
+            var captured = m;
+            grid.appendChild(makeThumb(
+                CRYSTAL_BASE + '/api/file/image?path=' + encodeURIComponent(m.url),
+                function () {
+                    var i = keptMedia.indexOf(captured);
+                    if (i !== -1) keptMedia.splice(i, 1);
+                },
+                false
+            ));
+        });
+        grid.appendChild(pasteZone);
+        modal.appendChild(grid);
+
+        function addNewImage(file) {
+            var previewUrl = URL.createObjectURL(file);
+            var item = { file: file, previewUrl: previewUrl };
+            newFiles.push(item);
+            grid.insertBefore(makeThumb(
+                previewUrl,
+                function () {
+                    var i = newFiles.indexOf(item);
+                    if (i !== -1) { newFiles.splice(i, 1); URL.revokeObjectURL(previewUrl); }
+                },
+                true
+            ), pasteZone);
+        }
+
+        return {
+            addNewImage: addNewImage,
+            getMediaDto: function () {
+                var result = [];
+                keptMedia.forEach(function (m, i) {
+                    result.push(Object.assign({}, m, { order: i }));
+                });
+                newFiles.forEach(function (item, i) {
+                    result.push({ url: 'FILE::' + item.file.name, order: keptMedia.length + i, typeOfMedia: 'image', useType: 'marketing', alt: '' });
+                });
+                return result;
+            },
+            getFiles: function () { return newFiles.map(function (item) { return item.file; }); },
+            cleanup: function () { newFiles.forEach(function (item) { URL.revokeObjectURL(item.previewUrl); }); }
+        };
+    }
+
     function collectData(extInputs, intInputs, weightInp, specsContainer) {
         function dimVals(inputs) {
             var keys = ['width', 'height', 'depth'];
@@ -471,6 +574,28 @@
 
         var physical = renderPhysicalSection(modal, existingVariant);
         var specsContainer = renderSpecsSection(modal, existingVariant, typeSelect, specKeys);
+        var imagesSection = renderImagesSection(modal, existingVariant);
+
+        // Paste handler — слушаем на document, самоудаляется когда оверлей закрыт
+        function handlePaste(e) {
+            if (!document.getElementById('ccp-overlay')) {
+                document.removeEventListener('paste', handlePaste);
+                return;
+            }
+            var items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+                    var blob = items[i].getAsFile();
+                    if (!blob) break;
+                    var name = 'screenshot_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.png';
+                    imagesSection.addNewImage(new File([blob], name, { type: blob.type || 'image/png' }));
+                    e.preventDefault();
+                    break;
+                }
+            }
+        }
+        document.addEventListener('paste', handlePaste);
 
         // Footer
         var footer = el('div', 'border-top:1px solid #e5e7eb;padding-top:16px;margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;');
@@ -510,12 +635,15 @@
                 bitrixUserId:   bxUserId ? Number(bxUserId) : undefined,
                 bitrixUserName: bxUserName || undefined
             };
+            var mediaDto = imagesSection.getMediaDto();
+            var newFiles = imagesSection.getFiles();
             var variantDto = {
                 article:    baseArticle,
                 name:       { ru: productName || baseArticle, en: productName || baseArticle },
                 weight:     data.weight,
                 dimensions: Object.keys(data.dims).length ? data.dims : undefined,
                 specs:      data.specs,
+                media:      mediaDto,
                 isActive:   true
             };
 
@@ -524,19 +652,25 @@
             saveStatus.style.color = '#6b7280';
             saveStatus.textContent = '';
 
+            function doSave(apiPath, method, dto) {
+                if (newFiles.length > 0) return apiFetchForm(method, apiPath, dto, newFiles);
+                if (method === 'PATCH') return apiPatch(apiPath, dto);
+                return apiPost(apiPath, dto);
+            }
+
             var promise;
             if (existingVariant && existingProduct) {
                 var updatedVariants = (existingProduct.variants || []).map(function (v) {
                     if (v.id === existingVariant.id) return Object.assign({}, v, variantDto, { id: v.id });
                     return v;
                 });
-                promise = apiPatch('/products/update/' + existingProduct.id,
-                    Object.assign({ productTypeCode: typeCode, variants: updatedVariants }, editorMeta));
+                var patchDto = Object.assign({ productTypeCode: typeCode, variants: updatedVariants }, editorMeta);
+                promise = doSave('/products/update/' + existingProduct.id, 'PATCH', patchDto);
             } else if (existingProduct) {
-                promise = apiPost('/products/addVariant/' + existingProduct.id,
+                promise = doSave('/products/addVariant/' + existingProduct.id, 'POST',
                     Object.assign({}, variantDto, editorMeta));
             } else {
-                promise = apiPost('/products/create', {
+                promise = doSave('/products/create', 'POST', {
                     productTypeCode: typeCode,
                     name:     { ru: productName || baseArticle, en: productName || baseArticle },
                     article:  baseArticle,
@@ -546,6 +680,7 @@
 
             promise
                 .then(function () {
+                    imagesSection.cleanup();
                     saveBtn.textContent = '✅ Сохранено';
                     saveStatus.style.color = '#16a34a';
                     saveStatus.textContent = existingVariant ? 'Данные обновлены в Crystal' : 'Вариант создан в Crystal';
