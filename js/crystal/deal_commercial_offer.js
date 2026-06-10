@@ -713,6 +713,7 @@
                 it.components.forEach(function (c) {
                     var rawSlot = c.slotName || slotByArticle[c.article];
                     var slotTitle = rawSlot ? resolveLang(rawSlot, state.lang) : '';
+                    console.log('[КП] slot:', c.article, '| raw:', rawSlot, '| title:', slotTitle, '| lang:', state.lang);
                     var compName = (slotTitle ? '<span style="color:#374151;font-weight:600;margin-right:4px;">' + esc(slotTitle) + '</span><span style="color:#9ca3af;margin-right:4px;">—</span>' : '')
                                  + (c.article ? '<span style="color:#9ca3af;margin-right:5px;">' + esc(c.article) + '</span>' : '')
                                  + esc(resolveItemName(c, state.lang));
