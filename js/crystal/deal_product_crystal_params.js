@@ -459,7 +459,7 @@
         keptMedia.forEach(function (m) {
             var captured = m;
             grid.appendChild(makeThumb(
-                CRYSTAL_BASE + '/api/file/image?path=' + encodeURIComponent(m.url),
+                CRYSTAL_BASE + '/api/files/image?path=' + encodeURIComponent(m.url),
                 function () {
                     var i = keptMedia.indexOf(captured);
                     if (i !== -1) keptMedia.splice(i, 1);
