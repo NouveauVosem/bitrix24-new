@@ -223,7 +223,7 @@ if (!empty($specsPerArticle)) {
                 $specValuesByKey[$code] = [];
                 if ($svRaw) {
                     foreach (json_decode($svRaw, true) ?: [] as $sv) {
-                        $specValuesByKey[$code][$sv['code']] = $sv['value']['en'] ?? $sv['value']['ru'] ?? $sv['code'];
+                        $specValuesByKey[$code][$sv['code']] = $sv['value'] ?? ['en' => $sv['code'], 'ru' => $sv['code']];
                     }
                 }
                 $enumKeysDone[$code] = true;
@@ -244,27 +244,37 @@ if (!empty($specsPerArticle)) {
         foreach ($rawSpecs as $code => $val) {
             $sk = $specKeysByCode[$code] ?? null;
             if (!$sk) continue;
-            $label = $sk['labels']['en'] ?? $sk['labels']['ru'] ?? $code;
-            $rawUnit = $sk['unit'] ?? null;
-            $unit = is_array($rawUnit) ? (($rawUnit['en'] ?: null) ?? ($rawUnit['ru'] ?: null)) : $rawUnit;
-            $vtype = $sk['valueType'] ?? 'text';
+            $labelI18n = $sk['labels'] ?? ['en' => $code, 'ru' => $code];
+            $rawUnit   = $sk['unit'] ?? null;
+            $vtype     = $sk['valueType'] ?? 'text';
 
             if (in_array($vtype, ['enum', 'enum_rich'], true)) {
-                $displayVal = $specValuesByKey[$code][$val] ?? $val;
+                $enumObj    = $specValuesByKey[$code][$val] ?? null;
+                $displayVal = is_array($enumObj)
+                    ? $enumObj
+                    : ['en' => $val, 'ru' => $val];
             } elseif ($vtype === 'float') {
                 if (is_array($val)) {
-                    $parts = array_values(array_filter($val, function ($v) { return $v !== null; }));
-                    $displayVal = implode('–', $parts);
+                    $parts  = array_values(array_filter($val, function ($v) { return $v !== null; }));
+                    $numStr = implode('–', $parts);
                 } else {
-                    $displayVal = (string)$val;
+                    $numStr = (string)$val;
                 }
-                if ($unit) $displayVal .= ' ' . $unit;
+                $unitEn = is_array($rawUnit) ? ($rawUnit['en'] ?: ($rawUnit['ru'] ?? '')) : ($rawUnit ?? '');
+                $unitRu = is_array($rawUnit) ? ($rawUnit['ru'] ?: ($rawUnit['en'] ?? '')) : ($rawUnit ?? '');
+                $displayVal = [
+                    'en' => $numStr . ($unitEn ? ' ' . $unitEn : ''),
+                    'ru' => $numStr . ($unitRu ? ' ' . $unitRu : ''),
+                ];
             } else {
                 $displayVal = (string)$val;
             }
 
-            if ($displayVal !== '') {
-                $resolved[] = ['label' => $label, 'value' => $displayVal];
+            $isEmpty = is_array($displayVal)
+                ? (($displayVal['en'] ?? '') === '' && ($displayVal['ru'] ?? '') === '')
+                : ($displayVal === '');
+            if (!$isEmpty) {
+                $resolved[] = ['label' => $labelI18n, 'value' => $displayVal];
             }
         }
 

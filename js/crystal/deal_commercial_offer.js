@@ -45,6 +45,12 @@
         return DOC_STRINGS[c] ? c : 'EN';
     }
 
+    function resolveLang(val, lang) {
+        if (!val || typeof val !== 'object') return String(val || '');
+        var l = lang.toLowerCase();
+        return val[l] || val.en || val.ru || '';
+    }
+
     function resolveItemName(item, lang) {
         if (lang === 'CZ' && item.nameCz) return item.nameCz;
         if (lang === 'RU' && item.nameRu) return item.nameRu;
@@ -645,8 +651,8 @@
 
             (it.specs || []).forEach(function (spec) {
                 html += '<tr>'
-                    + '<td style="' + labelTd + '">' + esc(spec.label) + '</td>'
-                    + '<td style="' + valueTd + '">' + esc(spec.value) + '</td>'
+                    + '<td style="' + labelTd + '">' + esc(resolveLang(spec.label, state.lang)) + '</td>'
+                    + '<td style="' + valueTd + '">' + esc(resolveLang(spec.value, state.lang)) + '</td>'
                     + '</tr>';
             });
 
