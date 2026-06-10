@@ -292,6 +292,7 @@
                     included:   true,
                     specs:      it.specs    || [],
                     physical:   it.physical || null,
+                    media:      it.media    || [],
                     components: (it.components || []).map(function (c) {
                         return {
                             name:    c.name    || '',
@@ -647,7 +648,8 @@
             html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
             html += '<div style="font-size:9.5pt;font-weight:700;color:#1e40af;margin-bottom:6px;">'
                   + itemNo + '. ' + esc(resolveItemName(it, state.lang)) + '</div>';
-            html += '<table style="width:56%;border-collapse:collapse;">';
+            html += '<div style="display:flex;gap:16px;align-items:flex-start;">';
+            html += '<table style="width:56%;border-collapse:collapse;flex-shrink:0;">';
 
             (it.specs || []).forEach(function (spec) {
                 html += '<tr>'
@@ -676,7 +678,17 @@
                 }
             }
 
-            html += '</table></div>';
+            html += '</table>';
+
+            if (it.media && it.media.length) {
+                html += '<div style="display:flex;flex-direction:column;gap:6px;flex:1;">';
+                it.media.forEach(function (url) {
+                    html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:130px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
+                });
+                html += '</div>';
+            }
+
+            html += '</div></div>';
         });
 
         html += '</div>';

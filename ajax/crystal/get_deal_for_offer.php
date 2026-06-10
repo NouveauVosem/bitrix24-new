@@ -175,10 +175,11 @@ foreach ($items as &$item) {
 unset($item);
 
 // Fetch product specs and physical params from Crystal for items with baseNormArticle
-$specsPerArticle   = [];
+$specsPerArticle    = [];
 $physicalPerArticle = [];
-$specKeysByCode    = [];
-$specValuesByKey   = [];
+$mediaPerArticle    = [];
+$specKeysByCode     = [];
+$specValuesByKey    = [];
 
 $uniqueArticles = [];
 foreach ($items as $item) {
@@ -199,6 +200,14 @@ foreach ($uniqueArticles as $article) {
                 $w = isset($v['weight']) && $v['weight'] !== null ? (float)$v['weight'] : null;
                 $d = !empty($v['dimensions']) ? $v['dimensions'] : null;
                 if ($w !== null || $d) $physicalPerArticle[$article] = ['weight' => $w, 'dimensions' => $d];
+                $images = [];
+                foreach ($v['media'] ?? [] as $m) {
+                    if (($m['typeOfMedia'] ?? '') === 'image' && !empty($m['url'])) {
+                        $images[] = $crystalBase . '/api/files/image?path=' . urlencode($m['url']);
+                    }
+                    if (count($images) >= 3) break;
+                }
+                if ($images) $mediaPerArticle[$article] = $images;
                 break 2;
             }
         }
@@ -289,6 +298,17 @@ if (!empty($physicalPerArticle)) {
         $article = $item['baseNormArticle'] ?? null;
         if ($article && isset($physicalPerArticle[$article])) {
             $item['physical'] = $physicalPerArticle[$article];
+        }
+    }
+    unset($item);
+}
+
+// Assign media (images) to items
+if (!empty($mediaPerArticle)) {
+    foreach ($items as &$item) {
+        $article = $item['baseNormArticle'] ?? null;
+        if ($article && isset($mediaPerArticle[$article])) {
+            $item['media'] = $mediaPerArticle[$article];
         }
     }
     unset($item);
