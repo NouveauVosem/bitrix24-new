@@ -678,6 +678,19 @@
                 }
             }
 
+            if (it.components && it.components.length) {
+                html += '<tr><td colspan="2" style="padding:6px 0 3px;font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">'
+                      + esc(s.configuration || 'Configuration') + '</td></tr>';
+                it.components.forEach(function (c) {
+                    var compName = (c.article ? '<span style="color:#9ca3af;margin-right:5px;">' + esc(c.article) + '</span>' : '')
+                                 + esc(resolveItemName(c, state.lang));
+                    html += '<tr>'
+                        + '<td style="' + labelTd + '">' + compName + '</td>'
+                        + '<td style="' + valueTd + '">&times;' + c.baseQty + '</td>'
+                        + '</tr>';
+                });
+            }
+
             html += '</table>';
 
             if (it.media && it.media.length) {
@@ -688,27 +701,7 @@
                 html += '</div>';
             }
 
-            html += '</div>';
-
-            if (it.components && it.components.length) {
-                html += '<div style="margin-top:8px;">';
-                html += '<div style="font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">'
-                      + esc(s.configuration || 'Configuration') + '</div>';
-                html += '<table style="width:100%;border-collapse:collapse;">';
-                it.components.forEach(function (c) {
-                    html += '<tr>'
-                        + '<td style="padding:2px 10px 2px 0;font-size:8.5pt;color:#6b7280;width:1%;white-space:nowrap;">'
-                        + (c.article ? esc(c.article) : '') + '</td>'
-                        + '<td style="padding:2px 10px 2px 0;font-size:8.5pt;color:#1f2937;">'
-                        + esc(resolveItemName(c, state.lang)) + '</td>'
-                        + '<td style="padding:2px 0;font-size:8.5pt;color:#6b7280;width:1%;white-space:nowrap;">'
-                        + '&times;' + c.baseQty + '</td>'
-                        + '</tr>';
-                });
-                html += '</table></div>';
-            }
-
-            html += '</div>';
+            html += '</div></div>';
         });
 
         html += '</div>';
