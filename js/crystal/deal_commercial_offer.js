@@ -10,6 +10,24 @@
     var DOC_STRINGS  = window.OFFER_DOC_STRINGS  || {};
     var LANG_ORDER   = ['EN', 'DE', 'RU', 'CZ', 'FR', 'ES', 'PL', 'HU', 'IT', 'EL'];
 
+    var CRYSTAL_BASE = 'https://crystal.alvla.tools';
+    var CRYSTAL_KEY  = 'legenda';
+    var _regionsCache = null;
+
+    function crystalGet(path) {
+        return fetch(CRYSTAL_BASE + path, { headers: { 'X-Api-Key': CRYSTAL_KEY } })
+            .then(function (r) { return r.ok ? r.json() : Promise.resolve(null); })
+            .catch(function () { return null; });
+    }
+
+    crystalGet('/api/semantics/regions').then(function (regions) {
+        if (!regions || !Array.isArray(regions)) return;
+        _regionsCache = regions
+            .sort(function (a, b) { return (a.order || 0) - (b.order || 0); })
+            .map(function (r) { return r.code.toUpperCase(); })
+            .filter(function (code) { return DOC_STRINGS[code]; });
+    });
+
     var SELLERS = {
         'ALVLA, s.r.o.': {
             name:    'ALVLA, s.r.o.',
@@ -494,8 +512,7 @@
             b.style.fontWeight  = active ? '600'     : '400';
         }
 
-        LANG_ORDER.forEach(function (lang) {
-            if (!DOC_STRINGS[lang]) return;
+        (_regionsCache || LANG_ORDER.filter(function (l) { return DOC_STRINGS[l]; })).forEach(function (lang) {
             var btn = document.createElement('button');
             btn.style.cssText = 'padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;border:1px solid #d1d5db;font-family:inherit;';
             btn.textContent   = lang;
