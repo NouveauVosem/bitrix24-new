@@ -226,7 +226,7 @@
 
             _items.forEach(function (item, idx) {
                 var card = document.createElement('div');
-                card.style.cssText = 'width:240px;flex-shrink:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
+                card.style.cssText = 'width:360px;flex-shrink:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;';
 
                 // --- header ---
                 var hdr = document.createElement('div');
