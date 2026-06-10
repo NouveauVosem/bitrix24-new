@@ -494,7 +494,7 @@
             calcBtn.textContent = '⧗ Отправка...';
 
             var promises = items.map(function (item) {
-                return fetch('https://crystal.alvla.tools/api/price-calculations/crm/from-form-norm', {
+                return fetch('https://crystal.alvla.tools/api/price-calculations/from-form-norm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' },
                     body: JSON.stringify({ formNormId: item.normId })
