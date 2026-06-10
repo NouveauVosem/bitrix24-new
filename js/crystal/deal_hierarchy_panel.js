@@ -384,10 +384,66 @@
                     }
                 });
 
-                hdr.appendChild(arrow);
-                hdr.appendChild(info);
-                hdr.appendChild(crystalBtn);
-                hdr.appendChild(delBtn);
+                if (item.normId) {
+                    var calcItemBtn = document.createElement('button');
+                    calcItemBtn.title = 'Отправить на просчёт';
+                    calcItemBtn.style.cssText = [
+                        'background:none;border:1px solid #86efac;',
+                        'color:#16a34a;border-radius:4px;',
+                        'font-size:11px;font-weight:700;padding:2px 6px;',
+                        'cursor:pointer;flex-shrink:0;line-height:1.4;'
+                    ].join('');
+                    calcItemBtn.textContent = '↗';
+                    calcItemBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        calcItemBtn.disabled = true;
+                        calcItemBtn.textContent = '⧗';
+                        fetch('https://crystal.alvla.tools/api/price-calculations/from-form-norm', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' },
+                            body: JSON.stringify({ formNormId: item.normId })
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (resp) {
+                            if (resp.status === 'created' || resp.id) {
+                                calcItemBtn.textContent = '✓';
+                                calcItemBtn.style.color = '#16a34a';
+                                setTimeout(function () {
+                                    calcItemBtn.textContent = '↗';
+                                    calcItemBtn.disabled = false;
+                                }, 2500);
+                            } else {
+                                calcItemBtn.textContent = '✕';
+                                calcItemBtn.style.color = '#dc2626';
+                                calcItemBtn.title = resp.message || 'Ошибка';
+                                setTimeout(function () {
+                                    calcItemBtn.textContent = '↗';
+                                    calcItemBtn.style.color = '#16a34a';
+                                    calcItemBtn.disabled = false;
+                                }, 3000);
+                            }
+                        })
+                        .catch(function () {
+                            calcItemBtn.textContent = '✕';
+                            calcItemBtn.style.color = '#dc2626';
+                            setTimeout(function () {
+                                calcItemBtn.textContent = '↗';
+                                calcItemBtn.style.color = '#16a34a';
+                                calcItemBtn.disabled = false;
+                            }, 3000);
+                        });
+                    });
+                    hdr.appendChild(arrow);
+                    hdr.appendChild(info);
+                    hdr.appendChild(calcItemBtn);
+                    hdr.appendChild(crystalBtn);
+                    hdr.appendChild(delBtn);
+                } else {
+                    hdr.appendChild(arrow);
+                    hdr.appendChild(info);
+                    hdr.appendChild(crystalBtn);
+                    hdr.appendChild(delBtn);
+                }
 
                 // --- components ---
                 var comps = item.components || [];
