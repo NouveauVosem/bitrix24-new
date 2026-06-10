@@ -17,6 +17,14 @@
         return _dealId;
     }
 
+    function getClientName() {
+        var titleEl = document.querySelector('#pagetitle');
+        if (!titleEl) return '';
+        var t = (titleEl.textContent || '').trim();
+        var idx = t.indexOf(' - ');
+        return idx !== -1 ? t.slice(idx + 3).trim() : t;
+    }
+
     function esc(s) {
         return String(s)
             .replace(/&/g, '&amp;')
@@ -401,7 +409,12 @@
                         fetch('https://crystal.alvla.tools/api/price-calculations/from-form-norm', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' },
-                            body: JSON.stringify({ formNormId: item.normId })
+                            body: JSON.stringify({
+                                formNormId: item.normId,
+                                dealId: getDealId(),
+                                clientName: getClientName(),
+                                quantity: item.qty || 1
+                            })
                         })
                         .then(function (r) { return r.json(); })
                         .then(function (resp) {
@@ -549,11 +562,18 @@
             calcBtn.disabled = true;
             calcBtn.textContent = '⧗ Отправка...';
 
+            var dealId = getDealId();
+            var clientName = getClientName();
             var promises = items.map(function (item) {
                 return fetch('https://crystal.alvla.tools/api/price-calculations/from-form-norm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' },
-                    body: JSON.stringify({ formNormId: item.normId })
+                    body: JSON.stringify({
+                        formNormId: item.normId,
+                        dealId: dealId,
+                        clientName: clientName,
+                        quantity: item.qty || 1
+                    })
                 })
                 .then(function (r) { return r.json(); })
                 .then(function (resp) { return { item: item, resp: resp }; })
