@@ -706,6 +706,7 @@
                 html += '<tr><td colspan="2" style="padding:6px 0 3px;font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">'
                       + esc(s.configuration || 'Configuration') + '</td></tr>';
                 it.components.forEach(function (c) {
+                    console.log('[КП] component:', c.article, 'slotName:', c.slotName);
                     var slotTitle = c.slotName ? resolveLang(c.slotName, state.lang) : '';
                     var compName = (slotTitle ? '<span style="color:#374151;font-weight:600;margin-right:4px;">' + esc(slotTitle) + '</span><span style="color:#9ca3af;margin-right:4px;">—</span>' : '')
                                  + (c.article ? '<span style="color:#9ca3af;margin-right:5px;">' + esc(c.article) + '</span>' : '')
