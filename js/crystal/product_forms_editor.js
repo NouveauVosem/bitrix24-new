@@ -126,7 +126,8 @@
         function renderPresets() {
             var q = searchInput.value.toLowerCase();
             var filtered = allPresets.filter(function (p) {
-                return !q || p.name.toLowerCase().indexOf(q) !== -1;
+                var ru = p.name && typeof p.name === 'object' ? (p.name.ru || '') : (p.name || '');
+                return !q || ru.toLowerCase().indexOf(q) !== -1;
             });
             listEl.innerHTML = '';
             if (filtered.length === 0) {
@@ -138,11 +139,11 @@
             filtered.forEach(function (preset) {
                 var card = el('div', 'cfe-preset-card');
                 var cardTop = el('div', 'cfe-preset-card-top');
-                cardTop.appendChild(el('div', 'cfe-preset-card-name', preset.name));
+                cardTop.appendChild(el('div', 'cfe-preset-card-name', preset.name && typeof preset.name === 'object' ? preset.name.ru || '' : preset.name || ''));
                 var delBtn = el('button', 'cfe-preset-del-btn', '✕');
                 delBtn.title = 'Удалить пресет';
                 delBtn.addEventListener('click', function () {
-                    if (!confirm('Удалить пресет "' + preset.name + '"?')) return;
+                    if (!confirm('Удалить пресет "' + (preset.name && typeof preset.name === 'object' ? preset.name.ru || '' : preset.name || '') + '"?')) return;
                     delBtn.disabled = true;
                     deletePresetApi(preset.id, reloadPresets, function () {
                         alert('Ошибка при удалении');
@@ -411,7 +412,7 @@
         // — wire preset callback now that slots + rebuildSlotsUI exist
         onAddPreset = function (preset) {
             slots.push({
-                name: { ru: typeof preset.name === 'string' ? preset.name : (preset.name && preset.name.ru) || '' },
+                name: preset.name && typeof preset.name === 'object' ? Object.assign({}, preset.name) : { ru: preset.name || '' },
                 required: preset.required !== undefined ? !!preset.required : true,
                 quantityPerUnit: parseInt(preset.quantityPerUnit) || 1,
                 options: (preset.options || []).map(function (o) {
@@ -499,12 +500,10 @@
         if (onPresetSaved) {
             var savePresetBtn = el('button', 'cfe-save-preset-btn', 'Сохр. пресет');
             savePresetBtn.addEventListener('click', function () {
-                var defaultName = (slot.name && slot.name.ru) || ('Пресет ' + (idx + 1));
-                var name = window.prompt('Название пресета:', defaultName);
-                if (!name || !name.trim()) return;
+                if (!(slot.name && slot.name.ru && slot.name.ru.trim())) { alert('Введите название слота перед сохранением пресета'); return; }
                 savePresetBtn.disabled = true;
                 savePresetBtn.textContent = '...';
-                savePreset(true, null, { name: name.trim(), required: slot.required, quantityPerUnit: slot.quantityPerUnit, options: slot.options },
+                savePreset(true, null, { name: slot.name, required: slot.required, quantityPerUnit: slot.quantityPerUnit, options: slot.options },
                     function () {
                         savePresetBtn.textContent = '✓';
                         onPresetSaved();
