@@ -623,7 +623,7 @@
         if (!state.includeSpecs) return '';
         var s = DOC_STRINGS[state.lang] || DOC_STRINGS['EN'] || {};
         var itemsWithData = includedItems.filter(function (it) {
-            return (it.specs && it.specs.length) || it.physical;
+            return (it.specs && it.specs.length) || it.physical || (it.components && it.components.length);
         });
         if (!itemsWithData.length) return '';
 
@@ -683,12 +683,32 @@
             if (it.media && it.media.length) {
                 html += '<div style="display:flex;flex-direction:column;gap:6px;flex:1;">';
                 it.media.forEach(function (url) {
-                    html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:130px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
+                    html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
                 });
                 html += '</div>';
             }
 
-            html += '</div></div>';
+            html += '</div>';
+
+            if (it.components && it.components.length) {
+                html += '<div style="margin-top:8px;">';
+                html += '<div style="font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">'
+                      + esc(s.configuration || 'Configuration') + '</div>';
+                html += '<table style="width:100%;border-collapse:collapse;">';
+                it.components.forEach(function (c) {
+                    html += '<tr>'
+                        + '<td style="padding:2px 10px 2px 0;font-size:8.5pt;color:#6b7280;width:1%;white-space:nowrap;">'
+                        + (c.article ? esc(c.article) : '') + '</td>'
+                        + '<td style="padding:2px 10px 2px 0;font-size:8.5pt;color:#1f2937;">'
+                        + esc(resolveItemName(c, state.lang)) + '</td>'
+                        + '<td style="padding:2px 0;font-size:8.5pt;color:#6b7280;width:1%;white-space:nowrap;">'
+                        + '&times;' + c.baseQty + '</td>'
+                        + '</tr>';
+                });
+                html += '</table></div>';
+            }
+
+            html += '</div>';
         });
 
         html += '</div>';

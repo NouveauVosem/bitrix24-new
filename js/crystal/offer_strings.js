@@ -28,7 +28,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Physical Parameters',
         extDim:     'External dimensions (W×D×H)',
         intDim:     'Internal dimensions (W×D×H)',
-        netWeight:  'Net weight',
+        netWeight:      'Net weight',
+        configuration:  'Configuration',
         vatNote:    'VAT 0% – Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)',
         printSave:  'Print / Save PDF'
     },
@@ -55,7 +56,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Physikalische Parameter',
         extDim:     'Außenmaße (B×T×H)',
         intDim:     'Innenmaße (B×T×H)',
-        netWeight:  'Nettogewicht',
+        netWeight:      'Nettogewicht',
+        configuration:  'Lieferumfang',
         vatNote:    'MwSt. 0% – Reverse-Charge-Verfahren gemäß Art. 196 der Richtlinie 2006/112/EG',
         printSave:  'Drucken / Als PDF speichern'
     },
@@ -82,7 +84,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Физические параметры',
         extDim:     'Внешние размеры (Ш×Г×В)',
         intDim:     'Внутренние размеры (Ш×Г×В)',
-        netWeight:  'Вес нетто',
+        netWeight:      'Вес нетто',
+        configuration:  'Комплектация',
         vatNote:    'НДС 0% – механизм обратного начисления (Ст. 196, Директива 2006/112/EC)',
         printSave:  'Печать / Сохранить PDF'
     },
@@ -109,7 +112,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Fyzické parametry',
         extDim:     'Vnější rozměry (Š×H×V)',
         intDim:     'Vnitřní rozměry (Š×H×V)',
-        netWeight:  'Čistá hmotnost',
+        netWeight:      'Čistá hmotnost',
+        configuration:  'Konfigurace',
         vatNote:    'DPH 0% – přenesení daňové povinnosti (čl. 196 Směrnice Rady 2006/112/ES)',
         printSave:  'Tisk / Uložit jako PDF'
     },
@@ -136,7 +140,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Paramètres physiques',
         extDim:     'Dimensions extérieures (L×P×H)',
         intDim:     'Dimensions intérieures (L×P×H)',
-        netWeight:  'Poids net',
+        netWeight:      'Poids net',
+        configuration:  'Configuration',
         vatNote:    'TVA 0% – autoliquidation (article 196, directive 2006/112/CE)',
         printSave:  'Imprimer / Enregistrer en PDF'
     },
@@ -163,7 +168,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Parámetros físicos',
         extDim:     'Dimensiones externas (An×Pr×Al)',
         intDim:     'Dimensiones internas (An×Pr×Al)',
-        netWeight:  'Peso neto',
+        netWeight:      'Peso neto',
+        configuration:  'Configuración',
         vatNote:    'IVA 0% – inversión del sujeto pasivo (art. 196, Directiva 2006/112/CE)',
         printSave:  'Imprimir / Guardar como PDF'
     },
@@ -190,7 +196,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Parametry fizyczne',
         extDim:     'Wymiary zewnętrzne (Sz×Gł×Wys.)',
         intDim:     'Wymiary wewnętrzne (Sz×Gł×Wys.)',
-        netWeight:  'Waga netto',
+        netWeight:      'Waga netto',
+        configuration:  'Konfiguracja',
         vatNote:    'VAT 0% – odwrotne obciążenie (art. 196 dyrektywy 2006/112/WE)',
         printSave:  'Drukuj / Zapisz jako PDF'
     },
@@ -217,7 +224,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Fizikai paraméterek',
         extDim:     'Külső méretek (Sz×Mé×M)',
         intDim:     'Belső méretek (Sz×Mé×M)',
-        netWeight:  'Nettó tömeg',
+        netWeight:      'Nettó tömeg',
+        configuration:  'Konfiguráció',
         vatNote:    'ÁFA 0% – fordított adózás (196. cikk, 2006/112/EK irányelv)',
         printSave:  'Nyomtatás / Mentés PDF-ként'
     },
@@ -244,7 +252,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Parametri fisici',
         extDim:     'Dimensioni esterne (L×P×A)',
         intDim:     'Dimensioni interne (L×P×A)',
-        netWeight:  'Peso netto',
+        netWeight:      'Peso netto',
+        configuration:  'Configurazione',
         vatNote:    'IVA 0% – inversione contabile (art. 196, direttiva 2006/112/CE)',
         printSave:  'Stampa / Salva come PDF'
     },
@@ -271,7 +280,8 @@ window.OFFER_DOC_STRINGS = {
         physParams: 'Φυσικές παράμετροι',
         extDim:     'Εξωτερικές διαστάσεις (Π×Β×Υ)',
         intDim:     'Εσωτερικές διαστάσεις (Π×Β×Υ)',
-        netWeight:  'Καθαρό βάρος',
+        netWeight:      'Καθαρό βάρος',
+        configuration:  'Διαμόρφωση',
         vatNote:    'ΦΠΑ 0% – αντιστροφή υποχρέωσης (άρθρο 196, οδηγία 2006/112/ΕΚ)',
         printSave:  'Εκτύπωση / Αποθήκευση ως PDF'
     }
