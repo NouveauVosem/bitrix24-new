@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H \"X-Api-Key: legenda\" \"https://crystal.alvla.tools/api/slot-presets\" | python -m json.tool 2>/dev/null | head -60)",
+      "Bash(curl -s -H \"X-Api-Key: legenda\" \"https://crystal.alvla.tools/api/slot-presets\")",
+      "Bash(curl -s -H \"X-Api-Key: legenda\" \"https://crystal.alvla.tools/api/semantics/regions\" | python -m json.tool 2>/dev/null | grep -A2 '\"code\"')",
+      "Bash(curl -s -H \"X-Api-Key: legenda\" \"https://crystal.alvla.tools/api/semantics/regions\")"
+    ]
+  }
+}

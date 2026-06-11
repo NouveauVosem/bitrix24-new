@@ -393,7 +393,7 @@
             }).forEach(function (s) {
                 slots.push({
                     id: s.id || null,
-                    name: s.name && typeof s.name === 'object' ? s.name : { ru: s.name || '' },
+                    name: s.name && typeof s.name === 'object' ? Object.assign({}, s.name) : { ru: s.name || '' },
                     required: s.required !== false,
                     quantityPerUnit: parseInt(s.quantityPerUnit) || 1,
                     options: (s.options || []).map(function (o) {
