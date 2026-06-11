@@ -158,17 +158,48 @@ $ctx = stream_context_create(['http' => [
 foreach ($items as &$item) {
     $normId = $item['normId'] ?? null;
     if (!$normId) continue;
-    if (!empty($item['bitrixId']) && !empty($item['baseNormArticle'])) continue;
+
+    $hasSlotSnapshot = !empty($item['slotSnapshot']);
+    $needBitrixId    = empty($item['bitrixId']);
+    $needNormArticle = empty($item['baseNormArticle']);
+
+    if (!$needBitrixId && !$needNormArticle && !$hasSlotSnapshot) continue;
 
     $raw = @file_get_contents($crystalBase . '/api/product-form-norms/' . urlencode($normId), false, $ctx);
-    if ($raw) {
-        $norm = json_decode($raw, true);
-        if (empty($item['bitrixId'])) {
-            $bid = (int)($norm['template']['bitrixId'] ?? 0);
-            if ($bid) $item['bitrixId'] = $bid;
-        }
-        if (empty($item['baseNormArticle'])) {
-            $item['baseNormArticle'] = $norm['baseNormArticle'] ?? null;
+    if (!$raw) continue;
+
+    $norm = json_decode($raw, true);
+
+    if ($needBitrixId) {
+        $bid = (int)($norm['template']['bitrixId'] ?? 0);
+        if ($bid) $item['bitrixId'] = $bid;
+    }
+    if ($needNormArticle) {
+        $item['baseNormArticle'] = $norm['baseNormArticle'] ?? null;
+    }
+
+    // Enrich slotSnapshot with fresh slot names from the form template (by slotId)
+    if ($hasSlotSnapshot) {
+        $templateId = $norm['templateId'] ?? null;
+        if ($templateId) {
+            $formRaw = @file_get_contents($crystalBase . '/api/product-forms/' . urlencode($templateId), false, $ctx);
+            if ($formRaw) {
+                $form = json_decode($formRaw, true);
+                $freshNames = [];
+                foreach ($form['slots'] ?? [] as $slot) {
+                    $sid = isset($slot['id']) ? (string)$slot['id'] : null;
+                    if ($sid !== null && isset($slot['name'])) {
+                        $freshNames[$sid] = $slot['name'];
+                    }
+                }
+                foreach ($item['slotSnapshot'] as &$snap) {
+                    $sid = isset($snap['slotId']) ? (string)$snap['slotId'] : null;
+                    if ($sid !== null && isset($freshNames[$sid])) {
+                        $snap['slotName'] = $freshNames[$sid];
+                    }
+                }
+                unset($snap);
+            }
         }
     }
 }
