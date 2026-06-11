@@ -182,7 +182,7 @@ foreach ($items as &$item) {
     if ($hasSlotSnapshot) {
         $templateId = $norm['templateId'] ?? null;
         if ($templateId) {
-            $formRaw = @file_get_contents($crystalBase . '/api/product-forms/' . urlencode($templateId) . '/full', false, $ctx);
+            $formRaw = @file_get_contents($crystalBase . '/api/product-forms/' . urlencode($templateId), false, $ctx);
             if ($formRaw) {
                 $form = json_decode($formRaw, true);
                 $freshNames = [];
