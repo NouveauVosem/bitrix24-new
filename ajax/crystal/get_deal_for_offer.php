@@ -172,6 +172,7 @@ foreach ($items as &$item) {
     if (!$raw) continue;
 
     $norm = json_decode($raw, true);
+    $dbg['templateId'] = $norm['templateId'] ?? null;
 
     if ($needBitrixId) {
         $bid = (int)($norm['template']['bitrixId'] ?? 0);
@@ -195,6 +196,9 @@ foreach ($items as &$item) {
                         $freshNames[$sid] = $slot['name'];
                     }
                 }
+                $dbg['freshNamesCount'] = count($freshNames);
+                $dbg['snapshotSlotIds'] = array_column($item['slotSnapshot'], 'slotId');
+                $dbg['freshSlotIds']    = array_keys($freshNames);
                 if (!empty($freshNames)) {
                     foreach ($item['slotSnapshot'] as &$snap) {
                         $sid = isset($snap['slotId']) ? (string)$snap['slotId'] : null;
@@ -207,6 +211,7 @@ foreach ($items as &$item) {
             }
         }
     }
+    $result['_debug_enrich'][] = $dbg;
 }
 unset($item);
 
