@@ -170,14 +170,6 @@ foreach ($items as &$item) {
 
     $norm = json_decode($raw, true);
 
-    // DEBUG: temporarily expose norm structure to find correct slots path
-    if ($hasSlotSnapshot) {
-        $result['_debug_norm_keys'] = array_keys($norm ?? []);
-        $result['_debug_template_keys'] = array_keys($norm['template'] ?? []);
-        $result['_debug_template_slots_count'] = count($norm['template']['slots'] ?? []);
-        $result['_debug_first_slot'] = $norm['template']['slots'][0] ?? null;
-    }
-
     if ($needBitrixId) {
         $bid = (int)($norm['template']['bitrixId'] ?? 0);
         if ($bid) $item['bitrixId'] = $bid;
@@ -186,22 +178,31 @@ foreach ($items as &$item) {
         $item['baseNormArticle'] = $norm['baseNormArticle'] ?? null;
     }
 
-    // Enrich slotSnapshot with fresh translations from the template
-    if ($hasSlotSnapshot && !empty($norm['template']['slots'])) {
-        $freshNames = [];
-        foreach ($norm['template']['slots'] as $slot) {
-            $sid = isset($slot['id']) ? (string)$slot['id'] : null;
-            if ($sid !== null && isset($slot['name'])) {
-                $freshNames[$sid] = $slot['name'];
+    // Enrich slotSnapshot with fresh slot names from the form template
+    if ($hasSlotSnapshot) {
+        $templateId = $norm['templateId'] ?? null;
+        if ($templateId) {
+            $formRaw = @file_get_contents($crystalBase . '/api/product-forms/' . urlencode($templateId) . '/full', false, $ctx);
+            if ($formRaw) {
+                $form = json_decode($formRaw, true);
+                $freshNames = [];
+                foreach ($form['slots'] ?? [] as $slot) {
+                    $sid = isset($slot['id']) ? (string)$slot['id'] : null;
+                    if ($sid !== null && isset($slot['name'])) {
+                        $freshNames[$sid] = $slot['name'];
+                    }
+                }
+                if (!empty($freshNames)) {
+                    foreach ($item['slotSnapshot'] as &$snap) {
+                        $sid = isset($snap['slotId']) ? (string)$snap['slotId'] : null;
+                        if ($sid !== null && isset($freshNames[$sid])) {
+                            $snap['slotName'] = $freshNames[$sid];
+                        }
+                    }
+                    unset($snap);
+                }
             }
         }
-        foreach ($item['slotSnapshot'] as &$snap) {
-            $sid = isset($snap['slotId']) ? (string)$snap['slotId'] : null;
-            if ($sid !== null && isset($freshNames[$sid])) {
-                $snap['slotName'] = $freshNames[$sid];
-            }
-        }
-        unset($snap);
     }
 }
 unset($item);
