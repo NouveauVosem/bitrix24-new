@@ -71,8 +71,8 @@
     function resolveLang(val, lang) {
         if (!val || typeof val !== 'object') return String(val || '');
         var l = lang.toLowerCase();
-        l = LANG_ALIASES[l] || l;
-        return val[l] || val.en || val.ru || '';
+        var lAlias = LANG_ALIASES[l] || l;
+        return val[lAlias] || val[l] || val.en || val.ru || '';
     }
 
     function resolveItemName(item, lang) {
