@@ -155,15 +155,18 @@ $ctx = stream_context_create(['http' => [
     'timeout' => 3,
 ]]);
 
+$result['_debug_enrich'] = [];
 foreach ($items as &$item) {
     $normId = $item['normId'] ?? null;
-    if (!$normId) continue;
+    $dbg = ['article' => $item['article'] ?? '?', 'normId' => $normId, 'hasSnapshot' => !empty($item['slotSnapshot']), 'snapshotLen' => count($item['slotSnapshot'] ?? [])];
+
+    if (!$normId) { $dbg['skip'] = 'no normId'; $result['_debug_enrich'][] = $dbg; continue; }
 
     $hasSlotSnapshot = !empty($item['slotSnapshot']);
     $needBitrixId    = empty($item['bitrixId']);
     $needNormArticle = empty($item['baseNormArticle']);
 
-    if (!$needBitrixId && !$needNormArticle && !$hasSlotSnapshot) continue;
+    if (!$needBitrixId && !$needNormArticle && !$hasSlotSnapshot) { $dbg['skip'] = 'nothing needed'; $result['_debug_enrich'][] = $dbg; continue; }
 
     $raw = @file_get_contents($crystalBase . '/api/product-form-norms/' . urlencode($normId), false, $ctx);
     if (!$raw) continue;
