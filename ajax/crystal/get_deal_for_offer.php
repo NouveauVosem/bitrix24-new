@@ -170,6 +170,14 @@ foreach ($items as &$item) {
 
     $norm = json_decode($raw, true);
 
+    // DEBUG: temporarily expose norm structure to find correct slots path
+    if ($hasSlotSnapshot) {
+        $result['_debug_norm_keys'] = array_keys($norm ?? []);
+        $result['_debug_template_keys'] = array_keys($norm['template'] ?? []);
+        $result['_debug_template_slots_count'] = count($norm['template']['slots'] ?? []);
+        $result['_debug_first_slot'] = $norm['template']['slots'][0] ?? null;
+    }
+
     if ($needBitrixId) {
         $bid = (int)($norm['template']['bitrixId'] ?? 0);
         if ($bid) $item['bitrixId'] = $bid;
