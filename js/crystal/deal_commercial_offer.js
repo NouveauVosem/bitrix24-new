@@ -713,7 +713,7 @@
                     if (article) slotByArticle[article] = snap.slotName;
                 });
                 it.components.forEach(function (c) {
-                    var rawSlot = slotByArticle[c.article] || c.slotName;
+                    var rawSlot = c.slotName || slotByArticle[c.article];
                     var slotTitle = rawSlot ? resolveLang(rawSlot, state.lang) : '';
                     var compName = (slotTitle ? '<span style="color:#374151;font-weight:600;margin-right:4px;">' + esc(slotTitle) + '</span><span style="color:#9ca3af;margin-right:4px;">—</span>' : '')
                                  + (c.article ? '<span style="color:#9ca3af;margin-right:5px;">' + esc(c.article) + '</span>' : '')
