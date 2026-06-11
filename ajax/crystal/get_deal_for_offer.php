@@ -155,24 +155,20 @@ $ctx = stream_context_create(['http' => [
     'timeout' => 3,
 ]]);
 
-$result['_debug_enrich'] = [];
 foreach ($items as &$item) {
     $normId = $item['normId'] ?? null;
-    $dbg = ['article' => $item['article'] ?? '?', 'normId' => $normId, 'hasSnapshot' => !empty($item['slotSnapshot']), 'snapshotLen' => count($item['slotSnapshot'] ?? [])];
-
-    if (!$normId) { $dbg['skip'] = 'no normId'; $result['_debug_enrich'][] = $dbg; continue; }
+    if (!$normId) continue;
 
     $hasSlotSnapshot = !empty($item['slotSnapshot']);
     $needBitrixId    = empty($item['bitrixId']);
     $needNormArticle = empty($item['baseNormArticle']);
 
-    if (!$needBitrixId && !$needNormArticle && !$hasSlotSnapshot) { $dbg['skip'] = 'nothing needed'; $result['_debug_enrich'][] = $dbg; continue; }
+    if (!$needBitrixId && !$needNormArticle && !$hasSlotSnapshot) continue;
 
     $raw = @file_get_contents($crystalBase . '/api/product-form-norms/' . urlencode($normId), false, $ctx);
     if (!$raw) continue;
 
     $norm = json_decode($raw, true);
-    $dbg['templateId'] = $norm['templateId'] ?? null;
 
     if ($needBitrixId) {
         $bid = (int)($norm['template']['bitrixId'] ?? 0);
@@ -183,35 +179,35 @@ foreach ($items as &$item) {
     }
 
     // Enrich slotSnapshot with fresh slot names from the form template
+    // Match by option article (slotIds may differ after form recreation)
     if ($hasSlotSnapshot) {
         $templateId = $norm['templateId'] ?? null;
         if ($templateId) {
             $formRaw = @file_get_contents($crystalBase . '/api/product-forms/' . urlencode($templateId), false, $ctx);
             if ($formRaw) {
                 $form = json_decode($formRaw, true);
-                $freshNames = [];
+                // Build map: option article → slot name
+                $articleToSlotName = [];
                 foreach ($form['slots'] ?? [] as $slot) {
-                    $sid = isset($slot['id']) ? (string)$slot['id'] : null;
-                    if ($sid !== null && isset($slot['name'])) {
-                        $freshNames[$sid] = $slot['name'];
-                    }
-                }
-                $dbg['freshNamesCount'] = count($freshNames);
-                $dbg['snapshotSlotIds'] = array_column($item['slotSnapshot'], 'slotId');
-                $dbg['freshSlotIds']    = array_keys($freshNames);
-                if (!empty($freshNames)) {
-                    foreach ($item['slotSnapshot'] as &$snap) {
-                        $sid = isset($snap['slotId']) ? (string)$snap['slotId'] : null;
-                        if ($sid !== null && isset($freshNames[$sid])) {
-                            $snap['slotName'] = $freshNames[$sid];
+                    if (empty($slot['name'])) continue;
+                    foreach ($slot['options'] ?? [] as $option) {
+                        $optArticle = $option['article'] ?? null;
+                        if ($optArticle) {
+                            $articleToSlotName[$optArticle] = $slot['name'];
                         }
                     }
-                    unset($snap);
                 }
+                foreach ($item['slotSnapshot'] as &$snap) {
+                    $optName = $snap['optionName'] ?? '';
+                    $optArticle = explode(' ', trim($optName))[0] ?? '';
+                    if ($optArticle && isset($articleToSlotName[$optArticle])) {
+                        $snap['slotName'] = $articleToSlotName[$optArticle];
+                    }
+                }
+                unset($snap);
             }
         }
     }
-    $result['_debug_enrich'][] = $dbg;
 }
 unset($item);
 
