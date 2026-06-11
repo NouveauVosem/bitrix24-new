@@ -36,6 +36,7 @@
     function saveForm(isNew, existingForm, formData, onSuccess, onError) {
         var slots = formData.slots.map(function (s, i) {
             return {
+                id: s.id || null,
                 name: s.name,
                 required: s.required,
                 quantityPerUnit: s.quantityPerUnit,
@@ -391,11 +392,12 @@
                 return (a.order || 0) - (b.order || 0);
             }).forEach(function (s) {
                 slots.push({
+                    id: s.id || null,
                     name: s.name && typeof s.name === 'object' ? s.name : { ru: s.name || '' },
                     required: s.required !== false,
                     quantityPerUnit: parseInt(s.quantityPerUnit) || 1,
                     options: (s.options || []).map(function (o) {
-                        return { article: o.article, name: o.name, bitrixId: o.bitrixId || null };
+                        return { id: o.id || null, article: o.article, name: o.name, bitrixId: o.bitrixId || null };
                     })
                 });
             });
