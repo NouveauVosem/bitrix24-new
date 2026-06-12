@@ -529,10 +529,38 @@
         var gridNode = document.body.querySelector('[id^="CCrmEntityProductListComponent"]');
         if (!gridNode) return;
 
+        var container = gridNode.parentNode;
+
+        // ── Tab navigation ──
+        var tabNav = document.createElement('div');
+        tabNav.id = 'cdh-tab-nav';
+        tabNav.style.cssText = 'display:flex;border-bottom:2px solid #e5e7eb;background:#f8fafc;';
+
+        function styleTab(btn, active) {
+            btn.style.cssText = [
+                'padding:9px 20px;font-size:14px;font-weight:600;',
+                'border:none;border-bottom:3px solid ' + (active ? '#1e40af' : 'transparent') + ';',
+                'background:none;cursor:pointer;margin-bottom:-2px;',
+                'color:' + (active ? '#1e40af' : '#6b7280') + ';'
+            ].join('');
+        }
+
+        var tabProducts = document.createElement('button');
+        tabProducts.textContent = 'Товары';
+        styleTab(tabProducts, true);
+
+        var tabOrder = document.createElement('button');
+        tabOrder.textContent = 'Состав заказа';
+        styleTab(tabOrder, false);
+
+        tabNav.appendChild(tabProducts);
+        tabNav.appendChild(tabOrder);
+        container.insertBefore(tabNav, gridNode);
+
         // panel
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
-        panel.style.cssText = 'border-top:2px solid #e5e7eb;background:#fff;';
+        panel.style.cssText = 'border-top:2px solid #e5e7eb;background:#fff;display:none;';
 
         // panel header
         var panelHdr = document.createElement('div');
@@ -649,9 +677,28 @@
         panel.appendChild(panelHdr);
         panel.appendChild(panelBody);
 
-        gridNode.parentNode.insertBefore(panel, gridNode.nextSibling);
+        container.insertBefore(panel, gridNode.nextSibling);
 
-        loadItems(function () { renderBody(); });
+        // ── Tab switching ──
+        var orderLoaded = false;
+
+        tabProducts.addEventListener('click', function () {
+            styleTab(tabProducts, true);
+            styleTab(tabOrder, false);
+            gridNode.style.display = '';
+            panel.style.display = 'none';
+        });
+
+        tabOrder.addEventListener('click', function () {
+            styleTab(tabProducts, false);
+            styleTab(tabOrder, true);
+            gridNode.style.display = 'none';
+            panel.style.display = '';
+            if (!orderLoaded) {
+                orderLoaded = true;
+                loadItems(function () { renderBody(); });
+            }
+        });
     }
 
     // ===== PUBLIC API =====
