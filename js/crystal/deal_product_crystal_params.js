@@ -276,13 +276,13 @@
 
     function buildDimsBlock(vals, inputsArr) {
         var wrap = el('div', 'display:flex;gap:6px;');
-        ['width', 'height', 'depth'].forEach(function (axis, idx) {
+        ['width', 'depth', 'height'].forEach(function (axis, idx) {
             var cell = el('div', 'flex:1;position:relative;');
             var inp = document.createElement('input');
             inp.type = 'number';
             inp.min = '0';
             inp.step = '1';
-            inp.placeholder = ['Ш', 'В', 'Г'][idx];
+            inp.placeholder = ['Ш', 'Г', 'В'][idx];
             inp.dataset.axis = axis;
             inp.value = vals[axis] != null ? vals[axis] : '';
             inp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px 24px 7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;';

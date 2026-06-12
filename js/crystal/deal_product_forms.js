@@ -3,8 +3,6 @@
 
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
-    var PANEL_ID = 'cpf-forms-panel';
-
     // ===== ARTICLE EXTRACTION =====
 
     function extractArticleFromRow(rowNode, productName) {
@@ -589,142 +587,6 @@
         });
     }
 
-    function insertFormsPanel() {
-        if (document.getElementById(PANEL_ID)) return;
-
-        var url = window.location.href;
-        var dealMatch = url.match(/crm\/deal\/details\/(\d+)/);
-        if (!dealMatch) return;
-        var dealId = dealMatch[1];
-
-        var sidebar = document.querySelector('.ui-entity-editor-column-content');
-        if (!sidebar) return;
-
-        var STORAGE_KEY = 'cpf-panel-collapsed';
-        var isCollapsed = localStorage.getItem(STORAGE_KEY) !== 'false';
-        var formsLoaded = false;
-
-        var wrapper = document.createElement('div');
-        wrapper.id = PANEL_ID;
-        wrapper.style.cssText = 'padding:10px 15px 5px;';
-
-        var toggleBar = document.createElement('div');
-        toggleBar.style.cssText = [
-            'cursor:pointer;padding:6px 10px;',
-            'background:#0d6efd;color:#fff;',
-            'border-radius:4px;font-size:15px;font-weight:700;',
-            'user-select:none;display:flex;',
-            'justify-content:space-between;align-items:center;margin-bottom:4px;'
-        ].join('');
-
-        var toggleLabel = document.createElement('span');
-        toggleLabel.textContent = 'Формы товаров';
-
-        var toggleArrow = document.createElement('span');
-        toggleArrow.textContent = isCollapsed ? '▶' : '▼';
-
-        toggleBar.appendChild(toggleLabel);
-        toggleBar.appendChild(toggleArrow);
-
-        var content = document.createElement('div');
-        content.style.display = isCollapsed ? 'none' : 'block';
-
-        var listDiv = document.createElement('div');
-        listDiv.style.cssText = 'min-height:20px;';
-        content.appendChild(listDiv);
-
-        function loadForms() {
-            if (formsLoaded) return;
-            listDiv.style.cssText = 'font-size:14px;color:#888;padding:6px 0;';
-            listDiv.textContent = 'Загрузка...';
-
-            fetch(CRYSTAL_BASE + '/api/product-forms', {
-                headers: { 'X-Api-Key': API_KEY }
-            })
-            .then(function (res) { return res.json(); })
-            .then(function (forms) {
-                formsLoaded = true;
-                listDiv.style.cssText = 'min-height:20px;';
-                listDiv.innerHTML = '';
-
-                if (!Array.isArray(forms) || forms.length === 0) {
-                    listDiv.style.cssText = 'font-size:14px;color:#888;padding:6px 0;';
-                    listDiv.textContent = 'Нет доступных форм';
-                    return;
-                }
-
-                forms.forEach(function (form) {
-                    var item = document.createElement('div');
-                    item.style.cssText = [
-                        'padding:7px 10px;margin-bottom:4px;',
-                        'background:#f5f7fa;border-radius:4px;cursor:pointer;',
-                        'border:1px solid #e5e7eb;transition:border-color 0.1s,background 0.1s;'
-                    ].join('');
-
-                    var row1 = document.createElement('div');
-                    row1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:6px;';
-
-                    var formName = document.createElement('span');
-                    formName.style.cssText = 'font-weight:600;color:#222;font-size:14px;';
-                    formName.textContent = form.name;
-
-                    var slotBadge = document.createElement('span');
-                    slotBadge.style.cssText = 'font-size:14px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
-                    var slotCount = form.slots ? form.slots.length : (form.slotsCount || 0);
-                    slotBadge.textContent = slotCount + ' слотов';
-
-                    row1.appendChild(formName);
-                    row1.appendChild(slotBadge);
-                    item.appendChild(row1);
-
-                    if (form.article) {
-                        var row2 = document.createElement('div');
-                        row2.style.cssText = 'font-size:14px;color:#888;margin-top:2px;';
-                        row2.textContent = form.article;
-                        item.appendChild(row2);
-                    }
-
-                    item.addEventListener('mouseenter', function () {
-                        item.style.borderColor = '#3b82f6';
-                        item.style.background = '#eff6ff';
-                    });
-                    item.addEventListener('mouseleave', function () {
-                        item.style.borderColor = '#e5e7eb';
-                        item.style.background = '#f5f7fa';
-                    });
-
-                    item.addEventListener('click', function () {
-                        item.style.opacity = '0.7';
-                        setTimeout(function () { item.style.opacity = '1'; }, 300);
-                        openFormFromPanel(form, dealId);
-                    });
-
-                    listDiv.appendChild(item);
-                });
-            })
-            .catch(function (err) {
-                formsLoaded = false;
-                listDiv.style.cssText = 'font-size:14px;color:#e53e3e;padding:6px 0;';
-                listDiv.textContent = 'Ошибка загрузки';
-                console.error('[CrystalForms] load forms error:', err);
-            });
-        }
-
-        toggleBar.addEventListener('click', function () {
-            isCollapsed = !isCollapsed;
-            content.style.display = isCollapsed ? 'none' : 'block';
-            toggleArrow.textContent = isCollapsed ? '▶' : '▼';
-            localStorage.setItem(STORAGE_KEY, String(isCollapsed));
-            if (!isCollapsed) loadForms();
-        });
-
-        wrapper.appendChild(toggleBar);
-        wrapper.appendChild(content);
-        sidebar.insertBefore(wrapper, sidebar.firstChild);
-
-        if (!isCollapsed) loadForms();
-    }
-
     // ===== FORMS PICKER MODAL (вызывается из панели иерархии) =====
 
     function openFormsPicker(dealId, clientName) {
@@ -1008,16 +870,4 @@
         extractArticleFromRow: extractArticleFromRow
     };
 
-    // ===== INIT =====
-
-    BX.ready(function () {
-        var url = window.location.href;
-        if (!url.match(/crm\/deal\/details\/(\d+)/)) return;
-
-        var observer = new MutationObserver(function () {
-            insertFormsPanel();
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        insertFormsPanel();
-    });
 })();
