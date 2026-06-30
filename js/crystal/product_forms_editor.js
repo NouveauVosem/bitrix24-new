@@ -45,25 +45,28 @@
             };
         });
 
+        var basePayload = {
+            name: formData.name,
+            bitrixName: formData.bitrixName,
+            article: formData.article,
+            productName: formData.productName,
+            variantName: formData.variantName,
+            bitrixId: formData.bitrixId
+        };
+
         if (isNew) {
-            crystalFetch('POST', '/api/product-forms', { name: formData.name, article: formData.article, bitrixId: formData.bitrixId })
+            crystalFetch('POST', '/api/product-forms', basePayload)
                 .then(function (created) {
-                    return crystalFetch('PUT', '/api/product-forms/' + created.id + '/full', {
-                        name: formData.name,
-                        article: formData.article,
-                        bitrixId: formData.bitrixId,
-                        slots: slots
-                    });
+                    return crystalFetch('PUT', '/api/product-forms/' + created.id + '/full',
+                        Object.assign({}, basePayload, { slots: slots })
+                    );
                 })
                 .then(onSuccess)
                 .catch(onError);
         } else {
-            crystalFetch('PUT', '/api/product-forms/' + existingForm.id + '/full', {
-                name: formData.name,
-                article: formData.article,
-                bitrixId: formData.bitrixId,
-                slots: slots
-            })
+            crystalFetch('PUT', '/api/product-forms/' + existingForm.id + '/full',
+                Object.assign({}, basePayload, { slots: slots })
+            )
                 .then(onSuccess)
                 .catch(onError);
         }
@@ -376,6 +379,12 @@
             bitrixIdGroup.input.value = norm.id      || '';
         });
 
+        var productNameGroup = buildField('Название продукта (группа)', existingForm ? (existingForm.productName || '') : '', 'Например: GL');
+        formPanel.appendChild(productNameGroup.wrap);
+
+        var variantNameGroup = buildField('Название варианта', existingForm ? (existingForm.variantName || '') : '', 'Например: GL 6880-1,7');
+        formPanel.appendChild(variantNameGroup.wrap);
+
         var bitrixIdGroup = buildField('ID товара в Битрикс', existingForm ? (existingForm.bitrixId || '') : '', 'Заполняется автоматически при выборе из поиска');
         bitrixIdGroup.input.type = 'number';
         formPanel.appendChild(bitrixIdGroup.wrap);
@@ -440,7 +449,10 @@
         saveBtn.addEventListener('click', function () {
             var formData = {
                 name: nameGroup.input.value.trim(),
+                bitrixName: nameGroup.input.value.trim() || null,
                 article: articleGroup.input.value.trim(),
+                productName: productNameGroup.input.value.trim() || null,
+                variantName: variantNameGroup.input.value.trim() || null,
                 bitrixId: parseInt(bitrixIdGroup.input.value) || null,
                 slots: slots.map(function (s, i) {
                     return {
