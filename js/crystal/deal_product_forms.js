@@ -197,7 +197,7 @@
                 }
                 function isRealSel() {
                     var s = selectedOptions[slot.id];
-                    return !!(s && s.id !== '__none__');
+                    return !!(s && s.id !== '__none__' && s.id !== '__in_norm__');
                 }
 
                 var selLabel = document.createElement('span');
@@ -229,6 +229,7 @@
                 });
 
                 var opts = (slot.options || []).slice();
+                opts.unshift({ id: '__in_norm__', article: null, name: 'Включено в норме' });
                 if (!slot.required) {
                     opts.push({ id: '__none__', article: null, name: 'Не включать' });
                 }
@@ -400,7 +401,7 @@
 
             slots.forEach(function (slot) {
                 var opt = selectedOptions[slot.id];
-                if (opt && opt.id !== '__none__') {
+                if (opt && opt.id !== '__none__' && opt.id !== '__in_norm__') {
                     components.push({
                         article: opt.article || '',
                         name: opt.name,
@@ -718,6 +719,8 @@
             backBtn.addEventListener('click', function () { renderFormsList(savedForms); });
             listDiv.appendChild(backBtn);
 
+            var defaultNorm = null;
+
             var newConfigItem = document.createElement('div');
             newConfigItem.style.cssText = 'padding:9px 11px;margin-bottom:8px;background:#f0fdf4;border-radius:5px;cursor:pointer;border:1px solid #86efac;';
             var newConfigSpan = document.createElement('span');
@@ -728,7 +731,7 @@
             newConfigItem.addEventListener('mouseleave', function () { newConfigItem.style.background = '#f0fdf4'; });
             newConfigItem.addEventListener('click', function () {
                 overlay.style.display = 'none';
-                openFormFromPanel(form, dealId, clientName, null, function () { overlay.style.display = 'flex'; });
+                openFormFromPanel(form, dealId, clientName, defaultNorm, function () { overlay.style.display = 'flex'; });
             });
             listDiv.appendChild(newConfigItem);
 
@@ -761,9 +764,11 @@
                     return;
                 }
 
+                defaultNorm = norms.find(function (n) { return n.isDefault; }) || null;
+
                 norms.forEach(function (norm) {
                     var normItem = document.createElement('div');
-                    normItem.style.cssText = 'padding:9px 11px;margin-bottom:5px;background:#f5f7fa;border-radius:5px;cursor:pointer;border:1px solid #e5e7eb;';
+                    normItem.style.cssText = 'padding:9px 11px;margin-bottom:5px;border-radius:5px;cursor:pointer;border:1px solid ' + (norm.isDefault ? '#fbbf24' : '#e5e7eb') + ';background:' + (norm.isDefault ? '#fffbeb' : '#f5f7fa') + ';';
 
                     var nr1 = document.createElement('div');
                     nr1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
@@ -772,17 +777,28 @@
                     normArticleEl.style.cssText = 'font-weight:600;color:#1d4ed8;font-size:14px;font-family:monospace;';
                     normArticleEl.textContent = norm.article;
 
-                    var priceTag = document.createElement('span');
-                    if (norm.draftPrice) {
-                        priceTag.style.cssText = 'font-size:14px;color:#166534;background:#dcfce7;padding:2px 7px;border-radius:8px;flex-shrink:0;font-weight:600;';
-                        priceTag.textContent = parseFloat(norm.draftPrice).toFixed(2) + ' EUR';
-                    } else {
-                        priceTag.style.cssText = 'font-size:14px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:8px;flex-shrink:0;';
-                        priceTag.textContent = 'цена не задана';
+                    var tagsRow = document.createElement('div');
+                    tagsRow.style.cssText = 'display:flex;align-items:center;gap:5px;flex-shrink:0;';
+
+                    if (norm.isDefault) {
+                        var defBadge = document.createElement('span');
+                        defBadge.style.cssText = 'font-size:12px;color:#92400e;background:#fef3c7;padding:2px 7px;border-radius:8px;font-weight:600;';
+                        defBadge.textContent = '★ Дефолт';
+                        tagsRow.appendChild(defBadge);
                     }
 
+                    var priceTag = document.createElement('span');
+                    if (norm.draftPrice) {
+                        priceTag.style.cssText = 'font-size:14px;color:#166534;background:#dcfce7;padding:2px 7px;border-radius:8px;font-weight:600;';
+                        priceTag.textContent = parseFloat(norm.draftPrice).toFixed(2) + ' EUR';
+                    } else {
+                        priceTag.style.cssText = 'font-size:14px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:8px;';
+                        priceTag.textContent = 'цена не задана';
+                    }
+                    tagsRow.appendChild(priceTag);
+
                     nr1.appendChild(normArticleEl);
-                    nr1.appendChild(priceTag);
+                    nr1.appendChild(tagsRow);
                     normItem.appendChild(nr1);
 
                     var normNameEl = document.createElement('div');
@@ -809,12 +825,35 @@
                         normItem.appendChild(slotsDiv);
                     }
 
+                    var actionsRow = document.createElement('div');
+                    actionsRow.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:7px;';
+
+                    if (!norm.isDefault) {
+                        var setDefaultBtn = document.createElement('button');
+                        setDefaultBtn.textContent = '★ Дефолт';
+                        setDefaultBtn.title = 'Сделать дефолтной нормой';
+                        setDefaultBtn.style.cssText = 'background:none;border:1px solid #d1d5db;color:#6b7280;font-size:12px;padding:2px 8px;border-radius:6px;cursor:pointer;';
+                        setDefaultBtn.addEventListener('mouseenter', function () { setDefaultBtn.style.borderColor = '#fbbf24'; setDefaultBtn.style.color = '#92400e'; });
+                        setDefaultBtn.addEventListener('mouseleave', function () { setDefaultBtn.style.borderColor = '#d1d5db'; setDefaultBtn.style.color = '#6b7280'; });
+                        setDefaultBtn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            setDefaultBtn.disabled = true;
+                            fetch(CRYSTAL_BASE + '/api/product-form-norms/' + norm.id + '/setDefault', {
+                                method: 'PATCH',
+                                headers: { 'X-Api-Key': API_KEY }
+                            })
+                            .then(function () { showNormsView(form); })
+                            .catch(function () { setDefaultBtn.disabled = false; alert('Ошибка'); });
+                        });
+                        actionsRow.appendChild(setDefaultBtn);
+                    }
+
                     var delNormBtn = document.createElement('button');
                     delNormBtn.textContent = '✕';
                     delNormBtn.title = 'Удалить норму';
-                    delNormBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;color:#d1d5db;font-size:15px;cursor:pointer;padding:0;line-height:1;';
-                    delNormBtn.addEventListener('mouseenter', function () { delNormBtn.style.color = '#dc2626'; });
-                    delNormBtn.addEventListener('mouseleave', function () { delNormBtn.style.color = '#d1d5db'; });
+                    delNormBtn.style.cssText = 'background:none;border:1px solid #d1d5db;color:#d1d5db;font-size:13px;padding:2px 7px;border-radius:6px;cursor:pointer;line-height:1;';
+                    delNormBtn.addEventListener('mouseenter', function () { delNormBtn.style.borderColor = '#dc2626'; delNormBtn.style.color = '#dc2626'; });
+                    delNormBtn.addEventListener('mouseleave', function () { delNormBtn.style.borderColor = '#d1d5db'; delNormBtn.style.color = '#d1d5db'; });
                     delNormBtn.addEventListener('click', function (e) {
                         e.stopPropagation();
                         if (!confirm('Удалить норму ' + norm.article + '?')) return;
@@ -826,11 +865,11 @@
                         .then(function () { normItem.remove(); })
                         .catch(function () { delNormBtn.disabled = false; alert('Ошибка удаления'); });
                     });
-                    normItem.style.position = 'relative';
-                    normItem.appendChild(delNormBtn);
+                    actionsRow.appendChild(delNormBtn);
+                    normItem.appendChild(actionsRow);
 
-                    normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = '#3b82f6'; normItem.style.background = '#eff6ff'; });
-                    normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = '#e5e7eb'; normItem.style.background = '#f5f7fa'; });
+                    normItem.addEventListener('mouseenter', function () { normItem.style.borderColor = norm.isDefault ? '#f59e0b' : '#3b82f6'; normItem.style.background = norm.isDefault ? '#fef9c3' : '#eff6ff'; });
+                    normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = norm.isDefault ? '#fbbf24' : '#e5e7eb'; normItem.style.background = norm.isDefault ? '#fffbeb' : '#f5f7fa'; });
                     normItem.addEventListener('click', function () {
                         overlay.style.display = 'none';
                         openFormFromPanel(form, dealId, clientName, norm, function () { overlay.style.display = 'flex'; });
