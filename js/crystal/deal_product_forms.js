@@ -133,7 +133,11 @@
             var sel = {};
             slots.forEach(function (slot) {
                 var opt = selectedOptions[slot.id];
-                if (opt && opt.id !== '__none__') sel[slot.id] = opt.id;
+                if (opt && opt.id !== '__none__') {
+                    sel[slot.id] = opt.id;
+                } else if (!slot.required) {
+                    sel[slot.id] = '__none__';
+                }
             });
             return sel;
         }
