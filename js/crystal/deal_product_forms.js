@@ -564,7 +564,63 @@
             }
         });
 
+        var copyAsNewBtn = document.createElement('button');
+        copyAsNewBtn.className = 'ui-btn ui-btn-light ui-btn-sm';
+        copyAsNewBtn.style.cssText = 'width:100%;margin-top:8px;';
+        copyAsNewBtn.textContent = 'Скопировать как новую форму';
+        copyAsNewBtn.addEventListener('click', function () {
+            if (!form.id) { alert('Форма не привязана к Crystal'); return; }
+            var newArticle = prompt('Артикул новой формы:');
+            if (!newArticle || !newArticle.trim()) return;
+
+            var currentQty = getCurrentQty();
+            var currentPrice = parseFloat(priceInput.value) || 0;
+            var normComponents = [];
+            var normSlotSnap = [];
+
+            slots.forEach(function (slot) {
+                var opt = selectedOptions[slot.id];
+                if (opt && opt.id !== '__none__' && opt.id !== '__in_norm__') {
+                    normComponents.push({ article: opt.article || '', name: opt.name, baseQty: slot.quantityPerUnit, bitrixId: opt.bitrixId || null });
+                    normSlotSnap.push({ slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name });
+                }
+            });
+
+            copyAsNewBtn.disabled = true;
+            copyAsNewBtn.textContent = '⧗ Копирую...';
+
+            fetch(CRYSTAL_BASE + '/api/product-forms/' + form.id + '/copy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                body: JSON.stringify({
+                    article: newArticle.trim(),
+                    normOverride: {
+                        slotSelections: getSlotSelections(),
+                        components: normComponents,
+                        slotSnapshot: normSlotSnap,
+                        name: newArticle.trim(),
+                        draftPrice: currentPrice || null
+                    }
+                })
+            })
+            .then(function (r) {
+                if (r.status === 409) return r.json().then(function (d) { throw new Error(d.message); });
+                if (!r.ok) throw new Error('Ошибка ' + r.status);
+                return r.json();
+            })
+            .then(function () {
+                copyAsNewBtn.textContent = '✅ Форма создана';
+                copyAsNewBtn.style.color = '#16a34a';
+            })
+            .catch(function (err) {
+                copyAsNewBtn.disabled = false;
+                copyAsNewBtn.textContent = 'Скопировать как новую форму';
+                alert(err.message || 'Ошибка копирования');
+            });
+        });
+
         footer.appendChild(submitBtn);
+        footer.appendChild(copyAsNewBtn);
         footer.appendChild(submitStatus);
 
         modal.appendChild(closeBtn);
@@ -706,49 +762,15 @@
                 r1.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
 
                 var nameEl = document.createElement('span');
-                nameEl.style.cssText = 'font-weight:600;color:#222;font-size:15px;flex:1;min-width:0;';
+                nameEl.style.cssText = 'font-weight:600;color:#222;font-size:15px;';
                 nameEl.textContent = form.name;
 
                 var cnt = document.createElement('span');
                 cnt.style.cssText = 'font-size:14px;color:#888;background:#e5e7eb;padding:1px 6px;border-radius:8px;flex-shrink:0;';
                 cnt.textContent = (form.slots ? form.slots.length : 0) + ' слотов';
 
-                var copyBtn = document.createElement('button');
-                copyBtn.title = 'Скопировать форму';
-                copyBtn.textContent = '📋';
-                copyBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:15px;padding:0 2px;flex-shrink:0;line-height:1;opacity:0.55;';
-                copyBtn.addEventListener('mouseenter', function () { copyBtn.style.opacity = '1'; });
-                copyBtn.addEventListener('mouseleave', function () { copyBtn.style.opacity = '0.55'; });
-                copyBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    var newArticle = prompt('Артикул новой формы:', (form.article || '') + '-copy');
-                    if (!newArticle || !newArticle.trim()) return;
-                    copyBtn.disabled = true;
-                    copyBtn.style.opacity = '0.3';
-                    fetch(CRYSTAL_BASE + '/api/product-forms/' + form.id + '/copy', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
-                        body: JSON.stringify({ article: newArticle.trim() })
-                    })
-                    .then(function (r) {
-                        if (r.status === 409) return r.json().then(function (d) { throw new Error(d.message); });
-                        if (!r.ok) throw new Error('Ошибка ' + r.status);
-                        return r.json();
-                    })
-                    .then(function (newForm) {
-                        savedForms.unshift(newForm);
-                        renderFormsList(savedForms);
-                    })
-                    .catch(function (err) {
-                        copyBtn.disabled = false;
-                        copyBtn.style.opacity = '0.55';
-                        alert(err.message || 'Ошибка копирования');
-                    });
-                });
-
                 r1.appendChild(nameEl);
                 r1.appendChild(cnt);
-                r1.appendChild(copyBtn);
                 item.appendChild(r1);
 
                 if (form.article) {
