@@ -1073,7 +1073,7 @@
                     normItem.addEventListener('mouseleave', function () { normItem.style.borderColor = norm.isDefault ? '#fbbf24' : '#e5e7eb'; normItem.style.background = norm.isDefault ? '#fffbeb' : '#f5f7fa'; });
                     normItem.addEventListener('click', function () {
                         overlay.style.display = 'none';
-                        openFormFromPanel(form, dealId, clientName, norm, function () { overlay.style.display = 'flex'; });
+                        openFormFromPanel(form, dealId, clientName, norm, function () { overlay.style.display = 'flex'; showNormsView(form); });
                     });
 
                     listDiv.appendChild(normItem);
