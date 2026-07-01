@@ -122,7 +122,7 @@
                 body.innerHTML = '<div style="color:#ef4444;font-size:14px;padding:24px;text-align:center;">Ошибка загрузки</div>';
                 return;
             }
-            var products = Array.isArray(data) ? data : (data.items || data.products || []);
+            var products = data.items || [];
             if (!products.length) {
                 body.innerHTML = '<div style="color:#9ca3af;font-size:14px;padding:24px;text-align:center;">Ничего не найдено</div>';
                 return;
