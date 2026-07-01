@@ -693,7 +693,7 @@
             .then(function (resp) {
                 var n = resp.norm;
                 if (!n) { normBtn.disabled = false; normBtn.textContent = '❌ Ошибка'; return; }
-                if (resp.found) {
+                if (!resp.created) {
                     return fetch(CRYSTAL_BASE + '/api/product-form-norms/' + n.id, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
