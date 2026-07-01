@@ -889,7 +889,7 @@
                     passportBtn.addEventListener('mouseleave', function () { passportBtn.style.borderColor = '#d1d5db'; passportBtn.style.color = '#6b7280'; });
                     passportBtn.addEventListener('click', function (e) {
                         e.stopPropagation();
-                        window.CrystalProductParams.open(form.article, form.name, form.bitrixId || null);
+                        window.CrystalProductParams.open(form.article, form.productName || form.name, form.bitrixId || null);
                     });
                     r1.appendChild(passportBtn);
                 }
