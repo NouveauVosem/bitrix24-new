@@ -513,7 +513,7 @@
 
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        submitBtn.style.cssText = 'width:100%;';
+        submitBtn.style.cssText = 'flex:2;';
         submitBtn.textContent = 'Добавить в заказ';
 
         var submitStatus = document.createElement('div');
@@ -538,15 +538,13 @@
                 }
             });
 
-            var normSlotSnapshot = slots
-                .filter(function (slot) {
-                    var opt = selectedOptions[slot.id];
-                    return opt && opt.id !== '__none__';
-                })
-                .map(function (slot) {
-                    var opt = selectedOptions[slot.id];
-                    return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
-                });
+            var normSlotSnapshot = slots.map(function (slot) {
+                var opt = selectedOptions[slot.id];
+                if (!opt || opt.id === '__none__') {
+                    return { slotId: String(slot.id), slotName: slot.name, optionId: '__none__', optionName: 'Не включать' };
+                }
+                return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
+            });
 
             submitBtn.disabled = true;
             submitBtn.textContent = '⧗ Добавляю...';
@@ -654,8 +652,68 @@
             }
         });
 
+        var normBtn = document.createElement('button');
+        normBtn.className = 'ui-btn ui-btn-sm';
+        normBtn.style.cssText = 'flex:1;';
+        normBtn.textContent = 'Создать норму';
+        normBtn.addEventListener('click', function () {
+            if (!form.id || !form.article) return;
+            var cQty = getCurrentQty();
+            var cPrice = parseFloat(priceInput.value) || 0;
+            var cComponents = [];
+            slots.forEach(function (slot) {
+                var opt = selectedOptions[slot.id];
+                if (opt && opt.id !== '__none__' && opt.id !== '__in_norm__') {
+                    cComponents.push({ article: opt.article || '', name: opt.name, qty: cQty * slot.quantityPerUnit, baseQty: slot.quantityPerUnit, bitrixId: opt.bitrixId || null, slotName: slot.name || {} });
+                }
+            });
+            var cSnapshot = slots.map(function (slot) {
+                var opt = selectedOptions[slot.id];
+                if (!opt || opt.id === '__none__') return { slotId: String(slot.id), slotName: slot.name, optionId: '__none__', optionName: 'Не включать' };
+                return { slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name };
+            });
+            normBtn.disabled = true;
+            normBtn.textContent = '⧗ Сохраняю...';
+            fetch(CRYSTAL_BASE + '/api/product-form-norms/findOrCreate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                body: JSON.stringify({
+                    baseNormArticle: form.article,
+                    templateId: form.id,
+                    name: productName,
+                    slotSelections: getSlotSelections(),
+                    components: cComponents.map(function (c) { return { article: c.article, name: c.name, baseQty: c.baseQty, bitrixId: c.bitrixId }; }),
+                    slotSnapshot: cSnapshot,
+                    draftPrice: cPrice || null
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                var n = resp.norm;
+                normBtn.disabled = false;
+                if (n) {
+                    normBtn.textContent = (resp.created ? '✅ ' : '✓ ') + n.article;
+                    normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
+                    normStatus.textContent = (resp.created ? '✓ Создана норма: ' : '✓ Норма: ') + n.article;
+                } else {
+                    normBtn.textContent = '❌ Ошибка';
+                }
+                setTimeout(function () { normBtn.textContent = 'Создать норму'; }, 2500);
+            })
+            .catch(function () {
+                normBtn.disabled = false;
+                normBtn.textContent = '❌ Ошибка';
+                setTimeout(function () { normBtn.textContent = 'Создать норму'; }, 2000);
+            });
+        });
+
+        var actionRow = document.createElement('div');
+        actionRow.style.cssText = 'display:flex;gap:8px;';
+        actionRow.appendChild(normBtn);
+        actionRow.appendChild(submitBtn);
+
         footer.appendChild(clipRow);
-        footer.appendChild(submitBtn);
+        footer.appendChild(actionRow);
         footer.appendChild(submitStatus);
 
         modal.appendChild(closeBtn);
