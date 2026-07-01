@@ -880,6 +880,20 @@
                 cnt.textContent = (form.slots ? form.slots.length : 0) + ' слотов';
 
                 r1.appendChild(nameEl);
+
+                if (form.article && window.CrystalProductParams) {
+                    var passportBtn = document.createElement('button');
+                    passportBtn.textContent = '⊙ Паспорт';
+                    passportBtn.style.cssText = 'background:none;border:1px solid #d1d5db;color:#6b7280;font-size:12px;padding:2px 8px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;';
+                    passportBtn.addEventListener('mouseenter', function () { passportBtn.style.borderColor = '#3b82f6'; passportBtn.style.color = '#1d4ed8'; });
+                    passportBtn.addEventListener('mouseleave', function () { passportBtn.style.borderColor = '#d1d5db'; passportBtn.style.color = '#6b7280'; });
+                    passportBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        window.CrystalProductParams.open(form.article, form.name, form.bitrixId || null);
+                    });
+                    r1.appendChild(passportBtn);
+                }
+
                 r1.appendChild(cnt);
                 item.appendChild(r1);
 
