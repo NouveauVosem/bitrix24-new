@@ -637,9 +637,7 @@
             };
             var mediaDto = imagesSection.getMediaDto();
             var newFiles = imagesSection.getFiles();
-            var variantDto = {
-                article:    baseArticle,
-                name:       { ru: productName || baseArticle, en: productName || baseArticle },
+            var physicalDto = {
                 weight:     data.weight,
                 dimensions: Object.keys(data.dims).length ? data.dims : undefined,
                 specs:      data.specs,
@@ -660,21 +658,28 @@
 
             var promise;
             if (existingVariant && existingProduct) {
+                // При обновлении НЕ трогаем name — он хранится в Crystal на нескольких языках
                 var updatedVariants = (existingProduct.variants || []).map(function (v) {
-                    if (v.id === existingVariant.id) return Object.assign({}, v, variantDto, { id: v.id });
-                    return v;
+                    if (v.id === existingVariant.id) {
+                        return Object.assign({}, physicalDto, {
+                            id:      v.id,
+                            article: v.article,
+                            name:    v.name
+                        });
+                    }
+                    return { id: v.id, article: v.article, name: v.name, weight: v.weight, dimensions: v.dimensions, specs: v.specs, media: v.media, isActive: v.isActive };
                 });
                 var patchDto = Object.assign({ productTypeCode: typeCode, variants: updatedVariants }, editorMeta);
                 promise = doSave('/products/update/' + existingProduct.id, 'PATCH', patchDto);
             } else if (existingProduct) {
                 promise = doSave('/products/addVariant/' + existingProduct.id, 'POST',
-                    Object.assign({}, variantDto, editorMeta));
+                    Object.assign({ article: baseArticle, name: { ru: productName || baseArticle, en: productName || baseArticle } }, physicalDto, editorMeta));
             } else {
                 promise = doSave('/products/create', 'POST', {
                     productTypeCode: typeCode,
                     name:     { ru: productName || baseArticle, en: productName || baseArticle },
                     article:  baseArticle,
-                    variants: [variantDto]
+                    variants: [Object.assign({ article: baseArticle, name: { ru: productName || baseArticle, en: productName || baseArticle } }, physicalDto)]
                 });
             }
 
