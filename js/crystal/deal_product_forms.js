@@ -166,9 +166,11 @@
                         if (resp.norm.draftPrice && !priceInput.value) {
                             priceInput.value = parseFloat(resp.norm.draftPrice).toFixed(2);
                         }
+                        if (normBtn) normBtn.textContent = 'Обновить норму';
                     } else {
                         normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f9fafb;border:1px solid #e5e7eb;color:#6b7280;';
                         normStatus.textContent = 'Будет создана новая норма: ' + form.article + '.XXXX';
+                        if (normBtn) normBtn.textContent = 'Создать норму';
                     }
                 })
                 .catch(function () { normStatus.style.display = 'none'; });
@@ -698,12 +700,12 @@
                 } else {
                     normBtn.textContent = '❌ Ошибка';
                 }
-                setTimeout(function () { normBtn.textContent = 'Создать норму'; }, 2500);
+                setTimeout(function () { normBtn.textContent = currentNorm ? 'Обновить норму' : 'Создать норму'; }, 2500);
             })
             .catch(function () {
                 normBtn.disabled = false;
                 normBtn.textContent = '❌ Ошибка';
-                setTimeout(function () { normBtn.textContent = 'Создать норму'; }, 2000);
+                setTimeout(function () { normBtn.textContent = currentNorm ? 'Обновить норму' : 'Создать норму'; }, 2000);
             });
         });
 
