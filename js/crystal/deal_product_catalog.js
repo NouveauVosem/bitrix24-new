@@ -231,8 +231,10 @@
 
     // ===== INIT =====
 
-    var observer = new MutationObserver(function () { injectBtn(); });
-    observer.observe(document.body, { childList: true, subtree: true });
-    injectBtn();
+    BX.ready(function () {
+        var observer = new MutationObserver(function () { injectBtn(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+        injectBtn();
+    });
 
 })();
