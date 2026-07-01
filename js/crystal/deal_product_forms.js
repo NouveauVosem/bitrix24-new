@@ -692,15 +692,30 @@
             .then(function (r) { return r.json(); })
             .then(function (resp) {
                 var n = resp.norm;
-                normBtn.disabled = false;
-                if (n) {
-                    normBtn.textContent = (resp.created ? '✅ ' : '✓ ') + n.article;
-                    normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
-                    normStatus.textContent = (resp.created ? '✓ Создана норма: ' : '✓ Норма: ') + n.article;
-                } else {
-                    normBtn.textContent = '❌ Ошибка';
+                if (!n) { normBtn.disabled = false; normBtn.textContent = '❌ Ошибка'; return; }
+                if (resp.found) {
+                    return fetch(CRYSTAL_BASE + '/api/product-form-norms/' + n.id, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                        body: JSON.stringify({
+                            draftPrice: cPrice || null,
+                            slotSnapshot: cSnapshot
+                        })
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function () {
+                        normBtn.disabled = false;
+                        normBtn.textContent = '✅ ' + n.article;
+                        normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
+                        normStatus.textContent = '✓ Обновлена норма: ' + n.article;
+                        setTimeout(function () { normBtn.textContent = 'Обновить норму'; }, 2500);
+                    });
                 }
-                setTimeout(function () { normBtn.textContent = currentNorm ? 'Обновить норму' : 'Создать норму'; }, 2500);
+                normBtn.disabled = false;
+                normBtn.textContent = '✅ ' + n.article;
+                normStatus.style.cssText = 'margin-bottom:10px;padding:7px 10px;border-radius:5px;font-size:14px;display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-weight:600;';
+                normStatus.textContent = '✓ Создана норма: ' + n.article;
+                setTimeout(function () { normBtn.textContent = 'Обновить норму'; }, 2500);
             })
             .catch(function () {
                 normBtn.disabled = false;
