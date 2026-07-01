@@ -42,6 +42,14 @@
             slots.forEach(function (slot) {
                 var selId = String(presetNorm.slotSelections[String(slot.id)] || '');
                 if (!selId) return;
+                if (selId === '__in_norm__') {
+                    selectedOptions[slot.id] = { id: '__in_norm__', article: null, name: 'Включено в норме' };
+                    return;
+                }
+                if (selId === '__none__') {
+                    selectedOptions[slot.id] = null;
+                    return;
+                }
                 var found = null;
                 (slot.options || []).forEach(function (o) {
                     if (String(o.id) === selId) found = o;
