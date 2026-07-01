@@ -399,6 +399,45 @@
         qtyInput.addEventListener('input', buildSlots);
         buildSlots();
 
+        function applyClipboard() {
+            var clip = window._cpfClipboard;
+            if (!clip) return;
+            if (clip.templateId === form.id) {
+                slots.forEach(function (slot) {
+                    var selId = clip.slotSelections[String(slot.id)];
+                    if (selId === undefined) return;
+                    if (selId === '__none__') { selectedOptions[slot.id] = null; return; }
+                    if (selId === '__in_norm__') { selectedOptions[slot.id] = { id: '__in_norm__', article: null, name: 'Включено в норме' }; return; }
+                    (slot.options || []).forEach(function (o) {
+                        if (String(o.id) === String(selId)) selectedOptions[slot.id] = o;
+                    });
+                });
+            } else {
+                (clip.snapshot || []).forEach(function (entry) {
+                    var entryName = entry.slotName && typeof entry.slotName === 'object' ? (entry.slotName.ru || '') : (entry.slotName || '');
+                    var matchedSlot = null;
+                    slots.forEach(function (slot) {
+                        var sn = slot.name && typeof slot.name === 'object' ? (slot.name.ru || '') : (slot.name || '');
+                        if (sn.toLowerCase() === entryName.toLowerCase()) matchedSlot = slot;
+                    });
+                    if (!matchedSlot) return;
+                    if (entry.optionId === '__none__') { selectedOptions[matchedSlot.id] = null; return; }
+                    if (entry.optionId === '__in_norm__') { selectedOptions[matchedSlot.id] = { id: '__in_norm__', article: null, name: 'Включено в норме' }; return; }
+                    var found = null;
+                    (matchedSlot.options || []).forEach(function (o) {
+                        if (!found && entry.optionArticle && o.article === entry.optionArticle) found = o;
+                    });
+                    if (!found) {
+                        (matchedSlot.options || []).forEach(function (o) {
+                            if (!found && o.name === entry.optionName) found = o;
+                        });
+                    }
+                    if (found) selectedOptions[matchedSlot.id] = found;
+                });
+            }
+            buildSlots();
+        }
+
         // price row
         var priceRow = document.createElement('div');
         priceRow.style.cssText = [
@@ -432,6 +471,45 @@
         // footer
         var footer = document.createElement('div');
         footer.style.cssText = 'border-top:1px solid #e5e7eb;padding-top:16px;margin-top:4px;';
+
+        var clipRow = document.createElement('div');
+        clipRow.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.style.cssText = 'flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:5px;background:#fff;color:#374151;font-size:14px;cursor:pointer;';
+        copyBtn.textContent = '📋 Копировать';
+        copyBtn.addEventListener('click', function () {
+            var snapshot = slots.map(function (slot) {
+                var opt = selectedOptions[slot.id];
+                return {
+                    slotName: slot.name,
+                    optionId: opt ? opt.id : '__none__',
+                    optionName: opt ? opt.name : 'Не включать',
+                    optionArticle: opt ? (opt.article || null) : null
+                };
+            });
+            window._cpfClipboard = {
+                templateId: form.id,
+                slotSelections: getSlotSelections(),
+                snapshot: snapshot
+            };
+            copyBtn.textContent = '✓ Скопировано';
+            pasteBtn.style.display = '';
+            setTimeout(function () { copyBtn.textContent = '📋 Копировать'; }, 1500);
+        });
+
+        var pasteBtn = document.createElement('button');
+        pasteBtn.style.cssText = 'flex:1;padding:6px 10px;border:1px solid #3b82f6;border-radius:5px;background:#eff6ff;color:#1d4ed8;font-size:14px;cursor:pointer;';
+        if (!window._cpfClipboard) pasteBtn.style.display = 'none';
+        pasteBtn.textContent = '📋 Вставить';
+        pasteBtn.addEventListener('click', function () {
+            applyClipboard();
+            pasteBtn.textContent = '✓ Вставлено';
+            setTimeout(function () { pasteBtn.textContent = '📋 Вставить'; }, 1500);
+        });
+
+        clipRow.appendChild(copyBtn);
+        clipRow.appendChild(pasteBtn);
 
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
@@ -576,6 +654,7 @@
             }
         });
 
+        footer.appendChild(clipRow);
         footer.appendChild(submitBtn);
         footer.appendChild(submitStatus);
 
