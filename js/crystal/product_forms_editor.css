@@ -56,6 +56,8 @@
 .cfe-save-status--ok  { color: #16a34a; }
 .cfe-save-status--err { color: #dc2626; }
 .cfe-save-btn     { background: #16a34a; color: #fff; border: none; padding: 10px 28px; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; }
+.cfe-copy-btn     { background: #fff; color: #374151; border: 1px solid #d1d5db; padding: 10px 20px; border-radius: 5px; font-size: 15px; cursor: pointer; margin-left: 10px; }
+.cfe-copy-btn:hover { border-color: #3b82f6; color: #1d4ed8; }
 
 /* ===== SLOT CARD ===== */
 .cfe-slot-card        { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 10px; background: #fafafa; }

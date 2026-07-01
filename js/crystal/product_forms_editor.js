@@ -494,6 +494,28 @@
         });
 
         footer.appendChild(saveBtn);
+        if (!isNew) {
+            var copyAsNewBtn = el('button', 'cfe-copy-btn', 'Скопировать как новую форму');
+            copyAsNewBtn.addEventListener('click', function () {
+                var newArticle = prompt('Артикул новой формы:', (existingForm.article || '') + '-copy');
+                if (!newArticle || !newArticle.trim()) return;
+                copyAsNewBtn.disabled = true;
+                copyAsNewBtn.textContent = 'Копирую...';
+                crystalFetch('POST', '/api/product-forms/' + existingForm.id + '/copy', { article: newArticle.trim() })
+                    .then(function () {
+                        copyAsNewBtn.textContent = '✅ Скопировано';
+                        saveStatus.className = 'cfe-save-status cfe-save-status--ok';
+                        saveStatus.textContent = 'Форма "' + newArticle.trim() + '" создана';
+                    })
+                    .catch(function (err) {
+                        copyAsNewBtn.disabled = false;
+                        copyAsNewBtn.textContent = 'Скопировать как новую форму';
+                        saveStatus.className = 'cfe-save-status cfe-save-status--err';
+                        saveStatus.textContent = err && err.message ? err.message : 'Ошибка копирования';
+                    });
+            });
+            footer.appendChild(copyAsNewBtn);
+        }
         footer.appendChild(saveStatus);
         formPanel.appendChild(footer);
 

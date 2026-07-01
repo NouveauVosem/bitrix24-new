@@ -564,63 +564,7 @@
             }
         });
 
-        var copyAsNewBtn = document.createElement('button');
-        copyAsNewBtn.className = 'ui-btn ui-btn-light ui-btn-sm';
-        copyAsNewBtn.style.cssText = 'width:100%;margin-top:8px;';
-        copyAsNewBtn.textContent = 'Скопировать как новую форму';
-        copyAsNewBtn.addEventListener('click', function () {
-            if (!form.id) { alert('Форма не привязана к Crystal'); return; }
-            var newArticle = prompt('Артикул новой формы:');
-            if (!newArticle || !newArticle.trim()) return;
-
-            var currentQty = getCurrentQty();
-            var currentPrice = parseFloat(priceInput.value) || 0;
-            var normComponents = [];
-            var normSlotSnap = [];
-
-            slots.forEach(function (slot) {
-                var opt = selectedOptions[slot.id];
-                if (opt && opt.id !== '__none__' && opt.id !== '__in_norm__') {
-                    normComponents.push({ article: opt.article || '', name: opt.name, baseQty: slot.quantityPerUnit, bitrixId: opt.bitrixId || null });
-                    normSlotSnap.push({ slotId: String(slot.id), slotName: slot.name, optionId: String(opt.id), optionName: opt.name });
-                }
-            });
-
-            copyAsNewBtn.disabled = true;
-            copyAsNewBtn.textContent = '⧗ Копирую...';
-
-            fetch(CRYSTAL_BASE + '/api/product-forms/' + form.id + '/copy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
-                body: JSON.stringify({
-                    article: newArticle.trim(),
-                    normOverride: {
-                        slotSelections: getSlotSelections(),
-                        components: normComponents,
-                        slotSnapshot: normSlotSnap,
-                        name: newArticle.trim(),
-                        draftPrice: currentPrice || null
-                    }
-                })
-            })
-            .then(function (r) {
-                if (r.status === 409) return r.json().then(function (d) { throw new Error(d.message); });
-                if (!r.ok) throw new Error('Ошибка ' + r.status);
-                return r.json();
-            })
-            .then(function () {
-                copyAsNewBtn.textContent = '✅ Форма создана';
-                copyAsNewBtn.style.color = '#16a34a';
-            })
-            .catch(function (err) {
-                copyAsNewBtn.disabled = false;
-                copyAsNewBtn.textContent = 'Скопировать как новую форму';
-                alert(err.message || 'Ошибка копирования');
-            });
-        });
-
         footer.appendChild(submitBtn);
-        footer.appendChild(copyAsNewBtn);
         footer.appendChild(submitStatus);
 
         modal.appendChild(closeBtn);
