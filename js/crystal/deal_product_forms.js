@@ -50,6 +50,11 @@
             });
         }
 
+        var defaultOptions = {};
+        slots.forEach(function (slot) {
+            defaultOptions[slot.id] = selectedOptions[slot.id];
+        });
+
         // overlay
         var overlay = document.createElement('div');
         overlay.id = 'cpf-modal-overlay';
@@ -204,6 +209,24 @@
                 selLabel.style.cssText = 'flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (isRealSel() ? '#1d4ed8' : '#9ca3af') + ';';
                 selLabel.textContent = getSelName();
 
+                var resetBtn = document.createElement('button');
+                resetBtn.title = 'Сбросить на дефолт';
+                resetBtn.textContent = '↺';
+                resetBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:16px;color:#f59e0b;padding:0 3px;flex-shrink:0;line-height:1;';
+                var _defId = defaultOptions[slot.id] ? defaultOptions[slot.id].id : null;
+                var _curId = selectedOptions[slot.id] ? selectedOptions[slot.id].id : null;
+                resetBtn.style.display = (_defId !== _curId) ? 'inline' : 'none';
+                resetBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    selectedOptions[slot.id] = defaultOptions[slot.id];
+                    selLabel.textContent = getSelName();
+                    selLabel.style.color = isRealSel() ? '#1d4ed8' : '#9ca3af';
+                    updateQtyInfo();
+                    renderOpts(searchInput.value);
+                    resetBtn.style.display = 'none';
+                    checkNorm();
+                });
+
                 var arrow = document.createElement('span');
                 arrow.style.cssText = 'flex-shrink:0;font-size:12px;color:#9ca3af;display:inline-block;transition:transform 0.22s ease;transform:' + (isOpen ? 'rotate(90deg)' : 'rotate(0deg)') + ';';
                 arrow.textContent = '▶';
@@ -211,6 +234,7 @@
                 header.appendChild(slotName);
                 header.appendChild(badge);
                 header.appendChild(selLabel);
+                header.appendChild(resetBtn);
                 header.appendChild(arrow);
 
                 // === Collapsible body — CSS transition, no display:none ===
@@ -286,6 +310,8 @@
                         var isSelected = selectedOptions[slot.id]
                             ? selectedOptions[slot.id].id === opt.id
                             : opt.id === '__none__';
+                        var defOpt = defaultOptions[slot.id];
+                        var isDefault = !!(defOpt && defOpt.id === opt.id);
 
                         var label = document.createElement('label');
                         label.style.cssText = [
@@ -309,6 +335,9 @@
                             selLabel.style.color = isRealSel() ? '#1d4ed8' : '#9ca3af';
                             updateQtyInfo();
                             renderOpts(searchInput.value);
+                            var rDefId = defaultOptions[slot.id] ? defaultOptions[slot.id].id : null;
+                            var rCurId = selectedOptions[slot.id] ? selectedOptions[slot.id].id : null;
+                            resetBtn.style.display = (rDefId !== rCurId) ? 'inline' : 'none';
                             checkNorm();
                         });
 
@@ -329,6 +358,12 @@
 
                         label.appendChild(radio);
                         label.appendChild(textWrap);
+                        if (isDefault) {
+                            var defMark = document.createElement('span');
+                            defMark.style.cssText = 'flex-shrink:0;font-size:11px;color:#92400e;background:#fef3c7;padding:1px 5px;border-radius:6px;font-weight:600;';
+                            defMark.textContent = '★';
+                            label.appendChild(defMark);
+                        }
                         optsDiv.appendChild(label);
                     });
                 }
