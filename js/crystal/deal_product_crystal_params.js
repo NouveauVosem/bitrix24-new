@@ -537,11 +537,10 @@
 
     function collectData(extInputs, intInputs, weightInp, specsContainer) {
         function dimVals(inputs) {
-            var keys = ['width', 'height', 'depth'];
             var obj = {};
-            inputs.forEach(function (inp, i) {
+            inputs.forEach(function (inp) {
                 var v = parseFloat(inp.value);
-                if (!isNaN(v)) obj[keys[i]] = v;
+                if (!isNaN(v)) obj[inp.dataset.axis] = v;
             });
             return Object.keys(obj).length ? obj : null;
         }
