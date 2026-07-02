@@ -351,9 +351,13 @@
         return { extInputs: extInputs, intInputs: intInputs, weightInp: weightInp };
     }
 
-    function renderSpecsSection(modal, existingVariant, typeSelect, specKeys) {
+    function renderSpecsSection(modal, existingVariant, typeSelect, specKeys, productSpecs) {
         var specsContainer = document.createElement('div');
         modal.appendChild(specsContainer);
+
+        var inheritedBorder = 'border-color:#93c5fd;';
+        var inheritedBg     = 'background:#f0f7ff;';
+        var inheritedTitle  = 'Значение из продукта';
 
         function rebuild(typeCode) {
             specsContainer.innerHTML = '';
@@ -367,7 +371,10 @@
             specsContainer.appendChild(sectionHead('Атрибуты'));
 
             filtered.forEach(function (sk) {
-                var currentVal = existingVariant && existingVariant.specs ? existingVariant.specs[sk.code] : undefined;
+                var variantVal = existingVariant && existingVariant.specs ? existingVariant.specs[sk.code] : undefined;
+                var productVal = productSpecs ? productSpecs[sk.code] : undefined;
+                var currentVal = variantVal !== undefined ? variantVal : productVal;
+                var isInherited = variantVal === undefined && productVal !== undefined;
                 var content;
 
                 if (sk.valueType === 'enum' || sk.valueType === 'enum_rich') {
@@ -394,6 +401,11 @@
                             if (currentVal === sv.code) o.selected = true;
                             sel.appendChild(o);
                         });
+                        if (isInherited) {
+                            sel.style.borderColor = '#93c5fd';
+                            sel.style.background = '#f0f7ff';
+                            sel.title = inheritedTitle;
+                        }
                     }).catch(function () {
                         sel.innerHTML = '';
                         var errO = document.createElement('option');
@@ -407,12 +419,14 @@
                         var minI = document.createElement('input');
                         minI.type = 'number'; minI.placeholder = 'от';
                         minI.dataset.specKey = sk.code; minI.dataset.vtype = 'range_min';
-                        minI.style.cssText = 'flex:1;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;';
+                        minI.style.cssText = 'flex:1;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;' + (isInherited ? inheritedBorder + inheritedBg : '');
+                        if (isInherited) minI.title = inheritedTitle;
                         if (Array.isArray(currentVal) && currentVal[0] != null) minI.value = currentVal[0];
                         var maxI = document.createElement('input');
                         maxI.type = 'number'; maxI.placeholder = 'до';
                         maxI.dataset.specKey = sk.code; maxI.dataset.vtype = 'range_max';
-                        maxI.style.cssText = 'flex:1;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;';
+                        maxI.style.cssText = 'flex:1;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;' + (isInherited ? inheritedBorder + inheritedBg : '');
+                        if (isInherited) maxI.title = inheritedTitle;
                         if (Array.isArray(currentVal) && currentVal[1] != null) maxI.value = currentVal[1];
                         rw.appendChild(minI);
                         rw.appendChild(el('span', 'color:#9ca3af;font-size:14px;flex-shrink:0;', '—'));
@@ -424,7 +438,8 @@
                         var nInp = document.createElement('input');
                         nInp.type = 'number'; nInp.step = 'any';
                         nInp.dataset.specKey = sk.code; nInp.dataset.vtype = 'float';
-                        nInp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px ' + (sk.unit ? '36px' : '8px') + ' 7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;';
+                        nInp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px ' + (sk.unit ? '36px' : '8px') + ' 7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;' + (isInherited ? inheritedBorder + inheritedBg : '');
+                        if (isInherited) nInp.title = inheritedTitle;
                         if (currentVal != null) nInp.value = currentVal;
                         nw.appendChild(nInp);
                         if (sk.unit) nw.appendChild(el('span', 'position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:#9ca3af;pointer-events:none;', resolveUnit(sk.unit)));
@@ -434,7 +449,8 @@
                     var tInp = document.createElement('input');
                     tInp.type = 'text';
                     tInp.dataset.specKey = sk.code; tInp.dataset.vtype = 'text';
-                    tInp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;';
+                    tInp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:14px;' + (isInherited ? inheritedBorder + inheritedBg : '');
+                    if (isInherited) tInp.title = inheritedTitle;
                     if (currentVal != null) tInp.value = currentVal;
                     content = tInp;
                 }
@@ -607,11 +623,15 @@
         });
         if (existingProduct && existingProduct.productType) {
             typeSelect.value = existingProduct.productType.code || '';
+            typeSelect.disabled = true;
+            typeSelect.style.cssText = 'width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:5px;font-size:14px;background:#f9fafb;color:#6b7280;cursor:default;';
+            typeSelect.title = 'Тип задан на уровне продукта';
         }
         modal.appendChild(fieldRow('Тип продукта', typeSelect));
 
         var physical = renderPhysicalSection(modal, existingVariant);
-        var specsContainer = renderSpecsSection(modal, existingVariant, typeSelect, specKeys);
+        var productSpecs = existingProduct && existingProduct.specs ? existingProduct.specs : null;
+        var specsContainer = renderSpecsSection(modal, existingVariant, typeSelect, specKeys, productSpecs);
         var imagesSection = renderImagesSection(modal, existingVariant);
 
         // Paste handler — слушаем на document, самоудаляется когда оверлей закрыт
