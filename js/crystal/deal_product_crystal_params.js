@@ -168,7 +168,7 @@
         closeBtn.addEventListener('click', function () { overlay.remove(); });
         header.appendChild(closeBtn);
         header.appendChild(el('div', 'font-size:17px;font-weight:700;color:#222;margin-bottom:2px;padding-right:36px;', 'Техпаспорт варианта: ' + baseArticle));
-        var subtitleEl = el('div', 'font-size:14px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', productName || '');
+        var subtitleEl = el('div', 'font-size:13px;color:#9ca3af;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 16px;', productName || '');
         header.appendChild(subtitleEl);
 
         var body = el('div', 'display:flex;flex:1;min-height:0;');
@@ -212,9 +212,29 @@
         Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys(), loadCurrentUser(), loadFormByArticle(baseArticle)])
             .then(function (results) {
                 var formData = results[4];
-                if (formData && (formData.variantName || formData.name)) {
-                    subtitleEl.textContent = formData.variantName || formData.name;
+
+                subtitleEl.textContent = '';
+                subtitleEl.style.cssText = 'font-size:13px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 16px;';
+                function nameTag(label, value) {
+                    var wrap = document.createElement('span');
+                    wrap.style.cssText = 'white-space:nowrap;';
+                    var lbl = document.createElement('b');
+                    lbl.style.cssText = 'color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;margin-right:4px;font-weight:600;';
+                    lbl.textContent = label + ':';
+                    var val = document.createElement('span');
+                    val.style.cssText = 'color:#374151;font-weight:600;';
+                    val.textContent = value || '—';
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(val);
+                    return wrap;
                 }
+                var fp = (formData && formData.productName) || productName || baseArticle;
+                var fv = (formData && (formData.variantName || formData.name)) || productName || baseArticle;
+                var fb = formData ? (formData.bitrixName || formData.name || '—') : (productName || '—');
+                subtitleEl.appendChild(nameTag('Группа', fp));
+                subtitleEl.appendChild(nameTag('Вариант', fv));
+                subtitleEl.appendChild(nameTag('BitrixName', fb));
+
                 formPanel.removeChild(statusEl);
                 renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2], formData);
             })
