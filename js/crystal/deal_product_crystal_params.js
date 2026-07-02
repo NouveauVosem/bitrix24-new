@@ -719,7 +719,7 @@
                         bitrixName: crystalBitrixName || undefined
                     }, physicalDto, editorMeta));
             } else {
-                promise = doSave('/products/create', 'POST', {
+                promise = doSave('/products/findOrCreate', 'POST', {
                     productTypeCode: typeCode,
                     name:       { ru: crystalProductName, en: crystalProductName },
                     article:    baseArticle,
