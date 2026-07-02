@@ -129,6 +129,15 @@
             });
     }
 
+    function loadFormByArticle(article) {
+        if (!article) return Promise.resolve(null);
+        return fetch(CRYSTAL_BASE + '/api/product-forms/byArticle/' + encodeURIComponent(article), {
+            headers: { 'X-Api-Key': API_KEY }
+        })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    }
+
     // ===== POPUP SHELL =====
 
     function openPopup(baseArticle, productName, bitrixId) {
@@ -159,7 +168,8 @@
         closeBtn.addEventListener('click', function () { overlay.remove(); });
         header.appendChild(closeBtn);
         header.appendChild(el('div', 'font-size:17px;font-weight:700;color:#222;margin-bottom:2px;padding-right:36px;', 'Техпаспорт варианта: ' + baseArticle));
-        header.appendChild(el('div', 'font-size:14px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', productName || ''));
+        var subtitleEl = el('div', 'font-size:14px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', productName || '');
+        header.appendChild(subtitleEl);
 
         var body = el('div', 'display:flex;flex:1;min-height:0;');
 
@@ -199,10 +209,14 @@
             .then(function (resp) { renderDrawing(drawingContent, resp); })
             .catch(function () { renderDrawing(drawingContent, null); });
 
-        Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys(), loadCurrentUser()])
+        Promise.all([findProductByArticle(baseArticle), loadTypes(), loadSpecKeys(), loadCurrentUser(), loadFormByArticle(baseArticle)])
             .then(function (results) {
+                var formData = results[4];
+                if (formData && (formData.variantName || formData.name)) {
+                    subtitleEl.textContent = formData.variantName || formData.name;
+                }
                 formPanel.removeChild(statusEl);
-                renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2]);
+                renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2], formData);
             })
             .catch(function (err) {
                 statusEl.style.color = '#dc2626';
@@ -548,9 +562,14 @@
 
     // ===== FORM =====
 
-    function renderForm(modal, baseArticle, productName, found, types, specKeys) {
+    function renderForm(modal, baseArticle, productName, found, types, specKeys, formData) {
         var existingProduct = found ? found.product : null;
         var existingVariant = found ? found.variant : null;
+
+        // Имена для Crystal из формы: группа, вариант, bitrixName
+        var crystalProductName = (formData && formData.productName) || productName || baseArticle;
+        var crystalVariantName = (formData && (formData.variantName || formData.name)) || productName || baseArticle;
+        var crystalBitrixName  = formData ? (formData.bitrixName || formData.name || null) : null;
 
         if (existingVariant) renderBadge(modal, existingVariant);
 
@@ -662,9 +681,10 @@
                 var updatedVariants = (existingProduct.variants || []).map(function (v) {
                     if (v.id === existingVariant.id) {
                         return Object.assign({}, physicalDto, {
-                            id:      v.id,
-                            article: v.article,
-                            name:    v.name
+                            id:         v.id,
+                            article:    v.article,
+                            name:       v.name,
+                            bitrixName: crystalBitrixName || undefined
                         });
                     }
                     return { id: v.id, article: v.article, name: v.name, weight: v.weight, dimensions: v.dimensions, specs: v.specs, media: v.media, isActive: v.isActive };
@@ -673,13 +693,22 @@
                 promise = doSave('/products/update/' + existingProduct.id, 'PATCH', patchDto);
             } else if (existingProduct) {
                 promise = doSave('/products/addVariant/' + existingProduct.id, 'POST',
-                    Object.assign({ article: baseArticle, name: { ru: productName || baseArticle, en: productName || baseArticle } }, physicalDto, editorMeta));
+                    Object.assign({
+                        article:    baseArticle,
+                        name:       { ru: crystalVariantName, en: crystalVariantName },
+                        bitrixName: crystalBitrixName || undefined
+                    }, physicalDto, editorMeta));
             } else {
                 promise = doSave('/products/create', 'POST', {
                     productTypeCode: typeCode,
-                    name:     { ru: productName || baseArticle, en: productName || baseArticle },
-                    article:  baseArticle,
-                    variants: [Object.assign({ article: baseArticle, name: { ru: productName || baseArticle, en: productName || baseArticle } }, physicalDto)]
+                    name:       { ru: crystalProductName, en: crystalProductName },
+                    article:    baseArticle,
+                    bitrixName: crystalBitrixName || undefined,
+                    variants:   [Object.assign({
+                        article:    baseArticle,
+                        name:       { ru: crystalVariantName, en: crystalVariantName },
+                        bitrixName: crystalBitrixName || undefined
+                    }, physicalDto)]
                 });
             }
 
