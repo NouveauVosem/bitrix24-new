@@ -630,7 +630,7 @@
         modal.appendChild(fieldRow('Тип продукта', typeSelect));
 
         var physical = renderPhysicalSection(modal, existingVariant);
-        var productSpecs = existingProduct && existingProduct.specs ? existingProduct.specs : null;
+        var productSpecs = existingProduct && existingProduct.defaultSpecs ? existingProduct.defaultSpecs : null;
         var specsContainer = renderSpecsSection(modal, existingVariant, typeSelect, specKeys, productSpecs);
         var imagesSection = renderImagesSection(modal, existingVariant);
 
