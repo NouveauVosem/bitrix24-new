@@ -116,7 +116,7 @@
     function findProductByArticle(article) {
         return apiGet('/products/getAll?search=' + encodeURIComponent(article) + '&limit=5')
             .then(function (resp) {
-                var products = (resp && resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                var products = (resp && resp.data) ? resp.data : (resp && resp.items) ? resp.items : (Array.isArray(resp) ? resp : []);
                 for (var i = 0; i < products.length; i++) {
                     var variants = products[i].variants || [];
                     for (var j = 0; j < variants.length; j++) {
