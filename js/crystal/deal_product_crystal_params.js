@@ -235,8 +235,30 @@
                 subtitleEl.appendChild(nameTag('Вариант', fv));
                 subtitleEl.appendChild(nameTag('BitrixName', fb));
 
-                formPanel.removeChild(statusEl);
-                renderForm(formPanel, baseArticle, productName, results[0], results[1], results[2], formData);
+                function proceed(found) {
+                    formPanel.removeChild(statusEl);
+                    renderForm(formPanel, baseArticle, productName, found, results[1], results[2], formData);
+                }
+
+                var found = results[0];
+                if (!found && formData && formData.productName) {
+                    apiGet('/products/getAll?search=' + encodeURIComponent(formData.productName) + '&limit=5')
+                        .then(function (resp) {
+                            var products = (resp && resp.items) ? resp.items : (resp && resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                            var match = null;
+                            for (var i = 0; i < products.length; i++) {
+                                var n = products[i].name || {};
+                                if (n.ru === formData.productName || n.en === formData.productName) {
+                                    match = products[i];
+                                    break;
+                                }
+                            }
+                            proceed(match ? { product: match, variant: null } : null);
+                        })
+                        .catch(function () { proceed(null); });
+                } else {
+                    proceed(found);
+                }
             })
             .catch(function (err) {
                 statusEl.style.color = '#dc2626';
