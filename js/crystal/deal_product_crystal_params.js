@@ -114,7 +114,7 @@
     }
 
     function findProductByArticle(article) {
-        return apiGet('/products/getAll?search=' + encodeURIComponent(article) + '&limit=5')
+        return apiGet('/products/getAll?limit=500')
             .then(function (resp) {
                 var products = (resp && resp.data) ? resp.data : (resp && resp.items) ? resp.items : (Array.isArray(resp) ? resp : []);
                 for (var i = 0; i < products.length; i++) {
