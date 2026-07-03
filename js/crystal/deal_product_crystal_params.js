@@ -738,15 +738,17 @@
 
             var promise;
             if (existingVariant && existingProduct) {
-                var variantDto = Object.assign({
-                    article:    existingVariant.article,
-                    name:       existingVariant.name,
-                    specs:      data.specs,
-                    dimensions: Object.keys(data.dims).length ? data.dims : undefined,
-                    weight:     data.weight,
-                    media:      mediaDto,
-                    isActive:   true
-                }, editorMeta);
+                var variantDto = Object.assign({}, editorMeta, {
+                    variants: [{
+                        article:    existingVariant.article,
+                        name:       existingVariant.name,
+                        specs:      data.specs,
+                        dimensions: Object.keys(data.dims).length ? data.dims : undefined,
+                        weight:     data.weight,
+                        media:      mediaDto,
+                        isActive:   true
+                    }]
+                });
                 promise = doSave('/products/variants/' + existingVariant.id, 'PATCH', variantDto);
             } else if (existingProduct) {
                 promise = doSave('/products/addVariant/' + existingProduct.id, 'POST',
