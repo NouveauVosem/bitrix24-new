@@ -187,19 +187,29 @@ foreach ($items as $item) {
     if ($a && !in_array($a, $uniqueArticles, true)) $uniqueArticles[] = $a;
 }
 
-foreach ($uniqueArticles as $article) {
-    $url = $crystalBase . '/api/products/getAll?search=' . urlencode($article) . '&limit=5';
-    $raw = @file_get_contents($url, false, $ctx);
-    if (!$raw) continue;
-    $resp     = json_decode($raw, true);
-    $products = is_array($resp['data'] ?? null) ? $resp['data'] : (is_array($resp) ? $resp : []);
-    foreach ($products as $prod) {
-        foreach ($prod['variants'] ?? [] as $v) {
-            if (($v['article'] ?? '') === $article) {
-                if (!empty($v['specs'])) $specsPerArticle[$article] = $v['specs'];
+if (!empty($uniqueArticles)) {
+    $payload = json_encode(['articles' => $uniqueArticles]);
+    $postCtx = stream_context_create(['http' => [
+        'method'  => 'POST',
+        'header'  => "X-Api-Key: $crystalKey\r\nContent-Type: application/json\r\nContent-Length: " . strlen($payload) . "\r\n",
+        'content' => $payload,
+        'timeout' => 5,
+    ]]);
+    $raw = @file_get_contents($crystalBase . '/api/products/variants/by-articles', false, $postCtx);
+    if ($raw) {
+        $variants = json_decode($raw, true) ?: [];
+        foreach ($variants as $v) {
+            $article = $v['article'] ?? '';
+            if (!$article || !in_array($article, $uniqueArticles, true)) continue;
+            if (!isset($specsPerArticle[$article]) && !empty($v['specs'])) {
+                $specsPerArticle[$article] = $v['specs'];
+            }
+            if (!isset($physicalPerArticle[$article])) {
                 $w = isset($v['weight']) && $v['weight'] !== null ? (float)$v['weight'] : null;
                 $d = !empty($v['dimensions']) ? $v['dimensions'] : null;
                 if ($w !== null || $d) $physicalPerArticle[$article] = ['weight' => $w, 'dimensions' => $d];
+            }
+            if (!isset($mediaPerArticle[$article])) {
                 $images = [];
                 foreach ($v['media'] ?? [] as $m) {
                     if (($m['typeOfMedia'] ?? '') === 'image' && !empty($m['url'])) {
@@ -208,7 +218,6 @@ foreach ($uniqueArticles as $article) {
                     if (count($images) >= 3) break;
                 }
                 if ($images) $mediaPerArticle[$article] = $images;
-                break 2;
             }
         }
     }
