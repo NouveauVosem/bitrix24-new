@@ -730,7 +730,7 @@
             if (it.media && it.media.length) {
                 html += '<div style="display:flex;flex-direction:column;gap:6px;flex:1;">';
                 it.media.forEach(function (url) {
-                    html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
+                    html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:320px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
                 });
                 html += '</div>';
             }
