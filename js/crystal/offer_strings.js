@@ -30,8 +30,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Internal dimensions (W×D×H)',
         netWeight:      'Net weight',
         configuration:  'Configuration',
-        vatNote:    'VAT 0% – Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)',
-        printSave:  'Print / Save PDF'
+        vatNote:       'VAT 0% – Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)',
+        leadTimeLabel: 'Lead time: ',
+        leadTimeWeeks: 'weeks',
+        printSave:     'Print / Save PDF'
     },
     DE: {
         docTitle:   'Angebot',
@@ -58,8 +60,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Innenmaße (B×T×H)',
         netWeight:      'Nettogewicht',
         configuration:  'Lieferumfang',
-        vatNote:    'MwSt. 0% – Reverse-Charge-Verfahren gemäß Art. 196 der Richtlinie 2006/112/EG',
-        printSave:  'Drucken / Als PDF speichern'
+        vatNote:       'MwSt. 0% – Reverse-Charge-Verfahren gemäß Art. 196 der Richtlinie 2006/112/EG',
+        leadTimeLabel: 'Lieferzeit: ',
+        leadTimeWeeks: 'Wochen',
+        printSave:     'Drucken / Als PDF speichern'
     },
     RU: {
         docTitle:   'Коммерческое предложение',
@@ -86,8 +90,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Внутренние размеры (Ш×Г×В)',
         netWeight:      'Вес нетто',
         configuration:  'Комплектация',
-        vatNote:    'НДС 0% – механизм обратного начисления (Ст. 196, Директива 2006/112/EC)',
-        printSave:  'Печать / Сохранить PDF'
+        vatNote:       'НДС 0% – механизм обратного начисления (Ст. 196, Директива 2006/112/EC)',
+        leadTimeLabel: 'Срок выполнения: ',
+        leadTimeWeeks: 'нед.',
+        printSave:     'Печать / Сохранить PDF'
     },
     CZ: {
         docTitle:   'Cenová nabídka',
@@ -114,8 +120,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Vnitřní rozměry (Š×H×V)',
         netWeight:      'Čistá hmotnost',
         configuration:  'Konfigurace',
-        vatNote:    'DPH 0% – přenesení daňové povinnosti (čl. 196 Směrnice Rady 2006/112/ES)',
-        printSave:  'Tisk / Uložit jako PDF'
+        vatNote:       'DPH 0% – přenesení daňové povinnosti (čl. 196 Směrnice Rady 2006/112/ES)',
+        leadTimeLabel: 'Dodací lhůta: ',
+        leadTimeWeeks: 'týdnů',
+        printSave:     'Tisk / Uložit jako PDF'
     },
     FR: {
         docTitle:   'Offre commerciale',
@@ -142,8 +150,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Dimensions intérieures (L×P×H)',
         netWeight:      'Poids net',
         configuration:  'Configuration',
-        vatNote:    'TVA 0% – autoliquidation (article 196, directive 2006/112/CE)',
-        printSave:  'Imprimer / Enregistrer en PDF'
+        vatNote:       'TVA 0% – autoliquidation (article 196, directive 2006/112/CE)',
+        leadTimeLabel: 'Délai de livraison : ',
+        leadTimeWeeks: 'semaines',
+        printSave:     'Imprimer / Enregistrer en PDF'
     },
     ES: {
         docTitle:   'Oferta comercial',
@@ -170,8 +180,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Dimensiones internas (An×Pr×Al)',
         netWeight:      'Peso neto',
         configuration:  'Configuración',
-        vatNote:    'IVA 0% – inversión del sujeto pasivo (art. 196, Directiva 2006/112/CE)',
-        printSave:  'Imprimir / Guardar como PDF'
+        vatNote:       'IVA 0% – inversión del sujeto pasivo (art. 196, Directiva 2006/112/CE)',
+        leadTimeLabel: 'Plazo de entrega: ',
+        leadTimeWeeks: 'semanas',
+        printSave:     'Imprimir / Guardar como PDF'
     },
     PL: {
         docTitle:   'Oferta handlowa',
@@ -198,8 +210,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Wymiary wewnętrzne (Sz×Gł×Wys.)',
         netWeight:      'Waga netto',
         configuration:  'Konfiguracja',
-        vatNote:    'VAT 0% – odwrotne obciążenie (art. 196 dyrektywy 2006/112/WE)',
-        printSave:  'Drukuj / Zapisz jako PDF'
+        vatNote:       'VAT 0% – odwrotne obciążenie (art. 196 dyrektywy 2006/112/WE)',
+        leadTimeLabel: 'Termin realizacji: ',
+        leadTimeWeeks: 'tyg.',
+        printSave:     'Drukuj / Zapisz jako PDF'
     },
     HU: {
         docTitle:   'Kereskedelmi ajánlat',
@@ -226,8 +240,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Belső méretek (Sz×Mé×M)',
         netWeight:      'Nettó tömeg',
         configuration:  'Konfiguráció',
-        vatNote:    'ÁFA 0% – fordított adózás (196. cikk, 2006/112/EK irányelv)',
-        printSave:  'Nyomtatás / Mentés PDF-ként'
+        vatNote:       'ÁFA 0% – fordított adózás (196. cikk, 2006/112/EK irányelv)',
+        leadTimeLabel: 'Szállítási határidő: ',
+        leadTimeWeeks: 'hét',
+        printSave:     'Nyomtatás / Mentés PDF-ként'
     },
     IT: {
         docTitle:   'Offerta commerciale',
@@ -254,8 +270,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Dimensioni interne (L×P×A)',
         netWeight:      'Peso netto',
         configuration:  'Configurazione',
-        vatNote:    'IVA 0% – inversione contabile (art. 196, direttiva 2006/112/CE)',
-        printSave:  'Stampa / Salva come PDF'
+        vatNote:       'IVA 0% – inversione contabile (art. 196, direttiva 2006/112/CE)',
+        leadTimeLabel: 'Tempi di consegna: ',
+        leadTimeWeeks: 'settimane',
+        printSave:     'Stampa / Salva come PDF'
     },
     EL: {
         docTitle:   'Εμπορική προσφορά',
@@ -282,8 +300,10 @@ window.OFFER_DOC_STRINGS = {
         intDim:     'Εσωτερικές διαστάσεις (Π×Β×Υ)',
         netWeight:      'Καθαρό βάρος',
         configuration:  'Διαμόρφωση',
-        vatNote:    'ΦΠΑ 0% – αντιστροφή υποχρέωσης (άρθρο 196, οδηγία 2006/112/ΕΚ)',
-        printSave:  'Εκτύπωση / Αποθήκευση ως PDF'
+        vatNote:       'ΦΠΑ 0% – αντιστροφή υποχρέωσης (άρθρο 196, οδηγία 2006/112/ΕΚ)',
+        leadTimeLabel: 'Χρόνος παράδοσης: ',
+        leadTimeWeeks: 'εβδ.',
+        printSave:     'Εκτύπωση / Αποθήκευση ως PDF'
     }
 };
 

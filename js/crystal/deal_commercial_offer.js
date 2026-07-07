@@ -300,6 +300,7 @@
             buyerVat:          company.vat           || '',
             notes:             '',
             validUntil:        defaultValidUntil(),
+            leadTime:          deal.leadTime || '',
             includeSpecs:      true,
             latePayment:       false,
             items: rawItems.map(function (it) {
@@ -854,6 +855,13 @@
             ].join('');
         }).join('');
 
+        var leadTimeHtml = state.leadTime
+            ? '<p style="font-size:9.5pt;margin:10px 0 0;">'
+              + '<span style="color:#6b7280;">' + esc(s.leadTimeLabel || 'Lead time: ') + '</span>'
+              + '<strong>' + esc(state.leadTime) + ' ' + esc(s.leadTimeWeeks || 'weeks') + '</strong>'
+              + '</p>'
+            : '';
+
         var vatNote = '<p style="font-size:8.5pt;color:#6b7280;margin:4px 0 0;">'
             + esc(s.vatNote || 'VAT 0% – Reverse charge mechanism applies (Article 196, Council Directive 2006/112/EC)')
             + '</p>';
@@ -943,6 +951,7 @@
             + '</table>\n</div>\n'
 
             + vatNote
+            + leadTimeHtml
             + notesHtml
             + buildLatePaymentHtml(state)
             + buildSpecsHtml(includedItems, state)

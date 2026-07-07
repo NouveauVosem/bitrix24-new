@@ -76,6 +76,7 @@ $result = [
         'lang'      => $langCode ?: 'EN',
         'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
         'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
+        'leadTime'  => trim($deal['UF_CRM_1720513743020'] ?? ''),
     ],
     'delivery' => [
         'street'  => $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
