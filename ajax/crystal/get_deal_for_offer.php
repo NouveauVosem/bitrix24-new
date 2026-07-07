@@ -66,6 +66,9 @@ if (!empty($langField['VALUE'])) {
 }
 $langCode = strtoupper(trim(explode(' ', trim($langRaw))[0]));
 
+// Lead time (order execution term, text field, e.g. "5-6")
+$leadTime = trim($dealUfFields['UF_CRM_1720513743020']['VALUE'] ?? '');
+
 $result = [
     'status' => 'success',
     'deal'   => [
@@ -76,7 +79,7 @@ $result = [
         'lang'      => $langCode ?: 'EN',
         'companyId' => (int)($deal['COMPANY_ID'] ?? 0),
         'contactId' => (int)($deal['CONTACT_ID'] ?? 0),
-        'leadTime'  => trim($deal['UF_CRM_1720513743020'] ?? ''),
+        'leadTime'  => $leadTime,
     ],
     'delivery' => [
         'street'  => $deliveryStreet . ($deliveryHouse ? ', ' . $deliveryHouse : ''),
