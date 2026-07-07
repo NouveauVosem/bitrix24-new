@@ -210,13 +210,15 @@ if (!empty($uniqueArticles)) {
                 if ($w !== null || $d) $physicalPerArticle[$article] = ['weight' => $w, 'dimensions' => $d];
             }
             if (!isset($mediaPerArticle[$article])) {
-                $images = [];
-                foreach ($v['media'] ?? [] as $m) {
-                    if (($m['typeOfMedia'] ?? '') === 'image' && !empty($m['url'])) {
-                        $images[] = $crystalBase . '/api/files/image?path=' . urlencode($m['url']);
-                    }
-                    if (count($images) >= 3) break;
-                }
+                $mediaItems = array_filter(
+                    $v['media'] ?? [],
+                    fn($m) => ($m['typeOfMedia'] ?? '') === 'image' && !empty($m['url'])
+                );
+                usort($mediaItems, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+                $images = array_map(
+                    fn($m) => $crystalBase . '/api/files/image?path=' . urlencode($m['url']),
+                    array_slice($mediaItems, 0, 3)
+                );
                 if ($images) $mediaPerArticle[$article] = $images;
             }
         }

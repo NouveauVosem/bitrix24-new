@@ -316,7 +316,8 @@
                     included:   true,
                     specs:      it.specs    || [],
                     physical:   it.physical || null,
-                    media:      it.media    || [],
+                    media:         it.media    || [],
+                    mediaSelected: (it.media || []).map(function(_, i) { return i === 0; }),
                     slotSnapshot: it.slotSnapshot || [],
                     components: (it.components || []).map(function (c) {
                         return {
@@ -439,6 +440,9 @@
 
         state.items.forEach(function (item, idx) {
             wrap.appendChild(buildItemRow(item, idx, state));
+            if (item.media && item.media.length) {
+                wrap.appendChild(buildItemMediaRow(item));
+            }
             (item.components || []).forEach(function (c) {
                 var row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;padding:3px 14px 3px 38px;border-top:1px solid #f3f4f6;'
@@ -498,6 +502,55 @@
         row.appendChild(qtyEl);
         row.appendChild(priceEl);
         row.appendChild(totalEl);
+        return row;
+    }
+
+    function buildItemMediaRow(item) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 14px 7px 38px;border-top:1px solid #f3f4f6;background:#f9fafb;';
+
+        var lbl = document.createElement('span');
+        lbl.style.cssText = 'font-size:11px;color:#9ca3af;flex-shrink:0;';
+        lbl.textContent = 'Фото:';
+        row.appendChild(lbl);
+
+        var thumbsWrap = document.createElement('div');
+        thumbsWrap.style.cssText = 'display:flex;gap:5px;';
+
+        item.media.forEach(function(url, i) {
+            var thumb = document.createElement('div');
+            thumb.style.cssText = 'position:relative;cursor:pointer;border-radius:4px;overflow:hidden;flex-shrink:0;'
+                + 'border:2px solid ' + (item.mediaSelected[i] ? '#2563EB' : '#d1d5db') + ';';
+            thumb.title = item.mediaSelected[i] ? 'Включено в КП' : 'Не включено';
+
+            var img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'width:50px;height:50px;object-fit:cover;display:block;'
+                + 'opacity:' + (item.mediaSelected[i] ? '1' : '0.3') + ';';
+            thumb.appendChild(img);
+
+            var dot = document.createElement('div');
+            dot.style.cssText = 'position:absolute;bottom:2px;right:2px;width:14px;height:14px;border-radius:50%;'
+                + 'display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;line-height:1;'
+                + 'background:' + (item.mediaSelected[i] ? '#2563EB' : '#9ca3af') + ';'
+                + 'opacity:' + (item.mediaSelected[i] ? '1' : '0.5') + ';';
+            dot.textContent = '✓';
+            thumb.appendChild(dot);
+
+            thumb.addEventListener('click', function() {
+                item.mediaSelected[i] = !item.mediaSelected[i];
+                var sel = item.mediaSelected[i];
+                thumb.style.borderColor = sel ? '#2563EB' : '#d1d5db';
+                img.style.opacity       = sel ? '1' : '0.3';
+                dot.style.background    = sel ? '#2563EB' : '#9ca3af';
+                dot.style.opacity       = sel ? '1' : '0.5';
+                thumb.title             = sel ? 'Включено в КП' : 'Не включено';
+            });
+
+            thumbsWrap.appendChild(thumb);
+        });
+
+        row.appendChild(thumbsWrap);
         return row;
     }
 
@@ -727,9 +780,12 @@
 
             html += '</table>';
 
-            if (it.media && it.media.length) {
+            var selectedMedia = (it.media || []).filter(function(url, i) {
+                return it.mediaSelected ? it.mediaSelected[i] : false;
+            });
+            if (selectedMedia.length) {
                 html += '<div style="display:flex;flex-direction:column;gap:6px;flex:1;">';
-                it.media.forEach(function (url) {
+                selectedMedia.forEach(function (url) {
                     html += '<img src="' + esc(url) + '" style="max-width:100%;max-height:320px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;">';
                 });
                 html += '</div>';
