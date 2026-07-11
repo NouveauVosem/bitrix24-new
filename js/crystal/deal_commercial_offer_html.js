@@ -213,7 +213,7 @@
                 '<td style="' + tdStyle('center') + '">' + (i + 1) + '</td>',
                 '<td style="' + tdStyle('left') + '">'
                     + (it.article ? '<span style="font-size:9pt;color:#9ca3af;margin-right:6px;">' + esc(it.article) + '</span>' : '')
-                    + '<strong>' + esc(resolveItemName(it, state.lang)) + '</strong>' + '</td>',
+                    + '<span style="font-weight:700;">' + esc(resolveItemName(it, state.lang)) + '</span>' + '</td>',
                 '<td style="' + tdStyle('center') + '">' + it.qty + '</td>',
                 '<td style="' + tdStyle('right') + '">' + formatMoney(it.price) + '</td>',
                 '<td style="' + tdStyle('center') + '">0%</td>',
