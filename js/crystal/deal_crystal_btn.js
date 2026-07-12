@@ -323,10 +323,12 @@ BX.ready(function () {
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
 
+        var BTN_STYLE = 'box-sizing:border-box;width:100%;padding:7px 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;opacity:1;transition:opacity .15s;';
+
         var rhenusBtn = document.createElement('button');
         rhenusBtn.id = 'crystal-rhenus-btn';
-        rhenusBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
-        rhenusBtn.textContent = 'Рассчитать Rhenus';
+        rhenusBtn.style.cssText = BTN_STYLE + 'background:#2563eb;';
+        rhenusBtn.textContent = 'Rhenus';
         rhenusBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
@@ -362,15 +364,12 @@ BX.ready(function () {
 
         var dsvBtn = document.createElement('button');
         dsvBtn.id = 'crystal-dsv-btn';
-        dsvBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        dsvBtn.textContent = 'Рассчитать DSV';
+        dsvBtn.style.cssText = BTN_STYLE + 'background:#16a34a;';
+        dsvBtn.textContent = 'DSV';
         dsvBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
             if (!dealId) return alert('Не удалось определить ID сделки');
-
-            dsvBtn.disabled = true;
-            dsvBtn.textContent = '⌛ Запускаю...';
 
             var parsed = parseDeliveryData();
             var deliveryData = {
@@ -381,26 +380,77 @@ BX.ready(function () {
                 })
             };
 
+            var popup = new BX.PopupWindow('crystal-dsv-log-popup', null, {
+                titleBar: 'Расчёт DSV',
+                content: '<div id="crystal-dsv-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>',
+                closeByEsc: true,
+                autoHide: false,
+                overlay: false,
+                buttons: []
+            });
+            popup.show();
+
+            var logDiv = document.getElementById('crystal-dsv-log');
+
+            dsvBtn.disabled = true;
+
             fetch('https://alvla.services/api/dsvquat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
             })
-            .then(function(res) { return res.json(); })
-            .then(function() {
-                dsvBtn.textContent = '✅ Запущено — результат придёт в сделку';
+            .then(function(res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var reader = res.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = '';
+
+                function read() {
+                    reader.read().then(function(chunk) {
+                        if (chunk.done) {
+                            dsvBtn.disabled = false;
+                            return;
+                        }
+                        buffer += decoder.decode(chunk.value, { stream: true });
+                        var parts = buffer.split('\n\n');
+                        buffer = parts.pop();
+
+                        parts.forEach(function(part) {
+                            var eventMatch = part.match(/^event:\s*(\w+)/m);
+                            var dataMatch  = part.match(/^data:\s*(.+)/m);
+                            if (!eventMatch || !dataMatch) return;
+                            var type = eventMatch[1];
+                            var data;
+                            try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
+
+                            if (type === 'status') {
+                                logDiv.innerHTML += '<br>' + data.message;
+                            } else if (type === 'result') {
+                                logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
+                                dsvBtn.disabled = false;
+                            } else if (type === 'error') {
+                                logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
+                                dsvBtn.disabled = false;
+                            }
+                            logDiv.scrollTop = logDiv.scrollHeight;
+                        });
+
+                        read();
+                    });
+                }
+                read();
             })
             .catch(function(err) {
-                dsvBtn.textContent = '❌ Ошибка запроса';
+                if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
                 dsvBtn.disabled = false;
-                console.error('DSV request error:', err);
+                console.error('DSV SSE error:', err);
             });
         });
 
         var rabenBtn = document.createElement('button');
         rabenBtn.id = 'crystal-raben-btn';
-        rabenBtn.className = 'ui-btn ui-btn-danger ui-btn-sm';
-        rabenBtn.textContent = 'Рассчитать Raben';
+        rabenBtn.style.cssText = BTN_STYLE + 'background:#dc2626;';
+        rabenBtn.textContent = 'Raben';
         rabenBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
@@ -436,9 +486,8 @@ BX.ready(function () {
 
         var pythonBtn = document.createElement('button');
         pythonBtn.id = 'crystal-python-btn';
-        pythonBtn.className = 'ui-btn ui-btn-sm';
-        pythonBtn.style.cssText = 'background:#7c3aed;color:#fff;border-color:#7c3aed;';
-        pythonBtn.textContent = 'Загрузить в Python';
+        pythonBtn.style.cssText = BTN_STYLE + 'background:#7c3aed;';
+        pythonBtn.textContent = 'Python';
         pythonBtn.addEventListener('click', function () {
             var parsed = parseDeliveryData();
             if (!parsed) return alert('Не удалось распарсить данные сделки');
@@ -489,12 +538,16 @@ BX.ready(function () {
         shippingSection.id = 'crystal-shipping-data';
         shippingSection.style.cssText = 'margin-top:8px;border-top:1px solid #e0e0e0;padding-top:6px;';
 
+        var btnGrid = document.createElement('div');
+        btnGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;';
+        btnGrid.appendChild(rhenusBtn);
+        btnGrid.appendChild(dsvBtn);
+        btnGrid.appendChild(rabenBtn);
+        btnGrid.appendChild(pythonBtn);
+
         content.appendChild(hint);
         content.appendChild(feedback);
-        content.appendChild(rhenusBtn);
-        content.appendChild(dsvBtn);
-        content.appendChild(rabenBtn);
-        content.appendChild(pythonBtn);
+        content.appendChild(btnGrid);
         content.appendChild(shippingSection);
         wrapper.appendChild(content);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
