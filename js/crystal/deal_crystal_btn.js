@@ -134,9 +134,9 @@ BX.ready(function () {
         }
 
         var prices = [
-            { label: 'Rhenus',   cid: 'UF_CRM_1774000644830' },
-            { label: 'Schenker', cid: 'UF_CRM_1774000685589' },
-            { label: 'Raben',    cid: 'UF_CRM_1774000702384' },
+            { label: 'Rhenus', cid: 'UF_CRM_1774000644830' },
+            { label: 'DSV',    cid: 'UF_CRM_1774000685589' },
+            { label: 'Raben',  cid: 'UF_CRM_1774000702384' },
         ];
         var priceLines = [];
         prices.forEach(function(p) {
@@ -276,17 +276,17 @@ BX.ready(function () {
             });
         });
 
-        var schenkerBtn = document.createElement('button');
-        schenkerBtn.id = 'crystal-schenker-btn';
-        schenkerBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        schenkerBtn.textContent = 'Рассчитать Schenker';
-        schenkerBtn.addEventListener('click', function () {
+        var dsvBtn = document.createElement('button');
+        dsvBtn.id = 'crystal-dsv-btn';
+        dsvBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
+        dsvBtn.textContent = 'Рассчитать DSV';
+        dsvBtn.addEventListener('click', function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
             if (!dealId) return alert('Не удалось определить ID сделки');
 
-            schenkerBtn.disabled = true;
-            schenkerBtn.textContent = '⌛ Запускаю...';
+            dsvBtn.disabled = true;
+            dsvBtn.textContent = '⌛ Запускаю...';
 
             var parsed = parseDeliveryData();
             var deliveryData = {
@@ -297,19 +297,19 @@ BX.ready(function () {
                 })
             };
 
-            fetch('https://alvla.services/api/schenkerquat', {
+            fetch('https://alvla.services/api/dsvquat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
             })
             .then(function(res) { return res.json(); })
             .then(function() {
-                schenkerBtn.textContent = '✅ Запущено — результат придёт в сделку';
+                dsvBtn.textContent = '✅ Запущено — результат придёт в сделку';
             })
             .catch(function(err) {
-                schenkerBtn.textContent = '❌ Ошибка запроса';
-                schenkerBtn.disabled = false;
-                console.error('Schenker request error:', err);
+                dsvBtn.textContent = '❌ Ошибка запроса';
+                dsvBtn.disabled = false;
+                console.error('DSV request error:', err);
             });
         });
 
@@ -404,7 +404,7 @@ BX.ready(function () {
         content.appendChild(hint);
         content.appendChild(feedback);
         content.appendChild(rhenusBtn);
-        content.appendChild(schenkerBtn);
+        content.appendChild(dsvBtn);
         content.appendChild(rabenBtn);
         content.appendChild(pythonBtn);
         wrapper.appendChild(content);
