@@ -173,8 +173,8 @@ BX.ready(function () {
         var headers = { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' };
 
         Promise.all([
-            fetch(CRYSTAL_API + '/shipping/quotes?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); }),
-            fetch(CRYSTAL_API + '/shipping/orders?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); })
+            fetch(CRYSTAL_API + '/api/shipping/quotes?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); }),
+            fetch(CRYSTAL_API + '/api/shipping/orders?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); })
         ]).then(function(results) {
             var quotes = Array.isArray(results[0]) ? results[0] : [];
             var orders = Array.isArray(results[1]) ? results[1] : [];
