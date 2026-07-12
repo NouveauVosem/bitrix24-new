@@ -380,17 +380,30 @@ BX.ready(function () {
                 })
             };
 
+            var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
+
             var popup = new BX.PopupWindow('crystal-dsv-log-popup', null, {
                 titleBar: 'Расчёт DSV',
-                content: '<div id="crystal-dsv-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>',
+                content: '<div id="crystal-dsv-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
+                    + '<div style="margin-top:8px;font-size:12px;color:#666;">'
+                    + '<label style="cursor:pointer;user-select:none;">'
+                    + '<input type="checkbox" id="crystal-sse-autoclose-chk" style="margin-right:5px;cursor:pointer;">'
+                    + 'Закрыть после просчёта'
+                    + '</label></div>',
                 closeByEsc: true,
                 autoHide: false,
                 overlay: false,
+                closeIcon: { show: true },
                 buttons: []
             });
             popup.show();
 
             var logDiv = document.getElementById('crystal-dsv-log');
+            var autocloseChk = document.getElementById('crystal-sse-autoclose-chk');
+            autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
+            autocloseChk.addEventListener('change', function() {
+                localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
+            });
 
             dsvBtn.disabled = true;
 
@@ -428,6 +441,7 @@ BX.ready(function () {
                             } else if (type === 'result') {
                                 logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
                                 dsvBtn.disabled = false;
+                                if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
                             } else if (type === 'error') {
                                 logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
                                 dsvBtn.disabled = false;
