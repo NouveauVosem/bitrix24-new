@@ -7,6 +7,7 @@ BX.ready(function () {
 
     var BUTTON_ID = 'crystal-sidebar-btn';
     var FEEDBACK_ID = 'crystal-feedback';
+    var CRYSTAL_API = 'https://crystal.alvla.tools';
 
     // ===== ПАРСЕР =====
 
@@ -157,6 +158,88 @@ BX.ready(function () {
         }
     }
 
+    // ===== ДАННЫЕ ДОСТАВКИ =====
+
+    function loadShippingData() {
+        var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+        var dealId = dealMatch ? dealMatch[1] : null;
+        if (!dealId) return;
+
+        var section = document.getElementById('crystal-shipping-data');
+        if (!section) return;
+
+        section.innerHTML = '<div style="color:#888;font-size:12px;padding:4px 0;">⌛ Загружаю...</div>';
+
+        var headers = { 'Content-Type': 'application/json', 'X-Api-Key': 'legenda' };
+
+        Promise.all([
+            fetch(CRYSTAL_API + '/shipping/quotes?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); }),
+            fetch(CRYSTAL_API + '/shipping/orders?dealId=' + dealId, { headers: headers }).then(function(r) { return r.json(); })
+        ]).then(function(results) {
+            var quotes = Array.isArray(results[0]) ? results[0] : [];
+            var orders = Array.isArray(results[1]) ? results[1] : [];
+
+            var html = '';
+
+            // --- Просчёты ---
+            html += '<div style="margin-top:8px;">';
+            html += '<b style="font-size:12px;">Просчёты доставки</b>';
+            if (quotes.length === 0) {
+                html += '<div style="color:#888;font-size:11px;padding:2px 0;">Нет данных</div>';
+            } else {
+                html += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:4px;">';
+                html += '<tr style="color:#666;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px 4px;">Перевозчик</th><th style="text-align:left;padding:2px 4px;">Цена</th><th style="text-align:left;padding:2px 4px;">Куда</th><th style="text-align:left;padding:2px 4px;">Дата</th></tr>';
+                quotes.forEach(function(q) {
+                    var priceCell = q.price
+                        ? '<b>' + parseFloat(q.price).toFixed(2) + '</b>'
+                        : (q.error ? '<span style="color:#c00;" title="' + q.error.replace(/"/g, '&quot;') + '">Ошибка</span>' : '—');
+                    var dest = [q.toCity, q.toCountry].filter(Boolean).join(', ');
+                    var date = q.createdAt ? new Date(q.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+                    html += '<tr style="border-bottom:1px solid #f5f5f5;">';
+                    html += '<td style="padding:2px 4px;">' + (q.carrier || '—') + '</td>';
+                    html += '<td style="padding:2px 4px;">' + priceCell + '</td>';
+                    html += '<td style="padding:2px 4px;">' + dest + '</td>';
+                    html += '<td style="padding:2px 4px;color:#888;">' + date + '</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+            }
+            html += '</div>';
+
+            // --- Заказы ---
+            var statusLabels = { booked: 'Забронирован', picked_up: 'Забран', in_transit: 'В пути', delivered: 'Доставлен', cancelled: 'Отменён' };
+            var statusColors = { booked: '#2563eb', picked_up: '#d97706', in_transit: '#7c3aed', delivered: '#16a34a', cancelled: '#dc2626' };
+
+            html += '<div style="margin-top:8px;">';
+            html += '<b style="font-size:12px;">Заказы доставки</b>';
+            if (orders.length === 0) {
+                html += '<div style="color:#888;font-size:11px;padding:2px 0;">Нет данных</div>';
+            } else {
+                html += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:4px;">';
+                html += '<tr style="color:#666;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px 4px;">Перевозчик</th><th style="text-align:left;padding:2px 4px;">Статус</th><th style="text-align:left;padding:2px 4px;">Цена</th><th style="text-align:left;padding:2px 4px;">Дата</th></tr>';
+                orders.forEach(function(o) {
+                    var statusLabel = statusLabels[o.status] || o.status;
+                    var statusColor = statusColors[o.status] || '#555';
+                    var priceCell = o.price ? parseFloat(o.price).toFixed(2) : '—';
+                    var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
+                    html += '<tr style="border-bottom:1px solid #f5f5f5;">';
+                    html += '<td style="padding:2px 4px;">' + (o.carrier || '—') + '</td>';
+                    html += '<td style="padding:2px 4px;"><span style="color:' + statusColor + ';font-weight:bold;">' + statusLabel + '</span></td>';
+                    html += '<td style="padding:2px 4px;">' + priceCell + '</td>';
+                    html += '<td style="padding:2px 4px;color:#888;">' + date + '</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+            }
+            html += '</div>';
+
+            section.innerHTML = html;
+        }).catch(function(err) {
+            section.innerHTML = '<div style="color:#c00;font-size:11px;">Ошибка загрузки данных доставки</div>';
+            console.error('[Crystal] shipping data error:', err);
+        });
+    }
+
     // ===== ВСТАВКА =====
 
     function insertButton() {
@@ -188,6 +271,7 @@ BX.ready(function () {
             content.style.display = isCollapsed ? 'none' : 'block';
             document.getElementById('crystal-toggle-arrow').textContent = isCollapsed ? '▶' : '▼';
             localStorage.setItem(STORAGE_KEY, isCollapsed ? 'true' : 'false');
+            if (!isCollapsed) loadShippingData();
         });
 
         wrapper.appendChild(toggleBtn);
@@ -401,16 +485,22 @@ BX.ready(function () {
             });
         });
 
+        var shippingSection = document.createElement('div');
+        shippingSection.id = 'crystal-shipping-data';
+        shippingSection.style.cssText = 'margin-top:8px;border-top:1px solid #e0e0e0;padding-top:6px;';
+
         content.appendChild(hint);
         content.appendChild(feedback);
         content.appendChild(rhenusBtn);
         content.appendChild(dsvBtn);
         content.appendChild(rabenBtn);
         content.appendChild(pythonBtn);
+        content.appendChild(shippingSection);
         wrapper.appendChild(content);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
         updateFeedback();
+        if (!isCollapsed) loadShippingData();
     }
 
     var sidebarObserver = new MutationObserver(function () {
