@@ -323,7 +323,7 @@ BX.ready(function () {
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
 
-        var BTN_STYLE = 'box-sizing:border-box;width:100%;padding:7px 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;opacity:1;transition:opacity .15s;';
+        var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
 
         var rhenusBtn = document.createElement('button');
         rhenusBtn.id = 'crystal-rhenus-btn';
