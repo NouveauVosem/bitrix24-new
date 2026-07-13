@@ -348,30 +348,31 @@ BX.ready(function () {
         return String(carrier || '').trim().toLowerCase();
     }
 
-    // Общая логика запроса к перевозчику: попап с логом, чтение SSE-потока (status/result/error),
-    // управление disabled-состоянием кнопки. Используется и для просчёта, и для заказа.
+    // Общая логика запроса к перевозчику: один переиспользуемый попап с логом на все
+    // просчёты/заказы (не пересоздаётся на каждый клик — это раньше приводило к дублям id
+    // и "зависанию" лога на старом скрытом попапе после повторного клика), чтение SSE-потока
+    // (status/result/error), управление disabled-состоянием кнопки.
     var STOPCALC_ENDPOINT = 'https://alvla.services/api/stopcalc';
+    var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
 
-    function sendCarrierRequest(opts) {
-        var key        = opts.key;
-        var title      = opts.title;
-        var endpoint   = opts.endpoint;
-        var payload    = opts.payload;
-        var btn        = opts.button;
-        var carrierKey = opts.carrierKey;
-        var dealId     = payload.dealId;
+    var sharedLogPopup = null;
+    var sharedLogDiv = null;
+    var sharedStopBtn = null;
+    var sharedActiveCarrierKey = null;
+    var sharedActiveDealId = null;
 
-        var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
+    function getLogPopup() {
+        if (sharedLogPopup) return sharedLogPopup;
 
-        var popup = new BX.PopupWindow('crystal-' + key + '-log-popup', null, {
-            titleBar: title,
-            content: '<div id="crystal-' + key + '-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
+        sharedLogPopup = new BX.PopupWindow('crystal-carrier-log-popup', null, {
+            titleBar: 'Crystal — лог запросов',
+            content: '<div id="crystal-carrier-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;"></div>'
                 + '<div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
                 + '<label style="cursor:pointer;user-select:none;font-size:12px;color:#666;">'
-                + '<input type="checkbox" id="crystal-sse-autoclose-chk-' + key + '" style="margin-right:5px;cursor:pointer;">'
+                + '<input type="checkbox" id="crystal-carrier-log-autoclose" style="margin-right:5px;cursor:pointer;">'
                 + 'Закрыть после завершения'
                 + '</label>'
-                + '<button id="crystal-stop-btn-' + key + '" style="font-size:12px;padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Стоп</button>'
+                + '<button id="crystal-carrier-log-stop" style="font-size:12px;padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Стоп</button>'
                 + '</div>',
             closeByEsc: true,
             autoHide: false,
@@ -379,51 +380,77 @@ BX.ready(function () {
             closeIcon: { show: true },
             buttons: []
         });
-        popup.show();
+        sharedLogPopup.show();
 
-        var logDiv = document.getElementById('crystal-' + key + '-log');
-        var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-' + key);
+        sharedLogDiv = document.getElementById('crystal-carrier-log');
+
+        var autocloseChk = document.getElementById('crystal-carrier-log-autoclose');
         autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
         autocloseChk.addEventListener('change', function() {
             localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
         });
 
-        var stopBtn = document.getElementById('crystal-stop-btn-' + key);
-        stopBtn.addEventListener('click', function() {
-            stopBtn.disabled = true;
-            stopBtn.textContent = '⌛ Останавливаю...';
+        sharedStopBtn = document.getElementById('crystal-carrier-log-stop');
+        sharedStopBtn.addEventListener('click', function() {
+            if (!sharedActiveCarrierKey || !sharedActiveDealId) return;
+
+            sharedStopBtn.disabled = true;
+            sharedStopBtn.textContent = '⌛ Останавливаю...';
 
             fetch(STOPCALC_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ carrierKey: carrierKey, dealId: dealId })
+                body: JSON.stringify({ carrierKey: sharedActiveCarrierKey, dealId: sharedActiveDealId })
             })
             .then(function(res) {
                 return res.json().then(function(data) { return { ok: res.ok, status: res.status, data: data }; });
             })
             .then(function(result) {
                 if (result.ok && result.data.stopped) {
-                    logDiv.innerHTML += '<br><b style="color:#d97706">⏹ Остановлено пользователем</b>';
-                    stopBtn.textContent = 'Остановлено';
-                    if (btn) btn.disabled = false;
+                    sharedLogDiv.innerHTML += '<br><b style="color:#d97706">⏹ Остановлено пользователем</b>';
+                    sharedStopBtn.textContent = 'Остановлено';
                 } else if (result.status === 404) {
-                    logDiv.innerHTML += '<br><span style="color:#888;">Активная задача не найдена (уже завершена)</span>';
-                    stopBtn.disabled = false;
-                    stopBtn.textContent = 'Стоп';
+                    sharedLogDiv.innerHTML += '<br><span style="color:#888;">Активная задача не найдена (уже завершена)</span>';
+                    sharedStopBtn.disabled = false;
+                    sharedStopBtn.textContent = 'Стоп';
                 } else {
-                    logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + (result.data.error || 'Ошибка остановки') + '</b>';
-                    stopBtn.disabled = false;
-                    stopBtn.textContent = 'Стоп';
+                    sharedLogDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + (result.data.error || 'Ошибка остановки') + '</b>';
+                    sharedStopBtn.disabled = false;
+                    sharedStopBtn.textContent = 'Стоп';
                 }
-                logDiv.scrollTop = logDiv.scrollHeight;
+                sharedLogDiv.scrollTop = sharedLogDiv.scrollHeight;
             })
             .catch(function(err) {
-                logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса остановки</b>';
-                stopBtn.disabled = false;
-                stopBtn.textContent = 'Стоп';
+                sharedLogDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса остановки</b>';
+                sharedStopBtn.disabled = false;
+                sharedStopBtn.textContent = 'Стоп';
                 console.error('Stop calc error:', err);
             });
         });
+
+        return sharedLogPopup;
+    }
+
+    function sendCarrierRequest(opts) {
+        var title      = opts.title;
+        var endpoint   = opts.endpoint;
+        var payload    = opts.payload;
+        var btn        = opts.button;
+        var carrierKey = opts.carrierKey;
+        var dealId     = payload.dealId;
+
+        var popup = getLogPopup();
+        popup.show();
+
+        sharedActiveCarrierKey = carrierKey;
+        sharedActiveDealId = dealId;
+        sharedStopBtn.disabled = false;
+        sharedStopBtn.textContent = 'Стоп';
+
+        var logDiv = sharedLogDiv;
+        logDiv.innerHTML += (logDiv.innerHTML ? '<br>' : '')
+            + '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;color:#888;">— ' + title + ' —</div>Запрос отправлен...';
+        logDiv.scrollTop = logDiv.scrollHeight;
 
         if (btn) btn.disabled = true;
 
@@ -442,7 +469,7 @@ BX.ready(function () {
                 reader.read().then(function(chunk) {
                     if (chunk.done) {
                         if (btn) btn.disabled = false;
-                        stopBtn.disabled = true;
+                        sharedStopBtn.disabled = true;
                         return;
                     }
                     buffer += decoder.decode(chunk.value, { stream: true });
@@ -462,12 +489,12 @@ BX.ready(function () {
                         } else if (type === 'result') {
                             logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
                             if (btn) btn.disabled = false;
-                            stopBtn.disabled = true;
+                            sharedStopBtn.disabled = true;
                             if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
                         } else if (type === 'error') {
                             logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
                             if (btn) btn.disabled = false;
-                            stopBtn.disabled = true;
+                            sharedStopBtn.disabled = true;
                         }
                         logDiv.scrollTop = logDiv.scrollHeight;
                     });
@@ -480,7 +507,7 @@ BX.ready(function () {
         .catch(function(err) {
             if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
             if (btn) btn.disabled = false;
-            stopBtn.disabled = true;
+            sharedStopBtn.disabled = true;
             console.error(title + ' error:', err);
         });
     }
@@ -504,7 +531,6 @@ BX.ready(function () {
         if (!parsed) return alert('Не удалось получить данные доставки со сделки');
 
         sendCarrierRequest({
-            key: key + '-order',
             carrierKey: key + 'order',
             title: 'Заказ ' + carrier,
             endpoint: endpoint,
@@ -616,7 +642,6 @@ BX.ready(function () {
                 var parsed = parseDeliveryData();
 
                 sendCarrierRequest({
-                    key: key,
                     carrierKey: key,
                     title: 'Расчёт ' + label,
                     endpoint: endpoint,
