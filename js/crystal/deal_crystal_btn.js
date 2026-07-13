@@ -330,7 +330,7 @@ BX.ready(function () {
 
     function buildDeliveryData(parsed) {
         return {
-            from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+            from: { company: parsed.billingCompany || 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
             to: Object.assign({ company: dealCompanyName }, parsed.to),
             units: parsed.units.map(function(u) {
                 return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
