@@ -71,10 +71,10 @@ BX.ready(function () {
 
         palletLines.forEach(function(line) {
             var qtyMatch = line.match(/-*\s*(\d+)\s*шт/i);
-            var qtyPrefixMatch = !qtyMatch ? line.match(/^(\d{1,2})\*\d{2,}/) : null;
+            var qtyPrefixMatch = !qtyMatch ? line.match(/^(\d{1,2})\*\s*\d{2,}/) : null;
             var quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : (qtyPrefixMatch ? parseInt(qtyPrefixMatch[1], 10) : 1);
 
-            var sizeMatch = line.match(/(\d{2,5})\s*\*\s*(\d{1,5})\s*[HНhн]?\s*(\d{2,4})?/i);
+            var sizeMatch = line.match(/(\d{2,5})\s*\*\s*(\d{1,5})\s*[*HНhн]?\s*(\d{2,4})?/i);
             var length = sizeMatch ? parseInt(sizeMatch[1], 10) : null;
             var width  = sizeMatch ? parseInt(sizeMatch[2], 10) : null;
             var height = sizeMatch ? parseInt(sizeMatch[3], 10) : null;
