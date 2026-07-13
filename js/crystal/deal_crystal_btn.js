@@ -15,6 +15,7 @@ BX.ready(function () {
     // на сделке нет, поэтому берём компанию-заказчика (не всегда совпадает с получателем груза).
 
     var dealCompanyName = '';
+    var dealCompanyLoaded = false;
 
     (function loadDealCompanyName() {
         var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -30,7 +31,11 @@ BX.ready(function () {
         .then(function (resp) {
             dealCompanyName = (resp && resp.company && resp.company.name) ? resp.company.name : '';
         })
-        .catch(function () { dealCompanyName = ''; });
+        .catch(function () { dealCompanyName = ''; })
+        .then(function () {
+            dealCompanyLoaded = true;
+            updateFeedback();
+        });
     })();
 
     // ===== ПАРСЕР =====
@@ -164,6 +169,15 @@ BX.ready(function () {
 
         // Адрес
         lines.push('<b>Адрес:</b>');
+        var companyLine;
+        if (!dealCompanyLoaded) {
+            companyLine = '<span style="color:#888;">⌛ загрузка...</span>';
+        } else if (dealCompanyName) {
+            companyLine = dealCompanyName;
+        } else {
+            companyLine = '<span style="color:#888;">не указана</span>';
+        }
+        lines.push('&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(заказчик)</span>: ' + companyLine);
         lines.push('&nbsp; Улица: '  + (data.to.street  || '-'));
         lines.push('&nbsp; Индекс: ' + (data.to.zipcode || '-'));
         lines.push('&nbsp; Город: '  + (data.to.city    || '-'));
