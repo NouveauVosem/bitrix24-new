@@ -59,7 +59,7 @@ BX.ready(function () {
 
         // --- Паллеты ---
         var units = [];
-        var lines = goodsRaw.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(Boolean);
+        var lines = goodsRaw.split(/[\r\n,]+/).map(function(l) { return l.trim(); }).filter(Boolean);
 
         var weightLine  = lines.find(function(l) { return /[\d,.]+\s*кг/i.test(l); });
         var weightMatch = weightLine ? weightLine.match(/([\d,.]+)\s*кг/i) : null;
@@ -71,7 +71,8 @@ BX.ready(function () {
 
         palletLines.forEach(function(line) {
             var qtyMatch = line.match(/-*\s*(\d+)\s*шт/i);
-            var quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            var qtyPrefixMatch = !qtyMatch ? line.match(/^(\d{1,2})\*\d{2,}/) : null;
+            var quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : (qtyPrefixMatch ? parseInt(qtyPrefixMatch[1], 10) : 1);
 
             var sizeMatch = line.match(/(\d{2,5})\s*\*\s*(\d{1,5})\s*[HНhн]?\s*(\d{2,4})?/i);
             var length = sizeMatch ? parseInt(sizeMatch[1], 10) : null;
