@@ -14,6 +14,8 @@ BX.ready(function () {
     function parseDeliveryData() {
         var dimensionsEl = document.querySelector('[data-cid="UF_CRM_1720510082918"] .field-item');
         var weightEl     = document.querySelector('[data-cid="UF_CRM_1720510115556"] .field-item');
+        var actualDimensionsEl = document.querySelector('[data-cid="UF_CRM_1727792811056"] .field-item');
+        var actualWeightEl     = document.querySelector('[data-cid="UF_CRM_1754911404492"] .field-item');
         var addressEl    = document.querySelector('[data-cid="UF_CRM_1714139787401"] .field-item');
         var countryEl  = document.querySelector('[data-cid="UF_CRM_67BF208ADD735"] .field-item');
         var cityEl     = document.querySelector('[data-cid="UF_CRM_1720604913416"] .field-item');
@@ -21,10 +23,20 @@ BX.ready(function () {
         var streetEl   = document.querySelector('[data-cid="UF_CRM_1720604937540"] .field-item');
         var houseEl    = document.querySelector('[data-cid="UF_CRM_1720604951910"] .field-item');
 
-        if (!dimensionsEl && !weightEl && !addressEl && !cityEl) return null;
+        if (!dimensionsEl && !weightEl && !actualDimensionsEl && !actualWeightEl && !addressEl && !cityEl) return null;
 
-        var dimensions = dimensionsEl ? dimensionsEl.textContent.trim().replace(/шт\s+/gi, 'шт\n') : '';
-        var weight     = weightEl     ? weightEl.textContent.trim() : '';
+        // Фактические поля (заполняются после сборки груза) имеют приоритет над расчётными
+        var actualDimText    = actualDimensionsEl ? actualDimensionsEl.textContent.trim() : '';
+        var actualWeightText = actualWeightEl     ? actualWeightEl.textContent.trim()     : '';
+
+        var dimensionsSource = actualDimText    ? 'actual' : 'calculated';
+        var weightSource     = actualWeightText ? 'actual' : 'calculated';
+
+        var dimensionsRaw = actualDimText    || (dimensionsEl ? dimensionsEl.textContent.trim() : '');
+        var weightRaw     = actualWeightText || (weightEl     ? weightEl.textContent.trim()     : '');
+
+        var dimensions = dimensionsRaw.replace(/шт\s+/gi, 'шт\n');
+        var weight     = weightRaw;
         var goodsRaw   = (dimensions + '\n' + weight)
             .replace(/[xх]/gi, '*')
             .trim();
@@ -96,10 +108,22 @@ BX.ready(function () {
             });
         }
 
-        return { to: to, units: units, totalWeight: totalWeight };
+        return { to: to, units: units, totalWeight: totalWeight, source: { dimensions: dimensionsSource, weight: weightSource } };
     }
 
     // ===== ФИДБЕК =====
+
+    function sourceBadge(source) {
+        if (!source) return '';
+        var d = source.dimensions === 'actual';
+        var w = source.weight === 'actual';
+
+        if (d && w) return '<span style="color:#16a34a;font-weight:bold;">(факт)</span>';
+        if (!d && !w) return '<span style="color:#888;font-weight:normal;">(расчёт)</span>';
+
+        return '<span style="color:#d97706;font-weight:bold;">(габариты: '
+            + (d ? 'факт' : 'расчёт') + ', вес: ' + (w ? 'факт' : 'расчёт') + ')</span>';
+    }
 
     function updateFeedback() {
         var feedback = document.getElementById(FEEDBACK_ID);
@@ -123,7 +147,7 @@ BX.ready(function () {
 
         // Юниты
         if (data.units.length > 0) {
-            lines.push('<b>Груз:</b>');
+            lines.push('<b>Груз:</b> ' + sourceBadge(data.source));
             data.units.forEach(function(u, i) {
                 var desc = 'Юнит ' + (i + 1) + ': ' + u.quantity + ' шт';
                 desc += ', ' + (u.length && u.width ? u.length + 'x' + u.width + (u.height ? 'x' + u.height : '') + ' см' : '-');
