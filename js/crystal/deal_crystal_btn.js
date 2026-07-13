@@ -51,8 +51,13 @@ BX.ready(function () {
         var zipcodeEl  = document.querySelector('[data-cid="UF_CRM_1720604926030"] .field-item');
         var streetEl   = document.querySelector('[data-cid="UF_CRM_1720604937540"] .field-item');
         var houseEl    = document.querySelector('[data-cid="UF_CRM_1720604951910"] .field-item');
+        var senderEl   = document.querySelector('[data-cid="UF_CRM_1759477391218"] .field-item');
+        var billingCompanyEl = document.querySelector('[data-cid="UF_CRM_1718209313308"] .field-item');
 
         if (!dimensionsEl && !weightEl && !actualDimensionsEl && !actualWeightEl && !addressEl && !cityEl) return null;
+
+        var senderRaw = senderEl ? senderEl.textContent.trim() : '';
+        var billingCompanyRaw = billingCompanyEl ? billingCompanyEl.textContent.trim() : '';
 
         // Фактические поля (заполняются после сборки груза) имеют приоритет над расчётными
         var actualDimText    = actualDimensionsEl ? actualDimensionsEl.textContent.trim() : '';
@@ -137,7 +142,7 @@ BX.ready(function () {
             });
         }
 
-        return { to: to, units: units, totalWeight: totalWeight, source: { dimensions: dimensionsSource, weight: weightSource } };
+        return { to: to, sender: senderRaw, billingCompany: billingCompanyRaw, units: units, totalWeight: totalWeight, source: { dimensions: dimensionsSource, weight: weightSource } };
     }
 
     // ===== ФИДБЕК =====
@@ -167,8 +172,13 @@ BX.ready(function () {
         var lines = [];
         lines.push('<div class="crystal-feedback-body">');
 
-        // Адрес
-        lines.push('<b>Адрес:</b>');
+        // Отправитель
+        lines.push('<b>Отправитель:</b>');
+        lines.push('&nbsp; ' + (data.sender || '-'));
+        lines.push('&nbsp; Плательщик (инвойс за доставку): ' + (data.billingCompany || '-'));
+
+        // Получатель
+        lines.push('<b>Получатель:</b>');
         var companyLine;
         if (!dealCompanyLoaded) {
             companyLine = '<span style="color:#888;">⌛ загрузка...</span>';
