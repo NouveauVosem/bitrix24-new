@@ -61,8 +61,9 @@ BX.ready(function () {
         var units = [];
         var lines = goodsRaw.split(/[\r\n,]+/).map(function(l) { return l.trim(); }).filter(Boolean);
 
-        var weightLine  = lines.find(function(l) { return /[\d,.]+\s*кг/i.test(l); });
-        var weightMatch = weightLine ? weightLine.match(/([\d,.]+)\s*кг/i) : null;
+        var weightLine  = lines.find(function(l) { return /[\d,.]+\s*кг/i.test(l); })
+                       || lines.find(function(l) { return /^\d[\d\s,.]*$/.test(l); });
+        var weightMatch = weightLine ? (weightLine.match(/([\d,.]+)\s*кг/i) || weightLine.match(/([\d,.]+)/)) : null;
         var totalWeight = weightMatch ? parseFloat(weightMatch[1].replace(',', '.')) : null;
 
         var palletLines = lines.filter(function(l) {
