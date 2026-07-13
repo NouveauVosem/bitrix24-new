@@ -262,18 +262,22 @@ BX.ready(function () {
                 html += '<div style="color:#888;font-size:11px;padding:2px 0;">Нет данных</div>';
             } else {
                 html += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:4px;">';
-                html += '<tr style="color:#666;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px 4px;">Перевозчик</th><th style="text-align:left;padding:2px 4px;">Цена</th><th style="text-align:left;padding:2px 4px;">Куда</th><th style="text-align:left;padding:2px 4px;">Дата</th></tr>';
+                html += '<tr style="color:#666;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px 4px;">Перевозчик</th><th style="text-align:left;padding:2px 4px;">Цена</th><th style="text-align:left;padding:2px 4px;">Куда</th><th style="text-align:left;padding:2px 4px;">Дата</th><th></th></tr>';
                 quotes.forEach(function(q) {
                     var priceCell = q.price
                         ? '<b>' + parseFloat(q.price).toFixed(2) + '</b>'
                         : (q.error ? '<span style="color:#c00;" title="' + q.error.replace(/"/g, '&quot;') + '">Ошибка</span>' : '—');
                     var dest = [q.toCity, q.toCountry].filter(Boolean).join(', ');
                     var date = q.createdAt ? new Date(q.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+                    var orderCell = q.price
+                        ? '<button class="crystal-order-btn" data-carrier="' + String(q.carrier || '').replace(/"/g, '&quot;') + '" data-price="' + q.price + '" style="font-size:10px;padding:2px 6px;border:none;border-radius:3px;background:#2d6cdf;color:#fff;cursor:pointer;">Заказать</button>'
+                        : '';
                     html += '<tr style="border-bottom:1px solid #f5f5f5;">';
                     html += '<td style="padding:2px 4px;">' + (q.carrier || '—') + '</td>';
                     html += '<td style="padding:2px 4px;">' + priceCell + '</td>';
                     html += '<td style="padding:2px 4px;">' + dest + '</td>';
                     html += '<td style="padding:2px 4px;color:#888;">' + date + '</td>';
+                    html += '<td style="padding:2px 4px;">' + orderCell + '</td>';
                     html += '</tr>';
                 });
                 html += '</table>';
@@ -308,9 +312,160 @@ BX.ready(function () {
             html += '</div>';
 
             section.innerHTML = html;
+
+            if (!section.dataset.orderBound) {
+                section.dataset.orderBound = '1';
+                section.addEventListener('click', function (e) {
+                    var btn = e.target.closest && e.target.closest('.crystal-order-btn');
+                    if (btn) orderTransport(btn);
+                });
+            }
         }).catch(function(err) {
             section.innerHTML = '<div style="color:#c00;font-size:11px;">Ошибка загрузки данных доставки</div>';
             console.error('[Crystal] shipping data error:', err);
+        });
+    }
+
+    // ===== ЗАПРОСЫ К ПЕРЕВОЗЧИКАМ (просчёт и заказ) =====
+
+    function buildDeliveryData(parsed) {
+        return {
+            from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+            to: Object.assign({ company: dealCompanyName }, parsed.to),
+            units: parsed.units.map(function(u) {
+                return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+            })
+        };
+    }
+
+    // Заказ (реальное бронирование) подключается по мере готовности бэкенда для каждого
+    // перевозчика — пока есть только DSV. Ключ — нормализованное название из q.carrier.
+    var ORDER_ENDPOINTS = {
+        dsv: 'https://alvla.services/api/dsvorder'
+    };
+
+    function normalizeCarrierKey(carrier) {
+        return String(carrier || '').trim().toLowerCase();
+    }
+
+    // Общая логика запроса к перевозчику: попап с логом, чтение SSE-потока (status/result/error),
+    // управление disabled-состоянием кнопки. Используется и для просчёта, и для заказа.
+    function sendCarrierRequest(opts) {
+        var key      = opts.key;
+        var title    = opts.title;
+        var endpoint = opts.endpoint;
+        var payload  = opts.payload;
+        var btn      = opts.button;
+
+        var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
+
+        var popup = new BX.PopupWindow('crystal-' + key + '-log-popup', null, {
+            titleBar: title,
+            content: '<div id="crystal-' + key + '-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
+                + '<div style="margin-top:8px;font-size:12px;color:#666;">'
+                + '<label style="cursor:pointer;user-select:none;">'
+                + '<input type="checkbox" id="crystal-sse-autoclose-chk-' + key + '" style="margin-right:5px;cursor:pointer;">'
+                + 'Закрыть после завершения'
+                + '</label></div>',
+            closeByEsc: true,
+            autoHide: false,
+            overlay: false,
+            closeIcon: { show: true },
+            buttons: []
+        });
+        popup.show();
+
+        var logDiv = document.getElementById('crystal-' + key + '-log');
+        var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-' + key);
+        autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
+        autocloseChk.addEventListener('change', function() {
+            localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
+        });
+
+        if (btn) btn.disabled = true;
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            function read() {
+                reader.read().then(function(chunk) {
+                    if (chunk.done) {
+                        if (btn) btn.disabled = false;
+                        return;
+                    }
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+
+                    parts.forEach(function(part) {
+                        var eventMatch = part.match(/^event:\s*(\w+)/m);
+                        var dataMatch  = part.match(/^data:\s*(.+)/m);
+                        if (!eventMatch || !dataMatch) return;
+                        var type = eventMatch[1];
+                        var data;
+                        try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
+
+                        if (type === 'status') {
+                            logDiv.innerHTML += '<br>' + data.message;
+                        } else if (type === 'result') {
+                            logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
+                            if (btn) btn.disabled = false;
+                            if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
+                        } else if (type === 'error') {
+                            logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
+                            if (btn) btn.disabled = false;
+                        }
+                        logDiv.scrollTop = logDiv.scrollHeight;
+                    });
+
+                    read();
+                });
+            }
+            read();
+        })
+        .catch(function(err) {
+            if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
+            if (btn) btn.disabled = false;
+            console.error(title + ' error:', err);
+        });
+    }
+
+    function orderTransport(btn) {
+        var carrier  = btn.getAttribute('data-carrier') || '';
+        var price    = parseFloat(btn.getAttribute('data-price'));
+        var key      = normalizeCarrierKey(carrier);
+        var endpoint = ORDER_ENDPOINTS[key];
+
+        if (!endpoint) {
+            alert('Заказ для перевозчика «' + carrier + '» пока не подключён');
+            return;
+        }
+
+        var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+        var dealId = dealMatch ? dealMatch[1] : null;
+        if (!dealId) return alert('Не удалось определить ID сделки');
+
+        var parsed = parseDeliveryData();
+        if (!parsed) return alert('Не удалось получить данные доставки со сделки');
+
+        sendCarrierRequest({
+            key: key + '-order',
+            title: 'Заказ ' + carrier,
+            endpoint: endpoint,
+            payload: {
+                deliveryData: buildDeliveryData(parsed),
+                expectedPrice: isNaN(price) ? null : price,
+                dealId: dealId
+            },
+            button: btn
         });
     }
 
@@ -411,92 +566,13 @@ BX.ready(function () {
                 if (!dealId) return alert('Не удалось определить ID сделки');
 
                 var parsed = parseDeliveryData();
-                var deliveryData = {
-                    from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                    to: Object.assign({ company: dealCompanyName }, parsed.to),
-                    units: parsed.units.map(function(u) {
-                        return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
-                    })
-                };
 
-                var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
-
-                var popup = new BX.PopupWindow('crystal-' + key + '-log-popup', null, {
-                    titleBar: 'Расчёт ' + label,
-                    content: '<div id="crystal-' + key + '-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
-                        + '<div style="margin-top:8px;font-size:12px;color:#666;">'
-                        + '<label style="cursor:pointer;user-select:none;">'
-                        + '<input type="checkbox" id="crystal-sse-autoclose-chk-' + key + '" style="margin-right:5px;cursor:pointer;">'
-                        + 'Закрыть после просчёта'
-                        + '</label></div>',
-                    closeByEsc: true,
-                    autoHide: false,
-                    overlay: false,
-                    closeIcon: { show: true },
-                    buttons: []
-                });
-                popup.show();
-
-                var logDiv = document.getElementById('crystal-' + key + '-log');
-                var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-' + key);
-                autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
-                autocloseChk.addEventListener('change', function() {
-                    localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
-                });
-
-                btn.disabled = true;
-
-                fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
-                })
-                .then(function(res) {
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    var reader = res.body.getReader();
-                    var decoder = new TextDecoder();
-                    var buffer = '';
-
-                    function read() {
-                        reader.read().then(function(chunk) {
-                            if (chunk.done) {
-                                btn.disabled = false;
-                                return;
-                            }
-                            buffer += decoder.decode(chunk.value, { stream: true });
-                            var parts = buffer.split('\n\n');
-                            buffer = parts.pop();
-
-                            parts.forEach(function(part) {
-                                var eventMatch = part.match(/^event:\s*(\w+)/m);
-                                var dataMatch  = part.match(/^data:\s*(.+)/m);
-                                if (!eventMatch || !dataMatch) return;
-                                var type = eventMatch[1];
-                                var data;
-                                try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
-
-                                if (type === 'status') {
-                                    logDiv.innerHTML += '<br>' + data.message;
-                                } else if (type === 'result') {
-                                    logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
-                                    btn.disabled = false;
-                                    if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
-                                } else if (type === 'error') {
-                                    logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
-                                    btn.disabled = false;
-                                }
-                                logDiv.scrollTop = logDiv.scrollHeight;
-                            });
-
-                            read();
-                        });
-                    }
-                    read();
-                })
-                .catch(function(err) {
-                    if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
-                    btn.disabled = false;
-                    console.error(label + ' SSE error:', err);
+                sendCarrierRequest({
+                    key: key,
+                    title: 'Расчёт ' + label,
+                    endpoint: endpoint,
+                    payload: { deliveryData: buildDeliveryData(parsed), dealId: dealId },
+                    button: btn
                 });
             });
 
@@ -518,13 +594,7 @@ BX.ready(function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
 
-            var deliveryData = {
-                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: dealCompanyName }, parsed.to),
-                units: parsed.units.map(function(u) {
-                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
-                })
-            };
+            var deliveryData = buildDeliveryData(parsed);
 
             pythonBtn.disabled = true;
             pythonBtn.textContent = '⌛ Отправляю...';
