@@ -9,6 +9,30 @@ BX.ready(function () {
     var FEEDBACK_ID = 'crystal-feedback';
     var CRYSTAL_API = 'https://crystal.alvla.tools';
 
+    // ===== КОМПАНИЯ СДЕЛКИ =====
+    // Реальное название компании, привязанной к сделке (COMPANY_ID). Используется как
+    // получатель (to.company) при просчёте доставки — отдельного поля "компания-получатель"
+    // на сделке нет, поэтому берём компанию-заказчика (не всегда совпадает с получателем груза).
+
+    var dealCompanyName = '';
+
+    (function loadDealCompanyName() {
+        var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+        var dealId = dealMatch ? dealMatch[1] : null;
+        if (!dealId) return;
+
+        fetch('/local/ajax/crystal/get_deal_company.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'dealId=' + encodeURIComponent(dealId)
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (resp) {
+            dealCompanyName = (resp && resp.company && resp.company.name) ? resp.company.name : '';
+        })
+        .catch(function () { dealCompanyName = ''; });
+    })();
+
     // ===== ПАРСЕР =====
 
     function parseDeliveryData() {
@@ -351,302 +375,113 @@ BX.ready(function () {
 
         var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
 
-        var rhenusBtn = document.createElement('button');
-        rhenusBtn.id = 'crystal-rhenus-btn';
-        rhenusBtn.style.cssText = BTN_STYLE + 'background:#2563eb;';
-        rhenusBtn.textContent = 'Rhenus';
-        rhenusBtn.addEventListener('click', function () {
-            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
-            var dealId = dealMatch ? dealMatch[1] : null;
-            if (!dealId) return alert('Не удалось определить ID сделки');
+        function createCarrierButton(key, label, color, endpoint) {
+            var btn = document.createElement('button');
+            btn.id = 'crystal-' + key + '-btn';
+            btn.style.cssText = BTN_STYLE + 'background:' + color + ';';
+            btn.textContent = label;
 
-            var parsed = parseDeliveryData();
-            var deliveryData = {
-                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: '' }, parsed.to),
-                units: parsed.units.map(function(u) {
-                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+            btn.addEventListener('click', function () {
+                var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
+                var dealId = dealMatch ? dealMatch[1] : null;
+                if (!dealId) return alert('Не удалось определить ID сделки');
+
+                var parsed = parseDeliveryData();
+                var deliveryData = {
+                    from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
+                    to: Object.assign({ company: dealCompanyName }, parsed.to),
+                    units: parsed.units.map(function(u) {
+                        return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+                    })
+                };
+
+                var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
+
+                var popup = new BX.PopupWindow('crystal-' + key + '-log-popup', null, {
+                    titleBar: 'Расчёт ' + label,
+                    content: '<div id="crystal-' + key + '-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
+                        + '<div style="margin-top:8px;font-size:12px;color:#666;">'
+                        + '<label style="cursor:pointer;user-select:none;">'
+                        + '<input type="checkbox" id="crystal-sse-autoclose-chk-' + key + '" style="margin-right:5px;cursor:pointer;">'
+                        + 'Закрыть после просчёта'
+                        + '</label></div>',
+                    closeByEsc: true,
+                    autoHide: false,
+                    overlay: false,
+                    closeIcon: { show: true },
+                    buttons: []
+                });
+                popup.show();
+
+                var logDiv = document.getElementById('crystal-' + key + '-log');
+                var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-' + key);
+                autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
+                autocloseChk.addEventListener('change', function() {
+                    localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
+                });
+
+                btn.disabled = true;
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
                 })
-            };
+                .then(function(res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    var reader = res.body.getReader();
+                    var decoder = new TextDecoder();
+                    var buffer = '';
 
-            var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
-
-            var popup = new BX.PopupWindow('crystal-rhenus-log-popup', null, {
-                titleBar: 'Расчёт Rhenus',
-                content: '<div id="crystal-rhenus-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
-                    + '<div style="margin-top:8px;font-size:12px;color:#666;">'
-                    + '<label style="cursor:pointer;user-select:none;">'
-                    + '<input type="checkbox" id="crystal-sse-autoclose-chk-rhenus" style="margin-right:5px;cursor:pointer;">'
-                    + 'Закрыть после просчёта'
-                    + '</label></div>',
-                closeByEsc: true,
-                autoHide: false,
-                overlay: false,
-                closeIcon: { show: true },
-                buttons: []
-            });
-            popup.show();
-
-            var logDiv = document.getElementById('crystal-rhenus-log');
-            var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-rhenus');
-            autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
-            autocloseChk.addEventListener('change', function() {
-                localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
-            });
-
-            rhenusBtn.disabled = true;
-
-            fetch('https://alvla.services/api/rhenusquat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
-            })
-            .then(function(res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                var reader = res.body.getReader();
-                var decoder = new TextDecoder();
-                var buffer = '';
-
-                function read() {
-                    reader.read().then(function(chunk) {
-                        if (chunk.done) {
-                            rhenusBtn.disabled = false;
-                            return;
-                        }
-                        buffer += decoder.decode(chunk.value, { stream: true });
-                        var parts = buffer.split('\n\n');
-                        buffer = parts.pop();
-
-                        parts.forEach(function(part) {
-                            var eventMatch = part.match(/^event:\s*(\w+)/m);
-                            var dataMatch  = part.match(/^data:\s*(.+)/m);
-                            if (!eventMatch || !dataMatch) return;
-                            var type = eventMatch[1];
-                            var data;
-                            try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
-
-                            if (type === 'status') {
-                                logDiv.innerHTML += '<br>' + data.message;
-                            } else if (type === 'result') {
-                                logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
-                                rhenusBtn.disabled = false;
-                                if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
-                            } else if (type === 'error') {
-                                logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
-                                rhenusBtn.disabled = false;
+                    function read() {
+                        reader.read().then(function(chunk) {
+                            if (chunk.done) {
+                                btn.disabled = false;
+                                return;
                             }
-                            logDiv.scrollTop = logDiv.scrollHeight;
+                            buffer += decoder.decode(chunk.value, { stream: true });
+                            var parts = buffer.split('\n\n');
+                            buffer = parts.pop();
+
+                            parts.forEach(function(part) {
+                                var eventMatch = part.match(/^event:\s*(\w+)/m);
+                                var dataMatch  = part.match(/^data:\s*(.+)/m);
+                                if (!eventMatch || !dataMatch) return;
+                                var type = eventMatch[1];
+                                var data;
+                                try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
+
+                                if (type === 'status') {
+                                    logDiv.innerHTML += '<br>' + data.message;
+                                } else if (type === 'result') {
+                                    logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
+                                    btn.disabled = false;
+                                    if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
+                                } else if (type === 'error') {
+                                    logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
+                                    btn.disabled = false;
+                                }
+                                logDiv.scrollTop = logDiv.scrollHeight;
+                            });
+
+                            read();
                         });
-
-                        read();
-                    });
-                }
-                read();
-            })
-            .catch(function(err) {
-                if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
-                rhenusBtn.disabled = false;
-                console.error('Rhenus SSE error:', err);
-            });
-        });
-
-        var dsvBtn = document.createElement('button');
-        dsvBtn.id = 'crystal-dsv-btn';
-        dsvBtn.style.cssText = BTN_STYLE + 'background:#16a34a;';
-        dsvBtn.textContent = 'DSV';
-        dsvBtn.addEventListener('click', function () {
-            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
-            var dealId = dealMatch ? dealMatch[1] : null;
-            if (!dealId) return alert('Не удалось определить ID сделки');
-
-            var parsed = parseDeliveryData();
-            var deliveryData = {
-                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: '' }, parsed.to),
-                units: parsed.units.map(function(u) {
-                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
+                    }
+                    read();
                 })
-            };
-
-            var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
-
-            var popup = new BX.PopupWindow('crystal-dsv-log-popup', null, {
-                titleBar: 'Расчёт DSV',
-                content: '<div id="crystal-dsv-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
-                    + '<div style="margin-top:8px;font-size:12px;color:#666;">'
-                    + '<label style="cursor:pointer;user-select:none;">'
-                    + '<input type="checkbox" id="crystal-sse-autoclose-chk" style="margin-right:5px;cursor:pointer;">'
-                    + 'Закрыть после просчёта'
-                    + '</label></div>',
-                closeByEsc: true,
-                autoHide: false,
-                overlay: false,
-                closeIcon: { show: true },
-                buttons: []
-            });
-            popup.show();
-
-            var logDiv = document.getElementById('crystal-dsv-log');
-            var autocloseChk = document.getElementById('crystal-sse-autoclose-chk');
-            autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
-            autocloseChk.addEventListener('change', function() {
-                localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
+                .catch(function(err) {
+                    if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
+                    btn.disabled = false;
+                    console.error(label + ' SSE error:', err);
+                });
             });
 
-            dsvBtn.disabled = true;
+            return btn;
+        }
 
-            fetch('https://alvla.services/api/dsvquat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
-            })
-            .then(function(res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                var reader = res.body.getReader();
-                var decoder = new TextDecoder();
-                var buffer = '';
-
-                function read() {
-                    reader.read().then(function(chunk) {
-                        if (chunk.done) {
-                            dsvBtn.disabled = false;
-                            return;
-                        }
-                        buffer += decoder.decode(chunk.value, { stream: true });
-                        var parts = buffer.split('\n\n');
-                        buffer = parts.pop();
-
-                        parts.forEach(function(part) {
-                            var eventMatch = part.match(/^event:\s*(\w+)/m);
-                            var dataMatch  = part.match(/^data:\s*(.+)/m);
-                            if (!eventMatch || !dataMatch) return;
-                            var type = eventMatch[1];
-                            var data;
-                            try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
-
-                            if (type === 'status') {
-                                logDiv.innerHTML += '<br>' + data.message;
-                            } else if (type === 'result') {
-                                logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
-                                dsvBtn.disabled = false;
-                                if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
-                            } else if (type === 'error') {
-                                logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
-                                dsvBtn.disabled = false;
-                            }
-                            logDiv.scrollTop = logDiv.scrollHeight;
-                        });
-
-                        read();
-                    });
-                }
-                read();
-            })
-            .catch(function(err) {
-                if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
-                dsvBtn.disabled = false;
-                console.error('DSV SSE error:', err);
-            });
-        });
-
-        var rabenBtn = document.createElement('button');
-        rabenBtn.id = 'crystal-raben-btn';
-        rabenBtn.style.cssText = BTN_STYLE + 'background:#dc2626;';
-        rabenBtn.textContent = 'Raben';
-        rabenBtn.addEventListener('click', function () {
-            var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
-            var dealId = dealMatch ? dealMatch[1] : null;
-            if (!dealId) return alert('Не удалось определить ID сделки');
-
-            var parsed = parseDeliveryData();
-            var deliveryData = {
-                from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: '' }, parsed.to),
-                units: parsed.units.map(function(u) {
-                    return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
-                })
-            };
-
-            var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
-
-            var popup = new BX.PopupWindow('crystal-raben-log-popup', null, {
-                titleBar: 'Расчёт Raben',
-                content: '<div id="crystal-raben-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;">Запрос отправлен...</div>'
-                    + '<div style="margin-top:8px;font-size:12px;color:#666;">'
-                    + '<label style="cursor:pointer;user-select:none;">'
-                    + '<input type="checkbox" id="crystal-sse-autoclose-chk-raben" style="margin-right:5px;cursor:pointer;">'
-                    + 'Закрыть после просчёта'
-                    + '</label></div>',
-                closeByEsc: true,
-                autoHide: false,
-                overlay: false,
-                closeIcon: { show: true },
-                buttons: []
-            });
-            popup.show();
-
-            var logDiv = document.getElementById('crystal-raben-log');
-            var autocloseChk = document.getElementById('crystal-sse-autoclose-chk-raben');
-            autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
-            autocloseChk.addEventListener('change', function() {
-                localStorage.setItem(AUTOCLOSE_KEY, autocloseChk.checked ? 'true' : 'false');
-            });
-
-            rabenBtn.disabled = true;
-
-            fetch('https://alvla.services/api/rabenquat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryData: deliveryData, dealId: dealId })
-            })
-            .then(function(res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                var reader = res.body.getReader();
-                var decoder = new TextDecoder();
-                var buffer = '';
-
-                function read() {
-                    reader.read().then(function(chunk) {
-                        if (chunk.done) {
-                            rabenBtn.disabled = false;
-                            return;
-                        }
-                        buffer += decoder.decode(chunk.value, { stream: true });
-                        var parts = buffer.split('\n\n');
-                        buffer = parts.pop();
-
-                        parts.forEach(function(part) {
-                            var eventMatch = part.match(/^event:\s*(\w+)/m);
-                            var dataMatch  = part.match(/^data:\s*(.+)/m);
-                            if (!eventMatch || !dataMatch) return;
-                            var type = eventMatch[1];
-                            var data;
-                            try { data = JSON.parse(dataMatch[1]); } catch(e) { return; }
-
-                            if (type === 'status') {
-                                logDiv.innerHTML += '<br>' + data.message;
-                            } else if (type === 'result') {
-                                logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
-                                rabenBtn.disabled = false;
-                                if (localStorage.getItem(AUTOCLOSE_KEY) === 'true') popup.close();
-                            } else if (type === 'error') {
-                                logDiv.innerHTML += '<br><b style="color:#dc2626">❌ ' + data.error + '</b>';
-                                rabenBtn.disabled = false;
-                            }
-                            logDiv.scrollTop = logDiv.scrollHeight;
-                        });
-
-                        read();
-                    });
-                }
-                read();
-            })
-            .catch(function(err) {
-                if (logDiv) logDiv.innerHTML += '<br><b style="color:#dc2626">❌ Ошибка запроса</b>';
-                rabenBtn.disabled = false;
-                console.error('Raben SSE error:', err);
-            });
-        });
+        var rhenusBtn = createCarrierButton('rhenus', 'Rhenus', '#2563eb', 'https://alvla.services/api/rhenusquat');
+        var dsvBtn    = createCarrierButton('dsv', 'DSV', '#16a34a', 'https://alvla.services/api/dsvquat');
+        var rabenBtn  = createCarrierButton('raben', 'Raben', '#dc2626', 'https://alvla.services/api/rabenquat');
 
         var pythonBtn = document.createElement('button');
         pythonBtn.id = 'crystal-python-btn';
@@ -659,17 +494,9 @@ BX.ready(function () {
             var dealMatch = window.location.href.match(/crm\/deal\/details\/(\d+)/);
             var dealId = dealMatch ? dealMatch[1] : null;
 
-            var clientName = '';
-            var titleEl = document.querySelector('#pagetitle');
-            if (titleEl) {
-                var titleText = titleEl.textContent.trim();
-                var dashIdx = titleText.indexOf(' - ');
-                clientName = dashIdx !== -1 ? titleText.slice(dashIdx + 3).trim() : titleText;
-            }
-
             var deliveryData = {
                 from: { company: 'ALVLA', street: 'Dubska 769', city: 'Kladno', zipcode: '27203', country: 'CZ - Czech Republic' },
-                to: Object.assign({ company: clientName }, parsed.to),
+                to: Object.assign({ company: dealCompanyName }, parsed.to),
                 units: parsed.units.map(function(u) {
                     return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
                 })
