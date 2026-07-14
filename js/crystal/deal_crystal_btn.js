@@ -147,6 +147,14 @@ BX.ready(function () {
 
     // ===== ФИДБЕК =====
 
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     function sourceBadge(source) {
         if (!source) return '';
         var d = source.dimensions === 'actual';
@@ -159,13 +167,24 @@ BX.ready(function () {
             + (d ? 'факт' : 'расчёт') + ', вес: ' + (w ? 'факт' : 'расчёт') + ')</span>';
     }
 
+    // Последний записанный в фидбек HTML. Сравнивать надо именно с ним, а не с
+    // feedback.innerHTML: геттер innerHTML отдаёт пере-сериализованную браузером
+    // разметку (& → &amp;, U+00A0 → &nbsp;), поэтому сравнение с собранной вручную
+    // строкой могло не совпасть никогда. Запись innerHTML — это мутация DOM, на неё
+    // реагирует sidebarObserver и снова зовёт updateFeedback → бесконечный цикл
+    // микрозадач, наглухо вешавший страницу сделки.
+    var lastFeedbackHTML = null;
+
     function updateFeedback() {
         var feedback = document.getElementById(FEEDBACK_ID);
         if (!feedback) return;
 
         var data = parseDeliveryData();
         if (!data) {
-            if (feedback.innerHTML !== '') feedback.innerHTML = '';
+            if (lastFeedbackHTML !== '') {
+                feedback.innerHTML = '';
+                lastFeedbackHTML = '';
+            }
             return;
         }
 
@@ -174,8 +193,8 @@ BX.ready(function () {
 
         // Отправитель
         lines.push('<b>Отправитель:</b>');
-        lines.push('&nbsp; ' + (data.sender || '-'));
-        lines.push('&nbsp; Плательщик (инвойс за доставку): ' + (data.billingCompany || '-'));
+        lines.push('&nbsp; ' + escapeHtml(data.sender || '-'));
+        lines.push('&nbsp; Плательщик (инвойс за доставку): ' + escapeHtml(data.billingCompany || '-'));
 
         // Получатель
         lines.push('<b>Получатель:</b>');
@@ -183,15 +202,15 @@ BX.ready(function () {
         if (!dealCompanyLoaded) {
             companyLine = '<span style="color:#888;">⌛ загрузка...</span>';
         } else if (dealCompanyName) {
-            companyLine = dealCompanyName;
+            companyLine = escapeHtml(dealCompanyName);
         } else {
             companyLine = '<span style="color:#888;">не указана</span>';
         }
         lines.push('&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(заказчик)</span>: ' + companyLine);
-        lines.push('&nbsp; Улица: '  + (data.to.street  || '-'));
-        lines.push('&nbsp; Индекс: ' + (data.to.zipcode || '-'));
-        lines.push('&nbsp; Город: '  + (data.to.city    || '-'));
-        lines.push('&nbsp; Страна: ' + (data.to.country || '-'));
+        lines.push('&nbsp; Улица: '  + escapeHtml(data.to.street  || '-'));
+        lines.push('&nbsp; Индекс: ' + escapeHtml(data.to.zipcode || '-'));
+        lines.push('&nbsp; Город: '  + escapeHtml(data.to.city    || '-'));
+        lines.push('&nbsp; Страна: ' + escapeHtml(data.to.country || '-'));
 
         // Юниты
         if (data.units.length > 0) {
@@ -217,7 +236,7 @@ BX.ready(function () {
         prices.forEach(function(p) {
             var el = document.querySelector('[data-cid="' + p.cid + '"] .field-item');
             var val = el ? el.textContent.trim() : '';
-            if (val && val.length <= 10) priceLines.push('&nbsp; ' + p.label + ': <b>' + val + '</b>');
+            if (val && val.length <= 10) priceLines.push('&nbsp; ' + p.label + ': <b>' + escapeHtml(val) + '</b>');
         });
         if (priceLines.length > 0) {
             lines.push('<b>Цены доставки:</b>');
@@ -227,8 +246,9 @@ BX.ready(function () {
         lines.push('</div>');
 
         var newHTML = lines.join('<br>');
-        if (feedback.innerHTML !== newHTML) {
+        if (lastFeedbackHTML !== newHTML) {
             feedback.innerHTML = newHTML;
+            lastFeedbackHTML = newHTML;
         }
     }
 
@@ -625,6 +645,9 @@ BX.ready(function () {
 
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
+        // Панель создаётся заново (Bitrix пересобирает сайдбар при переключении вкладок) —
+        // элемент пустой, поэтому кэш прошлой отрисовки больше не описывает его содержимое.
+        lastFeedbackHTML = null;
 
         var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
 
