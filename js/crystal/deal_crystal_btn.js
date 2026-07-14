@@ -566,8 +566,10 @@ BX.ready(function () {
     // ===== ВСТАВКА =====
 
     function insertButton() {
+        // Панель уже вставлена — данные обновляются по развороту панели и кнопке
+        // "Обновить", а не на каждый вызов insertButton (его дёргает MutationObserver
+        // на любую мутацию страницы, и постоянный автопарсинг тут был не нужен).
         if (document.getElementById(BUTTON_ID)) {
-            updateFeedback();
             return;
         }
 
@@ -594,7 +596,10 @@ BX.ready(function () {
             content.style.display = isCollapsed ? 'none' : 'block';
             document.getElementById('crystal-toggle-arrow').textContent = isCollapsed ? '▶' : '▼';
             localStorage.setItem(STORAGE_KEY, isCollapsed ? 'true' : 'false');
-            if (!isCollapsed) loadShippingData();
+            if (!isCollapsed) {
+                updateFeedback();
+                loadShippingData();
+            }
         });
 
         wrapper.appendChild(toggleBtn);
@@ -648,6 +653,14 @@ BX.ready(function () {
         // Панель создаётся заново (Bitrix пересобирает сайдбар при переключении вкладок) —
         // элемент пустой, поэтому кэш прошлой отрисовки больше не описывает его содержимое.
         lastFeedbackHTML = null;
+
+        var refreshBtn = document.createElement('div');
+        refreshBtn.id = 'crystal-feedback-refresh';
+        refreshBtn.textContent = '↻ Обновить данные сделки';
+        refreshBtn.style.cssText = 'cursor:pointer;font-size:11px;color:#2d6cdf;margin-bottom:4px;user-select:none;';
+        refreshBtn.addEventListener('click', function () {
+            updateFeedback();
+        });
 
         var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
 
@@ -728,6 +741,7 @@ BX.ready(function () {
         btnGrid.appendChild(pythonBtn);
 
         content.appendChild(hint);
+        content.appendChild(refreshBtn);
         content.appendChild(feedback);
         content.appendChild(btnGrid);
         content.appendChild(shippingSection);
