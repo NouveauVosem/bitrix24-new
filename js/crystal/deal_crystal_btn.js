@@ -748,12 +748,8 @@ BX.ready(function () {
         wrapper.appendChild(content);
         sidebar.insertBefore(wrapper, sidebar.firstChild);
 
-        // Панель по умолчанию свёрнута — не парсим поля сделки, пока пользователь
-        // реально её не развернёт (это уже делает клик по toggleBtn выше).
-        if (!isCollapsed) {
-            updateFeedback();
-            loadShippingData();
-        }
+        updateFeedback();
+        if (!isCollapsed) loadShippingData();
     }
 
     var sidebarObserver = new MutationObserver(function () {
