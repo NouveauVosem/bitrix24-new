@@ -420,6 +420,7 @@ BX.ready(function () {
 
     var sharedLogPopup = null;
     var sharedLogDiv = null;
+    var sharedScreenshotsDiv = null;
     var sharedStopBtn = null;
     var sharedActiveCarrierKey = null;
     var sharedActiveDealId = null;
@@ -429,7 +430,12 @@ BX.ready(function () {
 
         sharedLogPopup = new BX.PopupWindow('crystal-carrier-log-popup', null, {
             titleBar: 'Crystal — лог запросов',
-            content: '<div id="crystal-carrier-log" style="font-family:monospace;font-size:12px;min-width:420px;min-height:80px;max-height:320px;overflow-y:auto;line-height:1.6;"></div>'
+            // Лог и скриншоты — два независимых скролл-контейнера: раньше они были одним
+            // <div>, и когда картинка (грузится асинхронно) меняла высоту уже после того,
+            // как scrollTop выставлен по scrollHeight на тот момент, скриншот визуально
+            // "убегал" вверх при следующей мутации. Раздельная прокрутка убирает эту гонку.
+            content: '<div id="crystal-carrier-log" style="font-family:monospace;font-size:12px;min-width:420px;max-height:200px;overflow-y:auto;line-height:1.6;"></div>'
+                + '<div id="crystal-carrier-screenshots" style="min-width:420px;max-height:280px;overflow-y:auto;margin-top:8px;border-top:1px solid #eee;padding-top:6px;display:none;"></div>'
                 + '<div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
                 + '<label style="cursor:pointer;user-select:none;font-size:12px;color:#666;">'
                 + '<input type="checkbox" id="crystal-carrier-log-autoclose" style="margin-right:5px;cursor:pointer;">'
@@ -446,6 +452,7 @@ BX.ready(function () {
         sharedLogPopup.show();
 
         sharedLogDiv = document.getElementById('crystal-carrier-log');
+        sharedScreenshotsDiv = document.getElementById('crystal-carrier-screenshots');
 
         var autocloseChk = document.getElementById('crystal-carrier-log-autoclose');
         autocloseChk.checked = localStorage.getItem(AUTOCLOSE_KEY) === 'true';
@@ -492,9 +499,9 @@ BX.ready(function () {
         });
 
         // делегирование клика по кнопкам "Подтвердить"/"Отменить" — сама кнопка появляется
-        // позже, внутри логовой SSE-строки (событие screenshot), поэтому слушатель на logDiv,
-        // а не на конкретной кнопке
-        sharedLogDiv.addEventListener('click', function (e) {
+        // позже, вместе со скриншотом (событие screenshot), поэтому слушатель на панели
+        // скриншотов, а не на конкретной кнопке
+        sharedScreenshotsDiv.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.crystal-dsv-confirm');
             if (!btn || btn.disabled) return;
 
@@ -518,11 +525,11 @@ BX.ready(function () {
                 } else {
                     if (group) group.innerHTML = '<b style="color:#dc2626">❌ ' + (result.data.error || 'Ошибка подтверждения') + '</b>';
                 }
-                sharedLogDiv.scrollTop = sharedLogDiv.scrollHeight;
+                sharedScreenshotsDiv.scrollTop = sharedScreenshotsDiv.scrollHeight;
             })
             .catch(function () {
                 if (group) group.innerHTML = '<b style="color:#dc2626">❌ Ошибка запроса подтверждения</b>';
-                sharedLogDiv.scrollTop = sharedLogDiv.scrollHeight;
+                sharedScreenshotsDiv.scrollTop = sharedScreenshotsDiv.scrollHeight;
             });
         });
 
@@ -546,9 +553,15 @@ BX.ready(function () {
         sharedStopBtn.textContent = 'Стоп';
 
         var logDiv = sharedLogDiv;
+        var screenshotsDiv = sharedScreenshotsDiv;
         logDiv.innerHTML += (logDiv.innerHTML ? '<br>' : '')
             + '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;color:#888;">— ' + title + ' —</div>Запрос отправлен...';
         logDiv.scrollTop = logDiv.scrollHeight;
+
+        // Разделитель в галерее скриншотов ставим лениво — только когда придёт первый
+        // реальный скриншот этого запроса, а не сразу (иначе висел бы пустой разделитель
+        // для запросов, которые скриншотов вообще не присылают).
+        var screenshotDividerPending = !!screenshotsDiv.innerHTML;
 
         if (btn) btn.disabled = true;
 
@@ -585,14 +598,22 @@ BX.ready(function () {
                         if (type === 'status') {
                             logDiv.innerHTML += '<br>' + data.message;
                         } else if (type === 'screenshot') {
-                            logDiv.innerHTML += '<br><div style="margin-top:6px;color:#888;">📷 ' + escapeHtml(data.label || '') + '</div>'
+                            logDiv.innerHTML += '<br><span style="color:#888;">📷 ' + escapeHtml(data.label || 'скриншот') + ' — см. ниже</span>';
+
+                            screenshotsDiv.style.display = 'block';
+                            if (screenshotDividerPending) {
+                                screenshotsDiv.innerHTML += '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;color:#888;">— ' + escapeHtml(title) + ' —</div>';
+                                screenshotDividerPending = false;
+                            }
+                            screenshotsDiv.innerHTML += '<div style="margin-top:6px;color:#888;">' + escapeHtml(data.label || '') + '</div>'
                                 + '<img src="data:image/jpeg;base64,' + data.image + '" style="max-width:100%;border:1px solid #ccc;border-radius:4px;margin-top:4px;display:block;">';
                             if (data.needsConfirm) {
-                                logDiv.innerHTML += '<div class="crystal-dsv-confirm-group" style="margin-top:6px;display:flex;gap:8px;">'
+                                screenshotsDiv.innerHTML += '<div class="crystal-dsv-confirm-group" style="margin-top:6px;display:flex;gap:8px;">'
                                     + '<button class="crystal-dsv-confirm" data-choice="confirm" style="padding:4px 12px;border:none;border-radius:4px;background:#16a34a;color:#fff;cursor:pointer;">Подтвердить</button>'
                                     + '<button class="crystal-dsv-confirm" data-choice="cancel" style="padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Отменить</button>'
                                     + '</div>';
                             }
+                            screenshotsDiv.scrollTop = screenshotsDiv.scrollHeight;
                         } else if (type === 'result') {
                             logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
                             if (btn) btn.disabled = false;
