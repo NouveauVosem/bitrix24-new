@@ -208,10 +208,11 @@ BX.ready(function () {
         var lines = [];
         lines.push('<div class="crystal-feedback-body">');
 
-        // Отправитель
+        // Отправитель — сейчас в сделке одно поле физически обслуживает и отправителя,
+        // и плательщика по инвойсу за доставку (отдельного поля под плательщика ещё нет),
+        // поэтому не дублируем значение второй строкой, а просто помечаем это словами.
         lines.push('<b>Отправитель:</b>');
-        lines.push('&nbsp; ' + escapeHtml(data.sender || '-'));
-        lines.push('&nbsp; Плательщик (инвойс за доставку): ' + escapeHtml(data.billingCompany || '-'));
+        lines.push('&nbsp; ' + escapeHtml(data.sender || '-') + ' <span style="color:#888;">(та же компания и в инвойсе за доставку)</span>');
 
         // Получатель
         lines.push('<b>Получатель:</b>');
@@ -357,6 +358,38 @@ BX.ready(function () {
                 return { type: 'EP - DB Europallet', quantity: u.quantity, length: u.length, width: u.width, height: u.height, weight: u.weight };
             })
         };
+    }
+
+    // Человекочитаемая сводка данных, которые уйдут в запрос на заказ — показывается в
+    // подтверждении перед бронированием, чтобы было видно, что именно уедет к перевозчику.
+    function formatAddressLine(addr) {
+        var parts = [];
+        if (addr.company) parts.push(addr.company);
+        if (addr.street)  parts.push(addr.street);
+        var cityLine = [addr.zipcode, addr.city].filter(Boolean).join(' ');
+        if (cityLine) parts.push(cityLine);
+        if (addr.country) parts.push(addr.country);
+        return parts.length ? parts.join(', ') : '(не указано)';
+    }
+
+    function formatDeliveryDataSummary(deliveryData) {
+        var lines = [];
+        lines.push('Откуда: ' + formatAddressLine(deliveryData.from));
+        lines.push('Куда: '   + formatAddressLine(deliveryData.to));
+        lines.push('');
+        lines.push('Груз:');
+        if (!deliveryData.units.length) {
+            lines.push('  (нет данных о грузе)');
+        } else {
+            deliveryData.units.forEach(function(u, i) {
+                var dims = (u.length && u.width)
+                    ? (u.length + '×' + u.width + (u.height ? '×' + u.height : '') + ' см')
+                    : 'габариты не указаны';
+                var weight = u.weight ? u.weight + ' кг' : 'вес не указан';
+                lines.push('  ' + (i + 1) + ') ' + u.quantity + ' шт, ' + dims + ', ' + weight);
+            });
+        }
+        return lines.join('\n');
     }
 
     // Заказ (реальное бронирование) идёт через серверный прокси ajax/crystal/order_transport.php:
@@ -551,12 +584,23 @@ BX.ready(function () {
         var parsed = parseDeliveryData();
         if (!parsed) return alert('Не удалось получить данные доставки со сделки');
 
+        var deliveryData = buildDeliveryData(parsed);
+        var priceText = isNaN(price) ? 'цена не указана' : price.toFixed(2) + ' €';
+
+        var confirmMessage = 'Перевозчик: ' + carrier
+            + '\nЦена: ' + priceText
+            + '\nСделка: #' + dealId
+            + '\n\n' + formatDeliveryDataSummary(deliveryData)
+            + '\n\nЗаказать реальную доставку с этими данными? Это действие бронирует транспорт, отменить его будет нельзя.';
+
+        if (!confirm(confirmMessage)) return;
+
         sendCarrierRequest({
             carrierKey: key + 'order',
             title: 'Заказ ' + carrier,
             endpoint: ORDER_PROXY_ENDPOINT + '?carrier=' + encodeURIComponent(key),
             payload: {
-                deliveryData: buildDeliveryData(parsed),
+                deliveryData: deliveryData,
                 expectedPrice: isNaN(price) ? null : price,
                 dealId: dealId
             },
