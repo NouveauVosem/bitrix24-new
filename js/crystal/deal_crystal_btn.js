@@ -580,11 +580,14 @@ BX.ready(function () {
                         if (type === 'status') {
                             logDiv.innerHTML += '<br>' + data.message;
                         } else if (type === 'screenshot') {
-                            logDiv.innerHTML += '<br><img src="data:image/jpeg;base64,' + data.image + '" style="max-width:100%;border:1px solid #ccc;border-radius:4px;margin-top:6px;display:block;">'
-                                + '<div class="crystal-dsv-confirm-group" style="margin-top:6px;display:flex;gap:8px;">'
-                                + '<button class="crystal-dsv-confirm" data-choice="confirm" style="padding:4px 12px;border:none;border-radius:4px;background:#16a34a;color:#fff;cursor:pointer;">Подтвердить</button>'
-                                + '<button class="crystal-dsv-confirm" data-choice="cancel" style="padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Отменить</button>'
-                                + '</div>';
+                            logDiv.innerHTML += '<br><div style="margin-top:6px;color:#888;">📷 ' + escapeHtml(data.label || '') + '</div>'
+                                + '<img src="data:image/jpeg;base64,' + data.image + '" style="max-width:100%;border:1px solid #ccc;border-radius:4px;margin-top:4px;display:block;">';
+                            if (data.needsConfirm) {
+                                logDiv.innerHTML += '<div class="crystal-dsv-confirm-group" style="margin-top:6px;display:flex;gap:8px;">'
+                                    + '<button class="crystal-dsv-confirm" data-choice="confirm" style="padding:4px 12px;border:none;border-radius:4px;background:#16a34a;color:#fff;cursor:pointer;">Подтвердить</button>'
+                                    + '<button class="crystal-dsv-confirm" data-choice="cancel" style="padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Отменить</button>'
+                                    + '</div>';
+                            }
                         } else if (type === 'result') {
                             logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
                             if (btn) btn.disabled = false;
