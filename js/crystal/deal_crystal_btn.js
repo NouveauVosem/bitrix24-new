@@ -9,6 +9,23 @@ BX.ready(function () {
     var FEEDBACK_ID = 'crystal-feedback';
     var CRYSTAL_API = 'https://crystal.alvla.tools';
 
+    // ===== ДОСТУП К КНОПКЕ "ЗАКАЗАТЬ" =====
+    // Кнопка бронирования реальной доставки видна только этим пользователям (ID из Bitrix24).
+    // Узнать свой ID: открыть /local/ajax/crystal/get_current_user.php в браузере под своим логином.
+    var ALLOWED_ORDER_USER_IDS = [19, 8];
+
+    var canOrder = false;
+
+    (function loadCurrentUser() {
+        fetch('/local/ajax/crystal/get_current_user.php')
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                var uid = resp && resp.id ? parseInt(resp.id, 10) : null;
+                canOrder = uid !== null && ALLOWED_ORDER_USER_IDS.indexOf(uid) !== -1;
+            })
+            .catch(function () { canOrder = false; });
+    })();
+
     // ===== КОМПАНИЯ СДЕЛКИ =====
     // Реальное название компании, привязанной к сделке (COMPANY_ID). Используется как
     // получатель (to.company) при просчёте доставки — отдельного поля "компания-получатель"
@@ -273,7 +290,7 @@ BX.ready(function () {
                         : (q.error ? '<span style="color:#c00;" title="' + q.error.replace(/"/g, '&quot;') + '">Ошибка</span>' : '—');
                     var dest = [q.toCity, q.toCountry].filter(Boolean).join(', ');
                     var date = q.createdAt ? new Date(q.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-                    var orderCell = q.price
+                    var orderCell = (q.price && canOrder)
                         ? '<button class="crystal-order-btn" data-carrier="' + String(q.carrier || '').replace(/"/g, '&quot;') + '" data-price="' + q.price + '" style="font-size:10px;padding:2px 6px;border:none;border-radius:3px;background:#2d6cdf;color:#fff;cursor:pointer;">Заказать</button>'
                         : '';
                     html += '<tr style="border-bottom:1px solid #f5f5f5;">';
@@ -342,11 +359,12 @@ BX.ready(function () {
         };
     }
 
-    // Заказ (реальное бронирование) подключается по мере готовности бэкенда для каждого
-    // перевозчика — пока есть только DSV. Ключ — нормализованное название из q.carrier.
-    var ORDER_ENDPOINTS = {
-        dsv: 'https://alvla.services/api/dsvorder'
-    };
+    // Заказ (реальное бронирование) идёт через серверный прокси ajax/crystal/order_transport.php:
+    // он проверяет право пользователя на заказ (ALLOWED_ORDER_USER_IDS в PHP) и только потом
+    // стучится к перевозчику. Прямых запросов на alvla.services из браузера для заказа больше нет —
+    // canOrder на фронтенде используется только для того, чтобы не показывать кнопку зря.
+    var ORDER_PROXY_ENDPOINT = '/local/ajax/crystal/order_transport.php';
+    var SUPPORTED_ORDER_CARRIERS = ['dsv'];
 
     function normalizeCarrierKey(carrier) {
         return String(carrier || '').trim().toLowerCase();
@@ -520,9 +538,8 @@ BX.ready(function () {
         var carrier  = btn.getAttribute('data-carrier') || '';
         var price    = parseFloat(btn.getAttribute('data-price'));
         var key      = normalizeCarrierKey(carrier);
-        var endpoint = ORDER_ENDPOINTS[key];
 
-        if (!endpoint) {
+        if (SUPPORTED_ORDER_CARRIERS.indexOf(key) === -1) {
             alert('Заказ для перевозчика «' + carrier + '» пока не подключён');
             return;
         }
@@ -537,7 +554,7 @@ BX.ready(function () {
         sendCarrierRequest({
             carrierKey: key + 'order',
             title: 'Заказ ' + carrier,
-            endpoint: endpoint,
+            endpoint: ORDER_PROXY_ENDPOINT + '?carrier=' + encodeURIComponent(key),
             payload: {
                 deliveryData: buildDeliveryData(parsed),
                 expectedPrice: isNaN(price) ? null : price,
