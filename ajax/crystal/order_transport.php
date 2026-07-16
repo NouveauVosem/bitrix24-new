@@ -14,6 +14,20 @@ const ORDER_ENDPOINTS = [
     'dsv' => 'https://alvla.services/api/dsvorder',
 ];
 
+// Bitrix (и сам PHP через zlib.output_compression) может держать вывод в собственном
+// ob_start-буфере — тогда echo из CURLOPT_WRITEFUNCTION копится и улетает одним куском
+// только в конце скрипта, а не в реальном времени. Явно выключаем всё, что буферизует.
+// Цикл ограничен числом уровней на момент старта — не может зациклиться, даже если
+// какой-то буфер не закроется (@ подавляет предупреждение, чтобы оно не попало в SSE-поток).
+for ($obLevel = ob_get_level(); $obLevel > 0; $obLevel--) {
+    if (!@ob_end_clean()) {
+        break;
+    }
+}
+ini_set('output_buffering', 'off');
+ini_set('zlib.output_compression', '0');
+ob_implicit_flush(true);
+
 header('Content-Type: text/event-stream; charset=utf-8');
 header('Cache-Control: no-cache');
 header('X-Accel-Buffering: no');
