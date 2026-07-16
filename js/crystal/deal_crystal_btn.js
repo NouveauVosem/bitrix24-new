@@ -569,6 +569,43 @@ BX.ready(function () {
         });
     }
 
+    // Попап подтверждения заказа с тремя вариантами: отмена, тестовый заказ (текущее
+    // поведение бэкенда по умолчанию — payload без testMode) и реальный заказ (явно
+    // помечается testMode: false, чтобы бэкенд не спутал его с тестовым прогоном).
+    // Пересоздаём попап на каждый вызов и полностью уничтожаем после закрытия — если
+    // переиспользовать инстанс, id кнопок задублируются (та же проблема, что раньше
+    // была с sharedLogPopup).
+    function showOrderConfirmPopup(summaryText, onChoice) {
+        var popupId = 'crystal-order-confirm-popup';
+        var summaryHtml = escapeHtml(summaryText).replace(/\n/g, '<br>');
+
+        var popup = new BX.PopupWindow(popupId, null, {
+            titleBar: 'Подтверждение заказа доставки',
+            content: '<div style="font-family:monospace;font-size:12px;max-width:420px;line-height:1.5;">' + summaryHtml + '</div>'
+                + '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">'
+                + '<button id="crystal-order-cancel" style="padding:6px 14px;border:none;border-radius:4px;background:#e5e7eb;color:#111;cursor:pointer;">Отмена</button>'
+                + '<button id="crystal-order-test" style="padding:6px 14px;border:none;border-radius:4px;background:#d97706;color:#fff;cursor:pointer;">Тестовый заказ</button>'
+                + '<button id="crystal-order-confirm" style="padding:6px 14px;border:none;border-radius:4px;background:#16a34a;color:#fff;cursor:pointer;">Да, заказать</button>'
+                + '</div>',
+            closeByEsc: true,
+            autoHide: false,
+            overlay: true,
+            closeIcon: { show: true },
+            buttons: []
+        });
+
+        popup.show();
+
+        function finish(choice) {
+            popup.destroy();
+            if (choice) onChoice(choice);
+        }
+
+        document.getElementById('crystal-order-cancel').addEventListener('click', function () { finish(null); });
+        document.getElementById('crystal-order-test').addEventListener('click', function () { finish('test'); });
+        document.getElementById('crystal-order-confirm').addEventListener('click', function () { finish('real'); });
+    }
+
     function orderTransport(btn) {
         var carrier  = btn.getAttribute('data-carrier') || '';
         var price    = parseFloat(btn.getAttribute('data-price'));
@@ -589,24 +626,29 @@ BX.ready(function () {
         var deliveryData = buildDeliveryData(parsed);
         var priceText = isNaN(price) ? 'цена не указана' : price.toFixed(2) + ' Kč';
 
-        var confirmMessage = 'Перевозчик: ' + carrier
+        var summaryText = 'Перевозчик: ' + carrier
             + '\nЦена: ' + priceText
             + '\nСделка: #' + dealId
             + '\n\n' + formatDeliveryDataSummary(deliveryData)
-            + '\n\nЗаказать реальную доставку с этими данными? Это действие бронирует транспорт, отменить его будет нельзя.';
+            + '\n\n«Да, заказать» бронирует реальный транспорт — отменить его будет нельзя.\n«Тестовый заказ» отправляет тот же запрос в тестовом режиме.';
 
-        if (!confirm(confirmMessage)) return;
-
-        sendCarrierRequest({
-            carrierKey: key + 'order',
-            title: 'Заказ ' + carrier,
-            endpoint: ORDER_PROXY_ENDPOINT + '?carrier=' + encodeURIComponent(key),
-            payload: {
+        showOrderConfirmPopup(summaryText, function (choice) {
+            var payload = {
                 deliveryData: deliveryData,
                 expectedPrice: isNaN(price) ? null : price,
                 dealId: dealId
-            },
-            button: btn
+            };
+            if (choice === 'real') {
+                payload.testMode = false;
+            }
+
+            sendCarrierRequest({
+                carrierKey: key + 'order',
+                title: (choice === 'real' ? 'Заказ ' : 'Тестовый заказ ') + carrier,
+                endpoint: ORDER_PROXY_ENDPOINT + '?carrier=' + encodeURIComponent(key),
+                payload: payload,
+                button: btn
+            });
         });
     }
 
