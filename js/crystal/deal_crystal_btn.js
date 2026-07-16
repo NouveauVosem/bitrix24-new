@@ -287,7 +287,7 @@ BX.ready(function () {
                 html += '<tr style="color:#666;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px 4px;">Перевозчик</th><th style="text-align:left;padding:2px 4px;">Цена</th><th style="text-align:left;padding:2px 4px;">Куда</th><th style="text-align:left;padding:2px 4px;">Дата</th><th></th></tr>';
                 quotes.forEach(function(q) {
                     var priceCell = q.price
-                        ? '<b>' + parseFloat(q.price).toFixed(2) + '</b>'
+                        ? '<b>' + parseFloat(q.price).toFixed(2) + ' Kč</b>'
                         : (q.error ? '<span style="color:#c00;" title="' + q.error.replace(/"/g, '&quot;') + '">Ошибка</span>' : '—');
                     var dest = [q.toCity, q.toCountry].filter(Boolean).join(', ');
                     var date = q.createdAt ? new Date(q.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -320,7 +320,7 @@ BX.ready(function () {
                 orders.forEach(function(o) {
                     var statusLabel = statusLabels[o.status] || o.status;
                     var statusColor = statusColors[o.status] || '#555';
-                    var priceCell = o.price ? parseFloat(o.price).toFixed(2) : '—';
+                    var priceCell = o.price ? parseFloat(o.price).toFixed(2) + ' Kč' : '—';
                     var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
                     html += '<tr style="border-bottom:1px solid #f5f5f5;">';
                     html += '<td style="padding:2px 4px;">' + (o.carrier || '—') + '</td>';
@@ -362,20 +362,22 @@ BX.ready(function () {
 
     // Человекочитаемая сводка данных, которые уйдут в запрос на заказ — показывается в
     // подтверждении перед бронированием, чтобы было видно, что именно уедет к перевозчику.
-    function formatAddressLine(addr) {
-        var parts = [];
-        if (addr.company) parts.push(addr.company);
-        if (addr.street)  parts.push(addr.street);
-        var cityLine = [addr.zipcode, addr.city].filter(Boolean).join(' ');
-        if (cityLine) parts.push(cityLine);
-        if (addr.country) parts.push(addr.country);
-        return parts.length ? parts.join(', ') : '(не указано)';
+    function formatAddressBlock(addr) {
+        var streetLine = [addr.zipcode, addr.city].filter(Boolean).join(' ');
+        var addressParts = [addr.street, streetLine, addr.country].filter(Boolean);
+        var lines = [];
+        lines.push('  Компания: ' + (addr.company || '(не указана)'));
+        lines.push('  Адрес: '    + (addressParts.length ? addressParts.join(', ') : '(не указан)'));
+        return lines.join('\n');
     }
 
     function formatDeliveryDataSummary(deliveryData) {
         var lines = [];
-        lines.push('Откуда: ' + formatAddressLine(deliveryData.from));
-        lines.push('Куда: '   + formatAddressLine(deliveryData.to));
+        lines.push('Компания заказчик: ' + (deliveryData.from.company || '(не указана)'));
+        lines.push('Откуда:');
+        lines.push(formatAddressBlock(deliveryData.from));
+        lines.push('Куда:');
+        lines.push(formatAddressBlock(deliveryData.to));
         lines.push('');
         lines.push('Груз:');
         if (!deliveryData.units.length) {
@@ -585,7 +587,7 @@ BX.ready(function () {
         if (!parsed) return alert('Не удалось получить данные доставки со сделки');
 
         var deliveryData = buildDeliveryData(parsed);
-        var priceText = isNaN(price) ? 'цена не указана' : price.toFixed(2) + ' €';
+        var priceText = isNaN(price) ? 'цена не указана' : price.toFixed(2) + ' Kč';
 
         var confirmMessage = 'Перевозчик: ' + carrier
             + '\nЦена: ' + priceText
