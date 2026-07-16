@@ -85,7 +85,7 @@ function saveOrderConfirmation($dealId, $data)
     if (isset($logFields['UF_CRM_1726580880047'])) {
         $logFields['UF_CRM_1726580880047'] = (string)$logFields['UF_CRM_1726580880047'];
     }
-    $log = date('Y-m-d H:i:s') . " [order] dealId=$dealId fields=" . json_encode($logFields) . " result=" . ($result ? 'true' : 'false') . " errors=" . implode('; ', $deal->LAST_ERROR ?? []) . " warnings=" . implode('; ', $warnings) . "\n";
+    $log = date('Y-m-d H:i:s') . " [order] dealId=$dealId fields=" . json_encode($logFields) . " result=" . ($result ? 'true' : 'false') . " errors=" . ($deal->LAST_ERROR ?: '') . " warnings=" . implode('; ', $warnings) . "\n";
     file_put_contents(__DIR__ . '/save_delivery_log.txt', $log, FILE_APPEND);
 
     if ($result) {
