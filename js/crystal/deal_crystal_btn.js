@@ -410,6 +410,7 @@ BX.ready(function () {
     // и "зависанию" лога на старом скрытом попапе после повторного клика), чтение SSE-потока
     // (status/result/error), управление disabled-состоянием кнопки.
     var STOPCALC_ENDPOINT = 'https://alvla.services/api/stopcalc';
+    var DSVCONFIRM_ENDPOINT = 'https://alvla.services/api/dsvconfirm';
     var AUTOCLOSE_KEY = 'crystal-sse-autoclose';
 
     var sharedLogPopup = null;
@@ -485,6 +486,41 @@ BX.ready(function () {
             });
         });
 
+        // делегирование клика по кнопкам "Подтвердить"/"Отменить" — сама кнопка появляется
+        // позже, внутри логовой SSE-строки (событие screenshot), поэтому слушатель на logDiv,
+        // а не на конкретной кнопке
+        sharedLogDiv.addEventListener('click', function (e) {
+            var btn = e.target.closest && e.target.closest('.crystal-dsv-confirm');
+            if (!btn || btn.disabled) return;
+
+            var choice = btn.getAttribute('data-choice');
+            var group = btn.closest('.crystal-dsv-confirm-group');
+            var groupBtns = group ? group.querySelectorAll('.crystal-dsv-confirm') : [btn];
+            groupBtns.forEach(function (b) { b.disabled = true; });
+            btn.textContent = '⌛...';
+
+            fetch(DSVCONFIRM_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dealId: sharedActiveDealId, choice: choice })
+            })
+            .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (result) {
+                if (result.ok && result.data.ok) {
+                    if (group) group.innerHTML = choice === 'confirm'
+                        ? '<b style="color:#16a34a">✅ Подтверждено</b>'
+                        : '<b style="color:#d97706">⏹ Отменено</b>';
+                } else {
+                    if (group) group.innerHTML = '<b style="color:#dc2626">❌ ' + (result.data.error || 'Ошибка подтверждения') + '</b>';
+                }
+                sharedLogDiv.scrollTop = sharedLogDiv.scrollHeight;
+            })
+            .catch(function () {
+                if (group) group.innerHTML = '<b style="color:#dc2626">❌ Ошибка запроса подтверждения</b>';
+                sharedLogDiv.scrollTop = sharedLogDiv.scrollHeight;
+            });
+        });
+
         return sharedLogPopup;
     }
 
@@ -543,6 +579,12 @@ BX.ready(function () {
 
                         if (type === 'status') {
                             logDiv.innerHTML += '<br>' + data.message;
+                        } else if (type === 'screenshot') {
+                            logDiv.innerHTML += '<br><img src="data:image/jpeg;base64,' + data.image + '" style="max-width:100%;border:1px solid #ccc;border-radius:4px;margin-top:6px;display:block;">'
+                                + '<div class="crystal-dsv-confirm-group" style="margin-top:6px;display:flex;gap:8px;">'
+                                + '<button class="crystal-dsv-confirm" data-choice="confirm" style="padding:4px 12px;border:none;border-radius:4px;background:#16a34a;color:#fff;cursor:pointer;">Подтвердить</button>'
+                                + '<button class="crystal-dsv-confirm" data-choice="cancel" style="padding:4px 12px;border:none;border-radius:4px;background:#dc2626;color:#fff;cursor:pointer;">Отменить</button>'
+                                + '</div>';
                         } else if (type === 'result') {
                             logDiv.innerHTML += '<br><b style="color:#16a34a">✅ ' + data.result + '</b>';
                             if (btn) btn.disabled = false;
