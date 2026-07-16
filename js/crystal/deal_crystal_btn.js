@@ -229,7 +229,7 @@ BX.ready(function () {
         } else {
             companyLine = '<span style="color:#888;">не указана</span>';
         }
-        lines.push('&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(заказчик)</span>: ' + companyLine);
+        lines.push('&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(клиент)</span>: ' + companyLine);
         lines.push('&nbsp; Улица: '  + escapeHtml(data.to.street  || '-'));
         lines.push('&nbsp; Индекс: ' + escapeHtml(data.to.zipcode || '-'));
         lines.push('&nbsp; Город: '  + escapeHtml(data.to.city    || '-'));
