@@ -159,7 +159,7 @@ BX.ready(function () {
             });
         }
 
-        return { to: to, sender: senderRaw, billingCompany: billingCompanyRaw, units: units, totalWeight: totalWeight, source: { dimensions: dimensionsSource, weight: weightSource } };
+        return { to: to, sender: senderRaw, billingCompany: billingCompanyRaw, units: units, totalWeight: totalWeight, source: { dimensions: dimensionsSource, weight: weightSource }, rawGoods: { dimensions: dimensionsRaw, weight: weightRaw } };
     }
 
     // ===== ФИДБЕК =====
@@ -248,6 +248,13 @@ BX.ready(function () {
 
         if (data.totalWeight) {
             lines.push('<b>Общий вес:</b> ' + data.totalWeight + ' кг');
+        }
+
+        // Сырые значения из полей сделки (до парсинга) — для визуальной сверки,
+        // парсер иногда не справляется с нестандартным форматом.
+        if (data.rawGoods && (data.rawGoods.dimensions || data.rawGoods.weight)) {
+            lines.push('<span style="color:#888;font-size:11px;">Исходные данные (как в сделке): '
+                + escapeHtml(data.rawGoods.dimensions || '-') + ' / ' + escapeHtml(data.rawGoods.weight || '-') + '</span>');
         }
 
         lines.push('</div>');
