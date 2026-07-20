@@ -2,8 +2,10 @@
     'use strict';
 
     var OFFER_BTN_ID = 'crystal-offer-btn';
+    var INVOICE_BTN_ID = 'crystal-invoice-btn';
     var MODAL_ID     = 'crystal-offer-modal';
     var AJAX_URL     = '/local/ajax/crystal/get_deal_for_offer.php';
+    var INVOICE_PDF_URL = '/local/ajax/crystal/get_deal_invoice_pdf.php';
 
     var LATE_PAYMENT = window.OFFER_LATE_PAYMENT || {};
     var DOC_STRINGS  = window.OFFER_DOC_STRINGS  || {};
@@ -93,6 +95,38 @@
         btn.addEventListener('click', openModal);
 
         btns.appendChild(btn);
+        injectInvoiceBtn(btns);
+    }
+
+    function injectInvoiceBtn(container) {
+        if (document.getElementById(INVOICE_BTN_ID)) return;
+        var dealId = getDealId();
+        if (!dealId) return;
+
+        fetch(INVOICE_PDF_URL + '?dealId=' + encodeURIComponent(dealId))
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                if (resp.status !== 'success' || !resp.url) return;
+                if (document.getElementById(INVOICE_BTN_ID)) return;
+
+                var btn = document.createElement('a');
+                btn.id    = INVOICE_BTN_ID;
+                btn.href  = resp.url;
+                btn.title = resp.filename || 'Скачать фактуру';
+                btn.setAttribute('download', resp.filename || 'invoice.pdf');
+                btn.style.cssText = [
+                    'background:rgba(255,255,255,0.2);',
+                    'border:1px solid rgba(255,255,255,0.35);',
+                    'color:#fff;border-radius:3px;',
+                    'padding:1px 8px;cursor:pointer;',
+                    'font-size:13px;font-weight:600;line-height:1.4;',
+                    'text-decoration:none;display:inline-block;'
+                ].join('');
+                btn.textContent = 'Фактура';
+
+                container.appendChild(btn);
+            })
+            .catch(function () {});
     }
 
     // ===== DATA LOADING =====
