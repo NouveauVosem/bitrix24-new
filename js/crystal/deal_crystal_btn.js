@@ -100,7 +100,7 @@ BX.ready(function () {
             // новые раздельные поля
             var streetVal = streetEl ? streetEl.textContent.trim() : '';
             var houseVal  = houseEl  ? houseEl.textContent.trim()  : '';
-            to.street  = streetVal + (houseVal ? ', ' + houseVal : '');
+            to.street  = streetVal + (houseVal ? ' ' + houseVal : '');
             to.city    = cityVal;
             to.zipcode = zipcodeEl ? zipcodeEl.textContent.trim() : '';
             to.country = countryEl ? countryEl.textContent.trim() : '';
