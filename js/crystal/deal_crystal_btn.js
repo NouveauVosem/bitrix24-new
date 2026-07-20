@@ -205,22 +205,24 @@ BX.ready(function () {
             return;
         }
 
-        var lines = [];
-        lines.push('<div class="crystal-feedback-body">');
+        // Каждая секция — отдельный визуальный блок (отступ + тонкая линия сверху),
+        // чтобы "Отправитель"/"Получатель"/"Груз" не сливались в один сплошной текст.
+        var blocks = [];
 
         // Компания заказчик — то же значение, что уходит как from.company в запрос
         // на заказ (см. алерт подтверждения), продублировано тут для наглядности.
-        lines.push('<b>Компания заказчик:</b> ' + escapeHtml(data.billingCompany || '-'));
+        blocks.push(['<b>Компания заказчик:</b> ' + escapeHtml(data.billingCompany || '-')]);
 
         // Отправитель — компания (billingCompany) сейчас служит и отправителем, и плательщиком
         // по инвойсу за доставку (отдельного поля под плательщика ещё нет), поэтому не заводим
         // для неё второй блок, а просто помечаем это словами рядом с названием компании.
-        lines.push('<b>Отправитель:</b>');
-        lines.push('&nbsp; Компания: ' + escapeHtml(data.billingCompany || '-') + ' <span style="color:#888;">(тот же плательщик по инвойсу за доставку)</span>');
-        lines.push('&nbsp; ' + escapeHtml(data.sender || '-'));
+        blocks.push([
+            '<b>Отправитель:</b>',
+            '&nbsp; Компания: ' + escapeHtml(data.billingCompany || '-') + ' <span style="color:#888;">(тот же плательщик по инвойсу за доставку)</span>',
+            '&nbsp; ' + escapeHtml(data.sender || '-')
+        ]);
 
         // Получатель
-        lines.push('<b>Получатель:</b>');
         var companyLine;
         if (!dealCompanyLoaded) {
             companyLine = '<span style="color:#888;">⌛ загрузка...</span>';
@@ -229,37 +231,44 @@ BX.ready(function () {
         } else {
             companyLine = '<span style="color:#888;">не указана</span>';
         }
-        lines.push('&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(клиент)</span>: ' + companyLine);
-        lines.push('&nbsp; Улица: '  + escapeHtml(data.to.street  || '-'));
-        lines.push('&nbsp; Индекс: ' + escapeHtml(data.to.zipcode || '-'));
-        lines.push('&nbsp; Город: '  + escapeHtml(data.to.city    || '-'));
-        lines.push('&nbsp; Страна: ' + escapeHtml(data.to.country || '-'));
+        blocks.push([
+            '<b>Получатель:</b>',
+            '&nbsp; Компания <span title="Компания-заказчик по сделке; может отличаться от получателя груза">(клиент)</span>: ' + companyLine,
+            '&nbsp; Улица: '  + escapeHtml(data.to.street  || '-'),
+            '&nbsp; Индекс: ' + escapeHtml(data.to.zipcode || '-'),
+            '&nbsp; Город: '  + escapeHtml(data.to.city    || '-'),
+            '&nbsp; Страна: ' + escapeHtml(data.to.country || '-')
+        ]);
 
-        // Юниты
+        // Юниты + общий вес — один смысловой блок (груз)
+        var cargoLines = [];
         if (data.units.length > 0) {
-            lines.push('<b>Груз:</b> ' + sourceBadge(data.source));
+            cargoLines.push('<b>Груз:</b> ' + sourceBadge(data.source));
             data.units.forEach(function(u, i) {
                 var desc = 'Юнит ' + (i + 1) + ': ' + u.quantity + ' шт';
                 desc += ', ' + (u.length && u.width ? u.length + 'x' + u.width + (u.height ? 'x' + u.height : '') + ' см' : '-');
                 desc += ', ' + (u.weight ? u.weight + ' кг' : '-');
-                lines.push('&nbsp; ' + desc);
+                cargoLines.push('&nbsp; ' + desc);
             });
         }
-
         if (data.totalWeight) {
-            lines.push('<b>Общий вес:</b> ' + data.totalWeight + ' кг');
+            cargoLines.push('<b>Общий вес:</b> ' + data.totalWeight + ' кг');
         }
+        if (cargoLines.length) blocks.push(cargoLines);
 
         // Сырые значения из полей сделки (до парсинга) — для визуальной сверки,
         // парсер иногда не справляется с нестандартным форматом.
         if (data.rawGoods && (data.rawGoods.dimensions || data.rawGoods.weight)) {
-            lines.push('<span style="color:#888;font-size:11px;">Исходные данные (как в сделке): '
-                + escapeHtml(data.rawGoods.dimensions || '-') + ' / ' + escapeHtml(data.rawGoods.weight || '-') + '</span>');
+            blocks.push(['<span style="color:#888;font-size:11px;">Исходные данные (как в сделке): '
+                + escapeHtml(data.rawGoods.dimensions || '-') + ' / ' + escapeHtml(data.rawGoods.weight || '-') + '</span>']);
         }
 
-        lines.push('</div>');
-
-        var newHTML = lines.join('<br>');
+        var newHTML = '<div class="crystal-feedback-body">'
+            + blocks.map(function(block, i) {
+                var style = i === 0 ? '' : 'margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;';
+                return '<div style="' + style + '">' + block.join('<br>') + '</div>';
+            }).join('')
+            + '</div>';
         if (lastFeedbackHTML !== newHTML) {
             feedback.innerHTML = newHTML;
             lastFeedbackHTML = newHTML;
