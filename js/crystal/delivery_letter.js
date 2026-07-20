@@ -155,7 +155,14 @@ BX.ready(function () {
 
         var contact = parseContactField(getRecipientContactRaw());
 
-        var popup = new BX.PopupWindow('crystal-letter-popup', null, {
+        // Попап пересоздаётся на каждый вызов и полностью уничтожается после закрытия —
+        // при переиспользовании инстанса BX.PopupWindow по тому же id второе открытие
+        // подхватывало старый (уже отсоединённый) DOM, и письмо оказывалось пустым.
+        var popupId = 'crystal-letter-popup';
+        var existing = BX.PopupWindowManager.getPopupById(popupId);
+        if (existing) existing.destroy();
+
+        var popup = new BX.PopupWindow(popupId, null, {
             titleBar: 'Письмо перевозчику',
             content: '<div style="min-width:480px;">'
                 + '<div style="margin-bottom:8px;display:flex;gap:12px;align-items:center;">'
@@ -171,7 +178,10 @@ BX.ready(function () {
             autoHide: false,
             overlay: true,
             closeIcon: { show: true },
-            buttons: []
+            buttons: [],
+            events: {
+                onPopupClose: function () { this.destroy(); }
+            }
         });
 
         popup.show();
