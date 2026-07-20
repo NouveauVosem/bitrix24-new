@@ -794,7 +794,7 @@ BX.ready(function () {
             updateFeedback();
         });
 
-        var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
+        var BTN_STYLE = 'box-sizing:border-box;width:100%;height:30px;margin:0;padding:0 4px;border:none;border-radius:4px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .15s;';
 
         function createCarrierButton(key, label, color, endpoint) {
             var btn = document.createElement('button');
