@@ -771,50 +771,6 @@ BX.ready(function () {
 
         wrapper.appendChild(toggleBtn);
 
-        /* Crystal — калькулятор (отключено, можно вернуть)
-        var btn = document.createElement('a');
-        btn.id = BUTTON_ID;
-        btn.href = '#';
-        btn.target = '_blank';
-        btn.rel = 'noopener noreferrer';
-        btn.className = 'ui-btn ui-btn-primary ui-btn-md';
-        btn.style.cssText = 'display:block; text-align:center; width:100%; box-sizing:border-box;';
-        btn.textContent = 'Crystal';
-
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            var dimensionsEl = document.querySelector('[data-cid="UF_CRM_1720510082918"] .field-item');
-            var weightEl     = document.querySelector('[data-cid="UF_CRM_1720510115556"] .field-item');
-            var addressEl    = document.querySelector('[data-cid="UF_CRM_1714139787401"] .field-item');
-
-            var row = [];
-            row[3] = 'Dubska 769, 27203 Kladno';
-            row[4] = addressEl ? addressEl.textContent.trim() : '';
-            var dimensions = dimensionsEl ? dimensionsEl.textContent.trim().replace(/шт\s+/gi, 'шт\n') : '';
-            var weight = weightEl ? weightEl.textContent.trim() : '';
-            row[5] = dimensions + '\n' + weight;
-
-            var data = btoa(unescape(encodeURIComponent(JSON.stringify(row))));
-            window.open('https://alvla.services/calculator.html?data=' + data, '_blank');
-        });
-        */
-
-        var hint = document.createElement('details');
-        hint.id = 'crystal-delivery-hint';
-        hint.innerHTML = '<summary>Формат адреса доставки</summary>'
-            + '<div class="crystal-hint-body">'
-            + '<b>Формат:</b> Улица, Индекс Город, Страна<br>'
-            + '<b>Примеры:</b><br>'
-            + '&nbsp;Průmyslová 12, 271 01 Nové Strašecí, CZ<br>'
-            + '&nbsp;Karla Marxe 5, 10115 Berlin, DE<br>'
-            + '<b>Правила:</b><br>'
-            + '&nbsp;• Части разделяются <b>запятой</b><br>'
-            + '&nbsp;• Индекс пишется <b>перед городом</b> через пробел<br>'
-            + '&nbsp;• Форматы индекса: <code>271 01</code> или <code>10115</code><br>'
-            + '&nbsp;• Последняя часть — страна<br>'
-            + '&nbsp;• Минимум: Город, Страна'
-            + '</div>';
-
         var feedback = document.createElement('div');
         feedback.id = FEEDBACK_ID;
         // Панель создаётся заново (Bitrix пересобирает сайдбар при переключении вкладок) —
@@ -907,7 +863,6 @@ BX.ready(function () {
         btnGrid.appendChild(rabenBtn);
         btnGrid.appendChild(pythonBtn);
 
-        content.appendChild(hint);
         content.appendChild(refreshBtn);
         content.appendChild(feedback);
         content.appendChild(btnGrid);
