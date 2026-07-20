@@ -182,7 +182,7 @@ BX.ready(function () {
                 + '<label style="cursor:pointer;"><input type="radio" name="crystal-letter-lang" value="cz" checked> CZ</label>'
                 + '<label style="cursor:pointer;"><input type="radio" name="crystal-letter-lang" value="ru"> RU</label>'
                 + '</div>'
-                + '<div id="crystal-letter-text" contenteditable="true" style="width:100%;height:380px;overflow-y:auto;box-sizing:border-box;border:1px solid #ccd0d5;border-radius:4px;padding:8px 10px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;background:#fff;"></div>'
+                + '<div id="crystal-letter-text" contenteditable="true" style="width:100%;height:380px;overflow-y:auto;box-sizing:border-box;border:1px solid #ccd0d5;border-radius:4px;padding:8px 10px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;background:#fff;"></div>'
                 + '<div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px;">'
                 + '<button id="crystal-letter-copy" style="padding:6px 14px;border:none;border-radius:4px;background:#2d6cdf;color:#fff;cursor:pointer;">Копировать</button>'
                 + '</div>'
