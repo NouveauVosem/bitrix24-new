@@ -106,42 +106,55 @@ BX.ready(function () {
         return u.quantity + ' ' + t.unitWord + ' – ' + dims + ' ' + t.cm + ', ' + formatNum(u.weight) + ' ' + t.kg;
     }
 
-    function generateLetter(lang, data) {
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    // Подписи секций/полей делаем жирными — письмо копируется как форматированный
+    // текст (не plain text), поэтому жирность сохраняется при вставке в почтовый клиент.
+    function boldLabel(label) {
+        return '<b>' + escapeHtml(label) + '</b>';
+    }
+
+    function generateLetterHtml(lang, data) {
         var t = TEXT[lang];
         var billingCompany = data.billingCompany || 'ALVLA';
 
         var lines = [];
-        lines.push(t.greeting, '', t.intro, '');
-        lines.push(t.billing + ' ' + billingCompany, '');
+        lines.push(escapeHtml(t.greeting), '', escapeHtml(t.intro), '');
+        lines.push(boldLabel(t.billing) + ' ' + escapeHtml(billingCompany), '');
 
-        lines.push(t.pickupTitle);
-        lines.push(PICKUP.company);
-        lines.push(PICKUP.street);
-        lines.push(PICKUP.zipCity);
+        lines.push(boldLabel(t.pickupTitle));
+        lines.push(escapeHtml(PICKUP.company));
+        lines.push(escapeHtml(PICKUP.street));
+        lines.push(escapeHtml(PICKUP.zipCity));
         lines.push('');
-        lines.push(t.contact + ' ' + PICKUP.contactName);
-        lines.push(t.tel + ' ' + PICKUP.contactPhone);
+        lines.push(boldLabel(t.contact) + ' ' + escapeHtml(PICKUP.contactName));
+        lines.push(boldLabel(t.tel) + ' ' + escapeHtml(PICKUP.contactPhone));
         lines.push('');
 
-        lines.push(t.deliveryTitle);
-        lines.push(data.dealCompanyName || t.noCompany);
-        if (data.to.street) lines.push(data.to.street);
+        lines.push(boldLabel(t.deliveryTitle));
+        lines.push(escapeHtml(data.dealCompanyName || t.noCompany));
+        if (data.to.street) lines.push(escapeHtml(data.to.street));
         var zipCity = [data.to.zipcode, data.to.city].filter(Boolean).join(' ');
-        if (zipCity) lines.push(zipCity);
-        if (data.to.country) lines.push(data.to.country);
+        if (zipCity) lines.push(escapeHtml(zipCity));
+        if (data.to.country) lines.push(escapeHtml(data.to.country));
         lines.push('');
-        lines.push(t.contact + ' ' + (data.contact.name || '') + (data.contact.phone ? ' ' + data.contact.phone : ''));
-        lines.push('');
-
-        lines.push(t.shipmentTitle, '');
-        data.units.forEach(function (u) { lines.push(unitLine(u, t)); });
-        if (data.totalWeight) lines.push(t.totalWeight + ' ' + formatNum(data.totalWeight) + ' ' + t.kg);
+        lines.push(boldLabel(t.contact) + ' ' + escapeHtml((data.contact.name || '') + (data.contact.phone ? ' ' + data.contact.phone : '')));
         lines.push('');
 
-        lines.push(t.closing, '', t.thanks, '');
-        lines.push(t.regards, '', SIGNATURE.name, SIGNATURE.phone);
+        lines.push(boldLabel(t.shipmentTitle), '');
+        data.units.forEach(function (u) { lines.push(escapeHtml(unitLine(u, t))); });
+        if (data.totalWeight) lines.push(boldLabel(t.totalWeight) + ' ' + escapeHtml(formatNum(data.totalWeight) + ' ' + t.kg));
+        lines.push('');
 
-        return lines.join('\n');
+        lines.push(escapeHtml(t.closing), '', escapeHtml(t.thanks), '');
+        lines.push(escapeHtml(t.regards), '', escapeHtml(SIGNATURE.name), escapeHtml(SIGNATURE.phone));
+
+        return lines.join('<br>');
     }
 
     function openPopup() {
@@ -169,7 +182,7 @@ BX.ready(function () {
                 + '<label style="cursor:pointer;"><input type="radio" name="crystal-letter-lang" value="cz" checked> CZ</label>'
                 + '<label style="cursor:pointer;"><input type="radio" name="crystal-letter-lang" value="ru"> RU</label>'
                 + '</div>'
-                + '<textarea id="crystal-letter-text" style="width:100%;height:380px;font-family:monospace;font-size:12px;box-sizing:border-box;" spellcheck="false"></textarea>'
+                + '<div id="crystal-letter-text" contenteditable="true" style="width:100%;height:380px;overflow-y:auto;box-sizing:border-box;border:1px solid #ccd0d5;border-radius:4px;padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;background:#fff;"></div>'
                 + '<div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px;">'
                 + '<button id="crystal-letter-copy" style="padding:6px 14px;border:none;border-radius:4px;background:#2d6cdf;color:#fff;cursor:pointer;">Копировать</button>'
                 + '</div>'
@@ -186,11 +199,11 @@ BX.ready(function () {
 
         popup.show();
 
-        var textarea = document.getElementById('crystal-letter-text');
+        var letterBox = document.getElementById('crystal-letter-text');
 
         function render() {
             var lang = document.querySelector('input[name="crystal-letter-lang"]:checked').value;
-            textarea.value = generateLetter(lang, {
+            letterBox.innerHTML = generateLetterHtml(lang, {
                 billingCompany: parsed.billingCompany,
                 dealCompanyName: api.getDealCompanyName(),
                 to: parsed.to,
@@ -207,12 +220,15 @@ BX.ready(function () {
         });
 
         document.getElementById('crystal-letter-copy').addEventListener('click', function () {
-            textarea.select();
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(textarea.value).catch(function () { document.execCommand('copy'); });
-            } else {
+            var range = document.createRange();
+            range.selectNodeContents(letterBox);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
                 document.execCommand('copy');
-            }
+            } catch (e) {}
+            selection.removeAllRanges();
         });
 
         // В поле разгрузки не указан телефон — подтягиваем хотя бы телефон компании-заказчика.
