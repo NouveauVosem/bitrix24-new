@@ -29,7 +29,16 @@ $company   = null;
 if ($companyId > 0) {
     $c = CCrmCompany::GetByID($companyId);
     if ($c) {
-        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE']];
+        $phone = '';
+        $dbMulti = CCrmFieldMulti::GetList(
+            ['ID' => 'asc'],
+            ['ENTITY_ID' => 'COMPANY', 'ELEMENT_ID' => $companyId]
+        );
+        while ($row = $dbMulti->Fetch()) {
+            if ($row['TYPE_ID'] === 'PHONE' && !$phone) $phone = $row['VALUE'];
+        }
+
+        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE'], 'phone' => $phone];
     }
 }
 

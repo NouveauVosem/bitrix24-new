@@ -30,6 +30,7 @@ function addCustomAssets() {
 	$asset->addJs("/local/js/crystal/deal_hierarchy_panel.js");
 	$asset->addJs("/local/js/crystal/deal_crystal_btn.js");
 	$asset->addCss("/local/js/crystal/deal_crystal_btn.css");
+	$asset->addJs("/local/js/crystal/delivery_letter.js");
 	$asset->addJs("/local/js/crystal/deal_reservation_status.js");
 	$asset->addJs("/local/js/crystal/offer_strings.js");
 	$asset->addJs("/local/js/crystal/deal_commercial_offer_html.js");

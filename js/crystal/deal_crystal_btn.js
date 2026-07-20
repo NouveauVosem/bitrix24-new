@@ -882,6 +882,14 @@ BX.ready(function () {
 
     insertButton();
 
+    // Мини-API для соседних скриптов (например, delivery_letter.js), чтобы не дублировать
+    // парсер полей доставки и подгрузку названия компании-заказчика.
+    window.CrystalDeal = {
+        parseDeliveryData: parseDeliveryData,
+        getDealCompanyName: function () { return dealCompanyName; },
+        getPanelContent: function () { return document.getElementById('crystal-panel-content'); }
+    };
+
     // ===== КНОПКИ РАСЧЁТА ЦЕНЫ В СТРОКАХ ТОВАРОВ =====
 
     function getClientName() {
