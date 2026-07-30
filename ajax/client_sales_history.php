@@ -76,23 +76,13 @@ $currentDeal = [
     'date'             => $sourceDeal['DATE_CREATE'] ? (string)$sourceDeal['DATE_CREATE'] : null,
     'stage_id'         => $sourceDeal['STAGE_ID'],
     'currency'         => $sourceDeal['CURRENCY_ID'],
-    'deal_currency'    => $currencyMap[$sourceDeal['UF_CRM_1718027018701']] ?? $sourceDeal['UF_CRM_1718027018701'],
+    'deal_currency'    => $sourceDeal['UF_CRM_1718027018701'],
     'incoterms'        => $sourceDeal['UF_CRM_1718024604516'],
     'prev_price_exw'   => $sourceDeal['UF_CRM_1713986412118'],
     'target_price_exw' => $sourceDeal['UF_CRM_1717099845566'],
     'comments'         => $sourceDeal['COMMENTS'],
     'products'         => $currentDealProducts,
 ];
-
-// ── Декодирование enum поля валюты (UF_CRM_1718027018701) ────────────────────
-$currencyMap = [];
-$rsField = CUserField::GetList([], ['FIELD_NAME' => 'UF_CRM_1718027018701', 'ENTITY_ID' => 'CRM_DEAL']);
-if ($arField = $rsField->Fetch()) {
-    $rsEnum = CUserFieldEnum::GetList([], ['USER_FIELD_ID' => $arField['ID']]);
-    while ($arEnum = $rsEnum->Fetch()) {
-        $currencyMap[$arEnum['ID']] = $arEnum['VALUE'];
-    }
-}
 
 // ── Страна клиента из карточки компании ──────────────────────────────────────
 $companyCountry = null;
@@ -170,7 +160,7 @@ if (!empty($dealsRaw)) {
             'date'             => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
             'stage_id'         => $d['STAGE_ID'],
             'currency'         => $d['CURRENCY_ID'],
-            'deal_currency'    => $currencyMap[$d['UF_CRM_1718027018701']] ?? $d['UF_CRM_1718027018701'],
+            'deal_currency'    => $d['UF_CRM_1718027018701'],
             'incoterms'        => $d['UF_CRM_1718024604516'],
             'prev_price_exw'   => $d['UF_CRM_1713986412118'],
             'target_price_exw' => $d['UF_CRM_1717099845566'],
@@ -181,7 +171,7 @@ if (!empty($dealsRaw)) {
         foreach ($products as $p) {
             $p['deal_id']       = $d['ID'];
             $p['deal_date']     = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
-            $p['deal_currency'] = $currencyMap[$d['UF_CRM_1718027018701']] ?? $d['UF_CRM_1718027018701'];
+            $p['deal_currency'] = $d['UF_CRM_1718027018701'];
             $allProductsFlat[] = $p;
         }
     }
