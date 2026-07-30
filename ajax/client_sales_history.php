@@ -103,7 +103,7 @@ $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     ],
     'select' => [
         'OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
-        'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY', 'CURRENCY_ID',
+        'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY',
     ],
 ])->fetchAll();
 
@@ -115,7 +115,6 @@ foreach ($productRowsRaw as $row) {
         'name'         => $row['PRODUCT_NAME'],
         'price'        => $row['PRICE'],
         'quantity'     => $row['QUANTITY'],
-        'currency'     => $row['CURRENCY_ID'],
     ];
 }
 
