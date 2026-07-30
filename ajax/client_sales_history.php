@@ -86,17 +86,11 @@ $currentDeal = [
 
 // ── Декодирование enum поля валюты (UF_CRM_1718027018701) ────────────────────
 $currencyMap = [];
-$ufField = \Bitrix\Main\UserTypeTable::getList([
-    'filter' => ['=FIELD_NAME' => 'UF_CRM_1718027018701', '=ENTITY_ID' => 'CRM_DEAL'],
-    'select' => ['ID'],
-])->fetch();
-if ($ufField) {
-    $enumRows = \Bitrix\Main\UserFieldEnumTable::getList([
-        'filter' => ['=USER_FIELD_ID' => $ufField['ID']],
-        'select' => ['ID', 'VALUE'],
-    ])->fetchAll();
-    foreach ($enumRows as $e) {
-        $currencyMap[$e['ID']] = $e['VALUE'];
+$rsField = CUserField::GetList([], ['FIELD_NAME' => 'UF_CRM_1718027018701', 'ENTITY_ID' => 'CRM_DEAL']);
+if ($arField = $rsField->Fetch()) {
+    $rsEnum = CUserFieldEnum::GetList([], ['USER_FIELD_ID' => $arField['ID']]);
+    while ($arEnum = $rsEnum->Fetch()) {
+        $currencyMap[$arEnum['ID']] = $arEnum['VALUE'];
     }
 }
 
