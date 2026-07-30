@@ -32,6 +32,7 @@ $dealSelect = [
     'UF_CRM_1718024604516', // Базис поставки (Инкотермс)
     'UF_CRM_1713986412118', // Ранее выданная цена EXW Прага
     'UF_CRM_1717099845566', // Целевая цена EXW Прага
+    'UF_CRM_1718027018701', // Валюта сделки
 ];
 
 // ── Получить текущую сделку (без фильтра по стадии) ──────────────────────────
@@ -75,6 +76,7 @@ $currentDeal = [
     'date'             => $sourceDeal['DATE_CREATE'] ? (string)$sourceDeal['DATE_CREATE'] : null,
     'stage_id'         => $sourceDeal['STAGE_ID'],
     'currency'         => $sourceDeal['CURRENCY_ID'],
+    'deal_currency'    => $sourceDeal['UF_CRM_1718027018701'],
     'incoterms'        => $sourceDeal['UF_CRM_1718024604516'],
     'prev_price_exw'   => $sourceDeal['UF_CRM_1713986412118'],
     'target_price_exw' => $sourceDeal['UF_CRM_1717099845566'],
@@ -158,6 +160,7 @@ if (!empty($dealsRaw)) {
             'date'             => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
             'stage_id'         => $d['STAGE_ID'],
             'currency'         => $d['CURRENCY_ID'],
+            'deal_currency'    => $d['UF_CRM_1718027018701'],
             'incoterms'        => $d['UF_CRM_1718024604516'],
             'prev_price_exw'   => $d['UF_CRM_1713986412118'],
             'target_price_exw' => $d['UF_CRM_1717099845566'],
@@ -166,8 +169,9 @@ if (!empty($dealsRaw)) {
         ];
 
         foreach ($products as $p) {
-            $p['deal_id']   = $d['ID'];
-            $p['deal_date'] = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
+            $p['deal_id']       = $d['ID'];
+            $p['deal_date']     = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
+            $p['deal_currency'] = $d['UF_CRM_1718027018701'];
             $allProductsFlat[] = $p;
         }
     }
