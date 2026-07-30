@@ -124,7 +124,6 @@ $dealsRaw = \Bitrix\Crm\DealTable::getList([
     'order'  => ['DATE_CREATE' => 'DESC'],
 ])->fetchAll();
 
-$deals = [];
 $lastProducts = [];
 
 if (!empty($dealsRaw)) {
@@ -154,24 +153,16 @@ if (!empty($dealsRaw)) {
     foreach ($dealsRaw as $d) {
         $products = $productsByDeal[$d['ID']] ?? [];
 
-        $deals[] = [
-            'id'               => $d['ID'],
-            'title'            => $d['TITLE'],
-            'date'             => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
-            'stage_id'         => $d['STAGE_ID'],
-            'currency'         => $d['CURRENCY_ID'],
-            'deal_currency'    => $d['UF_CRM_1718027018701'],
-            'incoterms'        => $d['UF_CRM_1718024604516'],
-            'prev_price_exw'   => $d['UF_CRM_1713986412118'],
-            'target_price_exw' => $d['UF_CRM_1717099845566'],
-            'comments'         => $d['COMMENTS'],
-            'products'         => $products,
-        ];
-
         foreach ($products as $p) {
-            $p['deal_id']       = $d['ID'];
-            $p['deal_date']     = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
-            $p['deal_currency'] = $d['UF_CRM_1718027018701'];
+            $p['deal_currency']         = $d['UF_CRM_1718027018701'];
+            $p['deal_id']               = $d['ID'];
+            $p['deal_title']            = $d['TITLE'];
+            $p['deal_date']             = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
+            $p['deal_stage_id']         = $d['STAGE_ID'];
+            $p['deal_incoterms']        = $d['UF_CRM_1718024604516'];
+            $p['deal_prev_price_exw']   = $d['UF_CRM_1713986412118'];
+            $p['deal_target_price_exw'] = $d['UF_CRM_1717099845566'];
+            $p['deal_comments']         = $d['COMMENTS'];
             $allProductsFlat[] = $p;
         }
     }
@@ -186,7 +177,6 @@ echo json_encode([
     'contact_id'      => $contactId,
     'company_country' => $companyCountry,
     'current_deal'    => $currentDeal,
-    'deals'           => $deals,
     'last_products'   => $lastProducts,
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 die();
