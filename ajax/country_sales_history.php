@@ -180,12 +180,12 @@ if (!empty($dealsRaw)) {
         $products = $productsByDeal[$d['ID']] ?? [];
 
         foreach ($products as $p) {
+            $p['deal_currency']         = $d['UF_CRM_1718027018701'];
             $p['deal_id']               = $d['ID'];
             $p['deal_title']            = $d['TITLE'];
             $p['deal_date']             = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
             $p['deal_stage_id']         = $d['STAGE_ID'];
             $p['deal_company_id']       = $d['COMPANY_ID'];
-            $p['deal_currency']         = $d['UF_CRM_1718027018701'];
             $p['deal_incoterms']        = $d['UF_CRM_1718024604516'];
             $p['deal_prev_price_exw']   = $d['UF_CRM_1713986412118'];
             $p['deal_target_price_exw'] = $d['UF_CRM_1717099845566'];
