@@ -69,18 +69,6 @@ if ($companyId > 0) {
     $dealFilter['=CONTACT_ID'] = $contactId;
 }
 
-// ── Debug: все сделки компании без фильтра по стадиям ────────────────────────
-if (isset($_GET['debug'])) {
-    $allDeals = \Bitrix\Crm\DealTable::getList([
-        'filter' => ['=COMPANY_ID' => $companyId],
-        'select' => ['ID', 'TITLE', 'STAGE_ID', 'DATE_CREATE'],
-        'order'  => ['DATE_CREATE' => 'DESC'],
-    ])->fetchAll();
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($allDeals, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    die();
-}
-
 // ── Найти сделки клиента ──────────────────────────────────────────────────────
 $dealsRaw = \Bitrix\Crm\DealTable::getList([
     'filter' => $dealFilter,
