@@ -97,12 +97,12 @@ $dealIds = array_column($dealsRaw, 'ID');
 // ── Получить товарные позиции всех сделок одним запросом ─────────────────────
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
-        '=OWNER_TYPE_ID' => \CCrmOwnerType::Deal,
-        '@OWNER_ID'      => $dealIds,
-        '>PRICE'         => 0,
+        '=ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
+        '@ENTITY_ID'      => $dealIds,
+        '>PRICE'          => 0,
     ],
     'select' => [
-        'OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
+        'ENTITY_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
         'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY',
     ],
 ])->fetchAll();
@@ -110,7 +110,7 @@ $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
 // Группируем товары по deal ID
 $productsByDeal = [];
 foreach ($productRowsRaw as $row) {
-    $productsByDeal[$row['OWNER_ID']][] = [
+    $productsByDeal[$row['ENTITY_ID']][] = [
         'product_id'   => $row['PRODUCT_ID'],
         'name'         => $row['PRODUCT_NAME'],
         'price'        => $row['PRICE'],
