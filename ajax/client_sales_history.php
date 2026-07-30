@@ -26,10 +26,18 @@ if ($dealId <= 0) {
     die();
 }
 
-// ── Получить исходную сделку → COMPANY_ID ─────────────────────────────────────
+// ── Общие поля сделки ─────────────────────────────────────────────────────────
+$dealSelect = [
+    'ID', 'TITLE', 'DATE_CREATE', 'STAGE_ID', 'CURRENCY_ID', 'COMMENTS',
+    'UF_CRM_1718024604516', // Базис поставки (Инкотермс)
+    'UF_CRM_1713986412118', // Ранее выданная цена EXW Прага
+    'UF_CRM_1717099845566', // Целевая цена EXW Прага
+];
+
+// ── Получить текущую сделку (без фильтра по стадии) ──────────────────────────
 $sourceDeal = \Bitrix\Crm\DealTable::getList([
     'filter' => ['=ID' => $dealId],
-    'select' => ['ID', 'COMPANY_ID', 'CONTACT_ID'],
+    'select' => array_merge($dealSelect, ['COMPANY_ID', 'CONTACT_ID']),
 ])->fetch();
 
 if (!$sourceDeal) {
@@ -42,10 +50,48 @@ if (!$sourceDeal) {
 $companyId = (int)$sourceDeal['COMPANY_ID'];
 $contactId = (int)$sourceDeal['CONTACT_ID'];
 
-if ($companyId <= 0 && $contactId <= 0) {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['error' => 'No company or contact on this deal', 'deals' => [], 'last_products' => []]);
-    die();
+// ── Товары текущей сделки ─────────────────────────────────────────────────────
+$currentDealProducts = [];
+$currentProductRows = \Bitrix\Crm\ProductRowTable::getList([
+    'filter' => [
+        '=OWNER_ID'    => $dealId,
+        '>PRICE'       => 0,
+        '!=PRODUCT_ID' => 521,
+    ],
+    'select' => ['OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID', 'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY'],
+])->fetchAll();
+foreach ($currentProductRows as $row) {
+    $currentDealProducts[] = [
+        'product_id' => $row['PRODUCT_ID'],
+        'name'       => $row['PRODUCT_NAME'],
+        'price'      => $row['PRICE'],
+        'quantity'   => $row['QUANTITY'],
+    ];
+}
+
+$currentDeal = [
+    'id'               => $sourceDeal['ID'],
+    'title'            => $sourceDeal['TITLE'],
+    'date'             => $sourceDeal['DATE_CREATE'] ? (string)$sourceDeal['DATE_CREATE'] : null,
+    'stage_id'         => $sourceDeal['STAGE_ID'],
+    'currency'         => $sourceDeal['CURRENCY_ID'],
+    'incoterms'        => $sourceDeal['UF_CRM_1718024604516'],
+    'prev_price_exw'   => $sourceDeal['UF_CRM_1713986412118'],
+    'target_price_exw' => $sourceDeal['UF_CRM_1717099845566'],
+    'comments'         => $sourceDeal['COMMENTS'],
+    'products'         => $currentDealProducts,
+];
+
+// ── Страна клиента из карточки компании ──────────────────────────────────────
+$companyCountry = null;
+if ($companyId > 0) {
+    $company = \Bitrix\Crm\CompanyTable::getList([
+        'filter' => ['=ID' => $companyId],
+        'select' => ['UF_CRM_1717094712004'],
+    ])->fetch();
+    if ($company) {
+        $companyCountry = $company['UF_CRM_1717094712004'];
+    }
 }
 
 // ── Стадии с принятой ценой ───────────────────────────────────────────────────
@@ -60,8 +106,8 @@ $acceptedStages = [
 
 // ── Фильтр: по компании или контакту ─────────────────────────────────────────
 $dealFilter = [
-    '@STAGE_ID'  => $acceptedStages,
-    '!=ID'       => $dealId, // исключаем текущую сделку
+    '@STAGE_ID' => $acceptedStages,
+    '!=ID'      => $dealId,
 ];
 if ($companyId > 0) {
     $dealFilter['=COMPANY_ID'] = $companyId;
@@ -72,89 +118,71 @@ if ($companyId > 0) {
 // ── Найти сделки клиента ──────────────────────────────────────────────────────
 $dealsRaw = \Bitrix\Crm\DealTable::getList([
     'filter' => $dealFilter,
-    'select' => [
-        'ID', 'TITLE', 'DATE_CREATE', 'STAGE_ID', 'CURRENCY_ID', 'COMMENTS',
-        'UF_CRM_1718024604516', // Базис поставки (Инкотермс)
-        'UF_CRM_1713986412118', // Ранее выданная цена EXW Прага
-        'UF_CRM_1717099845566', // Целевая цена EXW Прага
-    ],
-    'order' => ['DATE_CREATE' => 'DESC'],
+    'select' => $dealSelect,
+    'order'  => ['DATE_CREATE' => 'DESC'],
 ])->fetchAll();
 
-if (empty($dealsRaw)) {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'company_id'    => $companyId,
-        'contact_id'    => $contactId,
-        'deals'         => [],
-        'last_products' => [],
-    ]);
-    die();
-}
-
-$dealIds = array_column($dealsRaw, 'ID');
-
-// ── Получить товарные позиции всех сделок одним запросом ─────────────────────
-$productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
-    'filter' => [
-        '@OWNER_ID'  => $dealIds,
-        '>PRICE'     => 0,
-        '!=PRODUCT_ID' => 521, // исключаем доставку
-    ],
-    'select' => [
-        'OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
-        'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY',
-    ],
-])->fetchAll();
-
-// Группируем товары по deal ID
-$productsByDeal = [];
-foreach ($productRowsRaw as $row) {
-    $productsByDeal[$row['OWNER_ID']][] = [
-        'product_id'   => $row['PRODUCT_ID'],
-        'name'         => $row['PRODUCT_NAME'],
-        'price'        => $row['PRICE'],
-        'quantity'     => $row['QUANTITY'],
-    ];
-}
-
-// ── Собрать ответ по сделкам ──────────────────────────────────────────────────
 $deals = [];
-$allProductsFlat = []; // для last_products
+$lastProducts = [];
 
-foreach ($dealsRaw as $d) {
-    $products = $productsByDeal[$d['ID']] ?? [];
+if (!empty($dealsRaw)) {
+    $dealIds = array_column($dealsRaw, 'ID');
 
-    $deals[] = [
-        'id'           => $d['ID'],
-        'title'        => $d['TITLE'],
-        'date'         => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
-        'stage_id'     => $d['STAGE_ID'],
-        'currency'     => $d['CURRENCY_ID'],
-        'incoterms'    => $d['UF_CRM_1718024604516'],
-        'prev_price_exw'   => $d['UF_CRM_1713986412118'],
-        'target_price_exw' => $d['UF_CRM_1717099845566'],
-        'comments'     => $d['COMMENTS'],
-        'products'     => $products,
-    ];
+    // ── Товары всех найденных сделок одним запросом ───────────────────────────
+    $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
+        'filter' => [
+            '@OWNER_ID'    => $dealIds,
+            '>PRICE'       => 0,
+            '!=PRODUCT_ID' => 521,
+        ],
+        'select' => ['OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID', 'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY'],
+    ])->fetchAll();
 
-    // Добавляем дату сделки в каждый продукт для сортировки
-    foreach ($products as $p) {
-        $p['deal_id']   = $d['ID'];
-        $p['deal_date'] = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
-        $allProductsFlat[] = $p;
+    $productsByDeal = [];
+    foreach ($productRowsRaw as $row) {
+        $productsByDeal[$row['OWNER_ID']][] = [
+            'product_id' => $row['PRODUCT_ID'],
+            'name'       => $row['PRODUCT_NAME'],
+            'price'      => $row['PRICE'],
+            'quantity'   => $row['QUANTITY'],
+        ];
     }
-}
 
-// ── Последние 10 товарных позиций (уже отсортированы т.к. сделки DESC) ────────
-$lastProducts = array_slice($allProductsFlat, 0, 10);
+    $allProductsFlat = [];
+    foreach ($dealsRaw as $d) {
+        $products = $productsByDeal[$d['ID']] ?? [];
+
+        $deals[] = [
+            'id'               => $d['ID'],
+            'title'            => $d['TITLE'],
+            'date'             => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
+            'stage_id'         => $d['STAGE_ID'],
+            'currency'         => $d['CURRENCY_ID'],
+            'incoterms'        => $d['UF_CRM_1718024604516'],
+            'prev_price_exw'   => $d['UF_CRM_1713986412118'],
+            'target_price_exw' => $d['UF_CRM_1717099845566'],
+            'comments'         => $d['COMMENTS'],
+            'products'         => $products,
+        ];
+
+        foreach ($products as $p) {
+            $p['deal_id']   = $d['ID'];
+            $p['deal_date'] = $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '';
+            $allProductsFlat[] = $p;
+        }
+    }
+
+    $lastProducts = array_slice($allProductsFlat, 0, 10);
+}
 
 // ── Ответ ─────────────────────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=utf-8');
 echo json_encode([
-    'company_id'    => $companyId,
-    'contact_id'    => $contactId,
-    'deals'         => $deals,
-    'last_products' => $lastProducts,
+    'company_id'      => $companyId,
+    'contact_id'      => $contactId,
+    'company_country' => $companyCountry,
+    'current_deal'    => $currentDeal,
+    'deals'           => $deals,
+    'last_products'   => $lastProducts,
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 die();
