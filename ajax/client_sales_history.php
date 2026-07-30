@@ -94,23 +94,14 @@ if (empty($dealsRaw)) {
 
 $dealIds = array_column($dealsRaw, 'ID');
 
-// DEBUG: показать поля таблицы
-if (isset($_GET['debug'])) {
-    $fields = \Bitrix\Crm\ProductRowTable::getEntity()->getFields();
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(array_keys($fields), JSON_PRETTY_PRINT);
-    die();
-}
-
 // ── Получить товарные позиции всех сделок одним запросом ─────────────────────
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
-        '=ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
-        '@ENTITY_ID'      => $dealIds,
-        '>PRICE'          => 0,
+        '@OWNER_ID' => $dealIds,
+        '>PRICE'    => 0,
     ],
     'select' => [
-        'ENTITY_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
+        'OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID',
         'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY',
     ],
 ])->fetchAll();
@@ -118,7 +109,7 @@ $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
 // Группируем товары по deal ID
 $productsByDeal = [];
 foreach ($productRowsRaw as $row) {
-    $productsByDeal[$row['ENTITY_ID']][] = [
+    $productsByDeal[$row['OWNER_ID']][] = [
         'product_id'   => $row['PRODUCT_ID'],
         'name'         => $row['PRODUCT_NAME'],
         'price'        => $row['PRICE'],
