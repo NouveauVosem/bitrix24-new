@@ -3,17 +3,21 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.ph
 
 \Bitrix\Main\Loader::includeModule("crm");
 
-$stages = \CCrmDealStage::GetListEx(
-    ['SORT' => 'ASC'],
-    [],
-    false,
-    false,
-    ['STATUS_ID', 'NAME', 'CATEGORY_ID', 'SORT']
-);
-
+// Основная воронка (category 0)
 $result = [];
+$stages = \CCrmStatus::GetList(['SORT' => 'ASC'], ['ENTITY_ID' => 'DEAL_STAGE']);
 while ($s = $stages->Fetch()) {
+    $s['CATEGORY_ID'] = 0;
     $result[] = $s;
+}
+
+// Дополнительные воронки (category 1, 2, ...)
+for ($i = 1; $i <= 5; $i++) {
+    $stages = \CCrmStatus::GetList(['SORT' => 'ASC'], ['ENTITY_ID' => 'DEAL_STAGE_' . $i]);
+    while ($s = $stages->Fetch()) {
+        $s['CATEGORY_ID'] = $i;
+        $result[] = $s;
+    }
 }
 
 header('Content-Type: application/json; charset=utf-8');
