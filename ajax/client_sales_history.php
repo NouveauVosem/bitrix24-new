@@ -94,6 +94,14 @@ if (empty($dealsRaw)) {
 
 $dealIds = array_column($dealsRaw, 'ID');
 
+// DEBUG: показать поля таблицы
+if (isset($_GET['debug'])) {
+    $fields = \Bitrix\Crm\ProductRowTable::getEntity()->getFields();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array_keys($fields), JSON_PRETTY_PRINT);
+    die();
+}
+
 // ── Получить товарные позиции всех сделок одним запросом ─────────────────────
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
