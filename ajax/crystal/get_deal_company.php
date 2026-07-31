@@ -38,7 +38,7 @@ if ($companyId > 0) {
             if ($row['TYPE_ID'] === 'PHONE' && !$phone) $phone = $row['VALUE'];
         }
 
-        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE'], 'phone' => $phone];
+        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE'], 'phone' => $phone, 'country' => $c['UF_CRM_1717094712004'] ?: null];
     }
 }
 

@@ -32,6 +32,7 @@ BX.ready(function () {
     // на сделке нет, поэтому берём компанию-заказчика (не всегда совпадает с получателем груза).
 
     var dealCompanyName = '';
+    var dealCompanyCountry = null;
     var dealCompanyLoaded = false;
 
     (function loadDealCompanyName() {
@@ -46,7 +47,8 @@ BX.ready(function () {
         })
         .then(function (r) { return r.json(); })
         .then(function (resp) {
-            dealCompanyName = (resp && resp.company && resp.company.name) ? resp.company.name : '';
+            dealCompanyName    = (resp && resp.company && resp.company.name)    ? resp.company.name    : '';
+            dealCompanyCountry = (resp && resp.company && resp.company.country) ? resp.company.country : null;
         })
         .catch(function () { dealCompanyName = ''; })
         .then(function () {
@@ -985,7 +987,8 @@ BX.ready(function () {
                             productName: productName,
                             quantity: quantity,
                             clientName: getClientName(),
-                            bitrixProductId: bitrixProductId
+                            bitrixProductId: bitrixProductId,
+                            clientCountry: dealCompanyCountry
                         })
                     })
                     .then(function(res) {
