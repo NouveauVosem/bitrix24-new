@@ -960,6 +960,12 @@ BX.ready(function () {
                     quantity = qtyMatch ? qtyMatch[0] : qtyText;
                 }
 
+                var bitrixProductId = null;
+                if (nameKey !== null && row.node.children[nameKey]) {
+                    var pidHidden = row.node.children[nameKey].querySelector('input[data-name="PRODUCT_ID"]');
+                    bitrixProductId = pidHidden ? pidHidden.value.trim() : null;
+                }
+
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
                 var dealId = dm ? dm[1] : null;
 
@@ -978,7 +984,8 @@ BX.ready(function () {
                             dealId: dealId,
                             productName: productName,
                             quantity: quantity,
-                            clientName: getClientName()
+                            clientName: getClientName(),
+                            bitrixProductId: bitrixProductId
                         })
                     })
                     .then(function(res) {
