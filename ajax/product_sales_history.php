@@ -40,6 +40,7 @@ $acceptedStages = [
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
         '=PRODUCT_ID' => $productBitrixId,
+        '=OWNER_TYPE' => 'D',
         '>PRICE'      => 0,
     ],
     'select' => ['OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID', 'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY'],
@@ -94,7 +95,7 @@ if (!empty($dealsRaw)) {
             $allProductsFlat[] = [
                 'product_id'            => $p['PRODUCT_ID'],
                 'name'                  => $p['PRODUCT_NAME'],
-                'price'                 => $p['PRICE'],
+                'price'                 => $p['PRICE_EXCLUSIVE'],
                 'quantity'              => $p['QUANTITY'],
                 'deal_id'               => $d['ID'],
                 'deal_title'            => $d['TITLE'],
