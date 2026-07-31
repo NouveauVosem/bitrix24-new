@@ -77,14 +77,22 @@ $dealsRaw = \Bitrix\Crm\DealTable::getList([
 $lastProducts = [];
 
 if (!empty($dealsRaw)) {
-    $dealMap = [];
-    foreach ($dealsRaw as $d) {
-        $dealMap[$d['ID']] = $d;
-    }
-
     $productsByDeal = [];
     foreach ($productRowsRaw as $row) {
         $productsByDeal[$row['OWNER_ID']][] = $row;
+    }
+
+    // Подтянуть страны компаний одним запросом
+    $companyIds = array_unique(array_filter(array_column($dealsRaw, 'COMPANY_ID')));
+    $companyCountryMap = [];
+    if (!empty($companyIds)) {
+        $companiesRaw = \Bitrix\Crm\CompanyTable::getList([
+            'filter' => ['@ID' => $companyIds],
+            'select' => ['ID', 'UF_CRM_1717094712004'],
+        ])->fetchAll();
+        foreach ($companiesRaw as $c) {
+            $companyCountryMap[$c['ID']] = $c['UF_CRM_1717094712004'];
+        }
     }
 
     $allProductsFlat = [];
@@ -102,6 +110,7 @@ if (!empty($dealsRaw)) {
                 'deal_date'             => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : '',
                 'deal_stage_id'         => $d['STAGE_ID'],
                 'deal_company_id'       => $d['COMPANY_ID'],
+                'deal_company_country'  => $companyCountryMap[$d['COMPANY_ID']] ?? null,
                 'deal_currency'         => $d['UF_CRM_1718027018701'],
                 'deal_incoterms'        => $d['UF_CRM_1718024604516'],
                 'deal_prev_price_exw'   => $d['UF_CRM_1713986412118'],
