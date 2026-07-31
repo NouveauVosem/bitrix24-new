@@ -1011,35 +1011,7 @@ BX.ready(function () {
                     });
                 }
 
-                if (!productName || !window.CrystalProductForms) {
-                    doCreate();
-                    return;
-                }
-
-                var article = window.CrystalProductForms.extractArticleFromRow(row.node, productName);
-                btn.disabled = true;
-                btn.textContent = '⌛ Ищу форму...';
-                statusDiv.textContent = '';
-
-                fetch('https://crystal.alvla.tools/api/product-forms/byArticle/' + encodeURIComponent(article), {
-                    headers: { 'X-Api-Key': 'legenda' }
-                })
-                .then(function(res) {
-                    if (res.status === 404) return null;
-                    return res.ok ? res.json() : null;
-                })
-                .then(function(form) {
-                    if (form && form.id) {
-                        btn.disabled = false;
-                        btn.textContent = 'Рассчитать';
-                        window.CrystalProductForms.openConfigurator(form, productName, quantity, dealId, getClientName());
-                    } else {
-                        doCreate();
-                    }
-                })
-                .catch(function() {
-                    doCreate();
-                });
+                doCreate();
             });
 
             lastCell.appendChild(btn);
