@@ -104,6 +104,7 @@ $acceptedStages = [
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
         '=PRODUCT_ID' => $productBitrixId,
+        '=OWNER_TYPE' => 'D',
         '>PRICE'      => 0,
     ],
     'select' => ['OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID', 'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY'],
