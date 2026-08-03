@@ -969,13 +969,35 @@ BX.ready(function () {
                 }
 
                 var bitrixProductId = null;
-                if (nameKey !== null && row.node.children[nameKey]) {
-                    var pidHidden = row.node.children[nameKey].querySelector('input[data-name="PRODUCT_ID"]');
-                    bitrixProductId = pidHidden ? pidHidden.value.trim() : null;
-                }
 
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
                 var dealId = dm ? dm[1] : null;
+
+                // Единственный источник PRODUCT_ID — строки сделки на сервере
+                // (CCrmDeal::LoadProductRows), тот же способ, что уже использует
+                // иерархическая панель (hierarchy.php). Скрытый input в DOM грида
+                // Bitrix рендерит не для всех строк, поэтому на него не полагаемся.
+                function resolveBitrixProductId(callback) {
+                    if (!dealId) return callback();
+
+                    fetch('/local/ajax/crystal/get_deal_product_rows.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'dealId=' + encodeURIComponent(dealId)
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (resp) {
+                        var rows = (resp && resp.status === 'success' && Array.isArray(resp.rows)) ? resp.rows : [];
+                        var match = rows.find(function (r) { return r.productName === productName; })
+                            || rows.find(function (r) {
+                                return r.productName && productName
+                                    && (r.productName.indexOf(productName) !== -1 || productName.indexOf(r.productName) !== -1);
+                            });
+                        if (match && match.productId) bitrixProductId = String(match.productId);
+                    })
+                    .catch(function () {})
+                    .then(callback);
+                }
 
                 function doCreate() {
                     btn.disabled = true;
@@ -1021,7 +1043,7 @@ BX.ready(function () {
                     });
                 }
 
-                doCreate();
+                resolveBitrixProductId(doCreate);
             });
 
             lastCell.appendChild(btn);
