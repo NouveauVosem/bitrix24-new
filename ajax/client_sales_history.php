@@ -56,6 +56,7 @@ $currentDealProducts = [];
 $currentProductRows = \Bitrix\Crm\ProductRowTable::getList([
     'filter' => [
         '=OWNER_ID'    => $dealId,
+        '=OWNER_TYPE'  => 'D',
         '>PRICE'       => 0,
         '!=PRODUCT_ID' => 521,
     ],
@@ -133,6 +134,7 @@ if (!empty($dealsRaw)) {
     $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
         'filter' => [
             '@OWNER_ID'    => $dealIds,
+            '=OWNER_TYPE'  => 'D',
             '>PRICE'       => 0,
             '!=PRODUCT_ID' => 521,
         ],
