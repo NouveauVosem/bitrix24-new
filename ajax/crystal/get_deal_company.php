@@ -38,7 +38,15 @@ if ($companyId > 0) {
             if ($row['TYPE_ID'] === 'PHONE' && !$phone) $phone = $row['VALUE'];
         }
 
-        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE'], 'phone' => $phone, 'country' => $c['UF_CRM_1717094712004'] ?: null];
+        // CCrmCompany::GetByID() не возвращает UF_ поля в этой версии Bitrix24 —
+        // страну (enum-поле) берём через ORM, как в ajax/country_sales_history.php.
+        $companyOrm = \Bitrix\Crm\CompanyTable::getList([
+            'filter' => ['=ID' => $companyId],
+            'select' => ['UF_CRM_1717094712004'],
+        ])->fetch();
+        $country = $companyOrm['UF_CRM_1717094712004'] ?? null;
+
+        $company = ['id' => (int)$c['ID'], 'name' => $c['TITLE'], 'phone' => $phone, 'country' => $country ?: null];
     }
 }
 
