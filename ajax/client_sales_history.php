@@ -169,7 +169,7 @@ if (!empty($dealsRaw)) {
         }
     }
 
-    $lastProducts = array_slice($allProductsFlat, 0, 10);
+    $lastProducts = array_slice($allProductsFlat, 0, 20);
 }
 
 // ── Ответ ─────────────────────────────────────────────────────────────────────
