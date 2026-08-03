@@ -981,21 +981,24 @@ BX.ready(function () {
                     btn.textContent = '⌛ Создаю...';
                     statusDiv.textContent = '';
 
+                    var requestPayload = {
+                        dealId: dealId,
+                        productName: productName,
+                        quantity: quantity,
+                        clientName: getClientName(),
+                        bitrixProductId: bitrixProductId,
+                        clientCountry: dealCompanyCountry,
+                        managerName: getManagerName()
+                    };
+                    console.log('[Crystal] price-calculations/crm/create payload:', requestPayload);
+
                     fetch('https://crystal.alvla.tools/api/price-calculations/crm/create', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-Api-Key': 'legenda'
                         },
-                        body: JSON.stringify({
-                            dealId: dealId,
-                            productName: productName,
-                            quantity: quantity,
-                            clientName: getClientName(),
-                            bitrixProductId: bitrixProductId,
-                            clientCountry: dealCompanyCountry,
-                            managerName: getManagerName()
-                        })
+                        body: JSON.stringify(requestPayload)
                     })
                     .then(function(res) {
                         return res.json().then(function(data) { return { ok: res.ok, data: data }; });
