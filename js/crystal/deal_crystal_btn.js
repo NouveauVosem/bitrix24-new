@@ -911,6 +911,11 @@ BX.ready(function () {
         return dashIdx !== -1 ? titleText.slice(dashIdx + 3).trim() : titleText;
     }
 
+    function getManagerName() {
+        var nameEl = document.querySelector('[data-cid="ASSIGNED_BY_ID"] .crm-widget-employee-name');
+        return nameEl ? nameEl.textContent.trim() : '';
+    }
+
     function injectProductButtons() {
         var gridNode = document.body.querySelector('[id^="CCrmEntityProductListComponent"]');
         if (!gridNode) return;
@@ -988,7 +993,8 @@ BX.ready(function () {
                             quantity: quantity,
                             clientName: getClientName(),
                             bitrixProductId: bitrixProductId,
-                            clientCountry: dealCompanyCountry
+                            clientCountry: dealCompanyCountry,
+                            managerName: getManagerName()
                         })
                     })
                     .then(function(res) {
