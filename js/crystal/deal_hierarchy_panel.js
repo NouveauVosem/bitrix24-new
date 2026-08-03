@@ -25,6 +25,15 @@
         return idx !== -1 ? t.slice(idx + 3).trim() : t;
     }
 
+    // Страна компании-заказчика уже подгружается в deal_crystal_btn.js
+    // (get_deal_company.php) — переиспользуем её через window.CrystalDeal,
+    // чтобы не дублировать запрос.
+    function getDealCompanyCountry() {
+        return (window.CrystalDeal && window.CrystalDeal.getDealCompanyCountry)
+            ? window.CrystalDeal.getDealCompanyCountry()
+            : null;
+    }
+
     function esc(s) {
         return String(s)
             .replace(/&/g, '&amp;')
@@ -413,7 +422,8 @@
                                 formNormId: item.normId,
                                 dealId: getDealId(),
                                 clientName: getClientName(),
-                                quantity: item.qty || 1
+                                quantity: item.qty || 1,
+                                dealCompanyCountry: getDealCompanyCountry()
                             })
                         })
                         .then(function (r) { return r.json(); })
@@ -600,7 +610,8 @@
                         formNormId: item.normId,
                         dealId: dealId,
                         clientName: clientName,
-                        quantity: item.qty || 1
+                        quantity: item.qty || 1,
+                        dealCompanyCountry: getDealCompanyCountry()
                     })
                 })
                 .then(function (r) { return r.json(); })

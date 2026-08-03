@@ -898,6 +898,7 @@ BX.ready(function () {
     window.CrystalDeal = {
         parseDeliveryData: parseDeliveryData,
         getDealCompanyName: function () { return dealCompanyName; },
+        getDealCompanyCountry: function () { return dealCompanyCountry; },
         getPanelContent: function () { return document.getElementById('crystal-panel-content'); }
     };
 
