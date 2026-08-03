@@ -137,6 +137,7 @@ $dealsRaw = \Bitrix\Crm\DealTable::getList([
         'UF_CRM_1713986412118', // Ранее выданная цена EXW Прага
         'UF_CRM_1717099845566', // Целевая цена EXW Прага
         'UF_CRM_1718027018701', // Валюта сделки
+        'UF_CRM_1741189617279', // Дата инвойса
     ],
     'order' => ['DATE_CREATE' => 'DESC'],
 ])->fetchAll();
@@ -169,6 +170,7 @@ if (!empty($dealsRaw)) {
                 'deal_prev_price_exw'   => $d['UF_CRM_1713986412118'],
                 'deal_target_price_exw' => $d['UF_CRM_1717099845566'],
                 'deal_comments'         => $d['COMMENTS'],
+                'deal_invoice_date'     => $d['UF_CRM_1741189617279'] ? (string)$d['UF_CRM_1741189617279'] : '',
             ];
         }
     }

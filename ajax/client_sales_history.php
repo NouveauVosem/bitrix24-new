@@ -33,6 +33,7 @@ $dealSelect = [
     'UF_CRM_1713986412118', // Ранее выданная цена EXW Прага
     'UF_CRM_1717099845566', // Целевая цена EXW Прага
     'UF_CRM_1718027018701', // Валюта сделки
+    'UF_CRM_1741189617279', // Дата инвойса
 ];
 
 // ── Получить текущую сделку (без фильтра по стадии) ──────────────────────────
@@ -82,6 +83,7 @@ $currentDeal = [
     'prev_price_exw'   => $sourceDeal['UF_CRM_1713986412118'],
     'target_price_exw' => $sourceDeal['UF_CRM_1717099845566'],
     'comments'         => $sourceDeal['COMMENTS'],
+    'invoice_date'     => $sourceDeal['UF_CRM_1741189617279'] ? (string)$sourceDeal['UF_CRM_1741189617279'] : '',
     'products'         => $currentDealProducts,
 ];
 
@@ -165,6 +167,7 @@ if (!empty($dealsRaw)) {
             $p['deal_prev_price_exw']   = $d['UF_CRM_1713986412118'];
             $p['deal_target_price_exw'] = $d['UF_CRM_1717099845566'];
             $p['deal_comments']         = $d['COMMENTS'];
+            $p['deal_invoice_date']     = $d['UF_CRM_1741189617279'] ? (string)$d['UF_CRM_1741189617279'] : '';
             $allProductsFlat[] = $p;
         }
     }
