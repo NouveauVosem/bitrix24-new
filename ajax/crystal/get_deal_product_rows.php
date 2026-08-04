@@ -27,6 +27,7 @@ foreach ((\CCrmDeal::LoadProductRows($dealId) ?: []) as $r) {
         'rowId'       => (int)$r['ID'],
         'productId'   => (int)$r['PRODUCT_ID'],
         'productName' => $r['PRODUCT_NAME'],
+        'property70'  => $r['PROPERTY_70'] ?? null,
     ];
 }
 
