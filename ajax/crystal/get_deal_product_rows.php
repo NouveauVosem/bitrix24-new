@@ -23,19 +23,36 @@ if (!$dealId) {
 // а LoadProductRows() отдаёт реальную привязку к каталогу без гадания.
 $rawRows = \CCrmDeal::LoadProductRows($dealId) ?: [];
 
-// DEBUG: dump keys of first row to see real field names
-if (!empty($rawRows) && isset($_POST['debug'])) {
-    echo json_encode(['status' => 'debug', 'keys' => array_keys($rawRows[0]), 'first_row' => $rawRows[0]], JSON_UNESCAPED_UNICODE);
-    die();
+$rows = [];
+$productIds = [];
+foreach ($rawRows as $r) {
+    if (!empty($r['PRODUCT_ID'])) {
+        $productIds[] = (int)$r['PRODUCT_ID'];
+    }
 }
 
-$rows = [];
+// Fetch PROPERTY_70 from iblock catalog for all product IDs at once
+$property70Map = [];
+if (!empty($productIds) && \CModule::IncludeModule('iblock')) {
+    $res = \CIBlockElement::GetList(
+        [],
+        ['ID' => $productIds, 'ACTIVE' => 'Y'],
+        false,
+        false,
+        ['ID', 'PROPERTY_70']
+    );
+    while ($el = $res->Fetch()) {
+        $property70Map[(int)$el['ID']] = $el['PROPERTY_70_VALUE'] ?? $el['PROPERTY_70'] ?? null;
+    }
+}
+
 foreach ($rawRows as $r) {
+    $pid = (int)$r['PRODUCT_ID'];
     $rows[] = [
         'rowId'       => (int)$r['ID'],
-        'productId'   => (int)$r['PRODUCT_ID'],
+        'productId'   => $pid,
         'productName' => $r['PRODUCT_NAME'],
-        'property70'  => $r['PROPERTY_70'] ?? null,
+        'property70'  => $property70Map[$pid] ?? null,
     ];
 }
 
