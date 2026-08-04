@@ -21,8 +21,16 @@ if (!$dealId) {
 // Источник правды по PRODUCT_ID строк сделки — сам Битрикс, а не DOM грида:
 // скрытый input[data-name="PRODUCT_ID"] в таблице товаров рендерится не всегда,
 // а LoadProductRows() отдаёт реальную привязку к каталогу без гадания.
+$rawRows = \CCrmDeal::LoadProductRows($dealId) ?: [];
+
+// DEBUG: dump keys of first row to see real field names
+if (!empty($rawRows) && isset($_POST['debug'])) {
+    echo json_encode(['status' => 'debug', 'keys' => array_keys($rawRows[0]), 'first_row' => $rawRows[0]], JSON_UNESCAPED_UNICODE);
+    die();
+}
+
 $rows = [];
-foreach ((\CCrmDeal::LoadProductRows($dealId) ?: []) as $r) {
+foreach ($rawRows as $r) {
     $rows[] = [
         'rowId'       => (int)$r['ID'],
         'productId'   => (int)$r['PRODUCT_ID'],
