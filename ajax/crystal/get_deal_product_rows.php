@@ -24,20 +24,11 @@ if (!$dealId) {
 $rawRows = \CCrmDeal::LoadProductRows($dealId) ?: [];
 
 // Транспортные услуги (UF_CRM_1718026115207) — берём тут же, чтобы фронту не
-// приходилось парсить это поле из DOM сайдбара сделки.
+// приходилось парсить это поле из DOM сайдбара сделки. Отдаём сырое значение
+// (ID пункта справочника) без резолва в текст — резолвится на стороне Crystal.
 global $USER_FIELD_MANAGER;
-$dealUfFields = $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $dealId, LANGUAGE_ID);
-
-$transportServicesField = $dealUfFields['UF_CRM_1718026115207'] ?? [];
-$transportServices = '';
-if (!empty($transportServicesField['VALUE'])) {
-    if (($transportServicesField['USER_TYPE_ID'] ?? '') === 'enumeration') {
-        $enumRes = \CUserFieldEnum::GetList([], ['ID' => $transportServicesField['VALUE']]);
-        if ($enumRow = $enumRes->Fetch()) $transportServices = $enumRow['VALUE'];
-    } else {
-        $transportServices = (string)$transportServicesField['VALUE'];
-    }
-}
+$dealUfFields = $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $dealId);
+$transportServices = $dealUfFields['UF_CRM_1718026115207']['VALUE'] ?? null;
 
 $rows = [];
 $productIds = [];
