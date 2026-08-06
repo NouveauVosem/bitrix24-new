@@ -970,6 +970,7 @@ BX.ready(function () {
 
                 var bitrixProductId = null;
                 var warehouseType = null;
+                var transportServices = null;
 
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
                 var dealId = dm ? dm[1] : null;
@@ -978,7 +979,8 @@ BX.ready(function () {
                 // (CCrmDeal::LoadProductRows), тот же способ, что уже использует
                 // иерархическая панель (hierarchy.php). Скрытый input в DOM грида
                 // Bitrix рендерит не для всех строк, поэтому на него не полагаемся.
-                // PROPERTY_70 (Склад/Под заказ) тоже берём отсюда — колонка может быть скрыта.
+                // PROPERTY_70 (Склад/Под заказ) и транспортные услуги (UF_CRM_1718026115207)
+                // тоже берём отсюда, а не парсингом DOM сайдбара — колонка/блок может быть скрыт.
                 function resolveBitrixProductId(callback) {
                     if (!dealId) return callback();
 
@@ -989,7 +991,9 @@ BX.ready(function () {
                     })
                     .then(function (r) { return r.json(); })
                     .then(function (resp) {
-                        var rows = (resp && resp.status === 'success' && Array.isArray(resp.rows)) ? resp.rows : [];
+                        if (!resp || resp.status !== 'success') return;
+
+                        var rows = Array.isArray(resp.rows) ? resp.rows : [];
                         var match = rows.find(function (r) { return r.productName === productName; })
                             || rows.find(function (r) {
                                 return r.productName && productName
@@ -999,6 +1003,9 @@ BX.ready(function () {
                             if (match.productId) bitrixProductId = String(match.productId);
                             if (match.property70) warehouseType = match.property70;
                         }
+
+                        if (resp.transportServices) transportServices = resp.transportServices;
+                        console.log('[Crystal] get_deal_product_rows resolved:', { bitrixProductId: bitrixProductId, warehouseType: warehouseType, transportServices: transportServices });
                     })
                     .catch(function () {})
                     .then(callback);
@@ -1017,7 +1024,8 @@ BX.ready(function () {
                         bitrixProductId: bitrixProductId,
                         clientCountry: dealCompanyCountry,
                         managerName: getManagerName(),
-                        warehouseType: warehouseType
+                        warehouseType: warehouseType,
+                        transportServices: transportServices
                     };
                     console.log('[Crystal] price-calculations/crm/create payload:', requestPayload);
 

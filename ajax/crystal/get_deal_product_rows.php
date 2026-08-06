@@ -23,6 +23,22 @@ if (!$dealId) {
 // а LoadProductRows() отдаёт реальную привязку к каталогу без гадания.
 $rawRows = \CCrmDeal::LoadProductRows($dealId) ?: [];
 
+// Транспортные услуги (UF_CRM_1718026115207) — берём тут же, чтобы фронту не
+// приходилось парсить это поле из DOM сайдбара сделки.
+global $USER_FIELD_MANAGER;
+$dealUfFields = $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $dealId, LANGUAGE_ID);
+
+$transportServicesField = $dealUfFields['UF_CRM_1718026115207'] ?? [];
+$transportServices = '';
+if (!empty($transportServicesField['VALUE'])) {
+    if (($transportServicesField['USER_TYPE_ID'] ?? '') === 'enumeration') {
+        $enumRes = \CUserFieldEnum::GetList([], ['ID' => $transportServicesField['VALUE']]);
+        if ($enumRow = $enumRes->Fetch()) $transportServices = $enumRow['VALUE'];
+    } else {
+        $transportServices = (string)$transportServicesField['VALUE'];
+    }
+}
+
 $rows = [];
 $productIds = [];
 foreach ($rawRows as $r) {
@@ -56,4 +72,4 @@ foreach ($rawRows as $r) {
     ];
 }
 
-echo json_encode(['status' => 'success', 'rows' => $rows], JSON_UNESCAPED_UNICODE);
+echo json_encode(['status' => 'success', 'rows' => $rows, 'transportServices' => $transportServices], JSON_UNESCAPED_UNICODE);
