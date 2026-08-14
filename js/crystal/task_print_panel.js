@@ -64,13 +64,13 @@
     // ===== CRYSTAL API =====
 
     function listPrints(taskId) {
-        return fetch(CRYSTAL_BASE + '/print-jobs?taskId=' + encodeURIComponent(taskId), {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs?taskId=' + encodeURIComponent(taskId), {
             headers: { 'X-Api-Key': API_KEY }
         }).then(function (r) { return r.json(); });
     }
 
     function uploadPrint(fd) {
-        return fetch(CRYSTAL_BASE + '/print-jobs', {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs', {
             method: 'POST',
             headers: { 'X-Api-Key': API_KEY },
             body: fd
@@ -83,14 +83,14 @@
     }
 
     function deletePrint(id) {
-        return fetch(CRYSTAL_BASE + '/print-jobs/' + encodeURIComponent(id), {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id), {
             method: 'DELETE',
             headers: { 'X-Api-Key': API_KEY }
         }).then(function (r) { return r.json(); });
     }
 
     function fetchPrintFile(id) {
-        return fetch(CRYSTAL_BASE + '/print-jobs/' + encodeURIComponent(id) + '/file', {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/file', {
             headers: { 'X-Api-Key': API_KEY }
         }).then(function (r) {
             if (!r.ok) throw new Error('Не удалось скачать файл');
