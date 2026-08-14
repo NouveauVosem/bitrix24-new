@@ -1,11 +1,6 @@
 (function () {
     'use strict';
 
-    // ВНИМАНИЕ: URL-паттерн определения страницы задачи (ниже) и точка встраивания
-    // кнопки — первая версия, ещё не проверенная вживую на crm.alvla.eu.
-    // Если задача открывается как слайдер поверх сделки, а не отдельной страницей,
-    // возможно понадобится донастроить детект (см. TASK_URL_RE).
-
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
     var TASK_URL_RE = /tasks\/task\/view\/(\d+)/;
@@ -149,6 +144,9 @@
         title.textContent = 'Печати по задаче #' + taskId;
         title.style.cssText = 'margin:0 0 14px;font-size:16px;';
         box.appendChild(title);
+
+        var folderRow = renderFolderStatus();
+        box.appendChild(folderRow.el);
 
         var listWrap = document.createElement('div');
         box.appendChild(listWrap);
@@ -307,6 +305,53 @@
 
     // ===== FILE SYSTEM ACCESS (скачивание в папку клиента на ПК) =====
 
+    function renderFolderStatus() {
+        var wrap = document.createElement('div');
+        wrap.style.cssText =
+            'display:flex;align-items:center;gap:8px;background:#f8f9fb;border:1px solid #eee;' +
+            'border-radius:8px;padding:8px 10px;margin-bottom:14px;font-size:13px;';
+
+        var label = document.createElement('span');
+        label.style.cssText = 'flex:1;color:#555;';
+        wrap.appendChild(label);
+
+        var btn = document.createElement('button');
+        btn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+        wrap.appendChild(btn);
+
+        btn.onclick = function () {
+            chooseRootDir().then(function () {
+                refresh();
+            }).catch(function (e) {
+                if (e && e.name === 'AbortError') return;
+                alert('Не удалось выбрать папку: ' + e.message);
+            });
+        };
+
+        function refresh() {
+            if (!window.showDirectoryPicker) {
+                label.textContent = 'Браузер не поддерживает сохранение в папку (нужен Chrome/Edge)';
+                btn.style.display = 'none';
+                return;
+            }
+            peekRootDirHandle().then(function (result) {
+                if (result && result.granted) {
+                    label.textContent = 'Папка для сохранения: ' + result.handle.name;
+                    btn.textContent = 'Сменить';
+                } else if (result && result.handle) {
+                    label.textContent = 'Папка выбрана (' + result.handle.name + '), доступ подтвердится при скачивании';
+                    btn.textContent = 'Сменить';
+                } else {
+                    label.textContent = 'Папка не настроена — создайте её (например C:\\PrintJobs) и укажите один раз';
+                    btn.textContent = 'Настроить';
+                }
+            });
+        }
+        refresh();
+
+        return { el: wrap, refresh: refresh };
+    }
+
     function downloadToFolder(item, getInfo, taskId) {
         if (!window.showDirectoryPicker) {
             return Promise.reject(new Error('Браузер не поддерживает сохранение в папку (нужен Chrome/Edge)'));
@@ -347,10 +392,26 @@
                     });
                 });
             }
-            return window.showDirectoryPicker({ mode: 'readwrite' }).then(function (newHandle) {
-                return idbSet(ROOT_DIR_KEY, newHandle).then(function () { return newHandle; });
+            return chooseRootDir();
+        });
+    }
+
+    // Проверяет сохранённый хендл БЕЗ показа диалогов (для статуса в панели)
+    function peekRootDirHandle() {
+        return idbGet(ROOT_DIR_KEY).then(function (handle) {
+            if (!handle) return null;
+            return handle.queryPermission({ mode: 'readwrite' }).then(function (perm) {
+                return { handle: handle, granted: perm === 'granted' };
             });
         });
+    }
+
+    // Всегда показывает диалог выбора папки (первичная настройка / смена папки)
+    function chooseRootDir() {
+        return window.showDirectoryPicker({ mode: 'readwrite', id: 'crystal-print-root', startIn: 'desktop' })
+            .then(function (handle) {
+                return idbSet(ROOT_DIR_KEY, handle).then(function () { return handle; });
+            });
     }
 
     // ===== МИНИ IndexedDB ХРАНИЛИЩЕ ДЛЯ FileSystemDirectoryHandle =====
