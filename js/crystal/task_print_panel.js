@@ -9,31 +9,55 @@
     var ROOT_DIR_KEY = 'printRootDir';
 
     BX.ready(function () {
-        var match = window.location.href.match(TASK_URL_RE);
-        if (!match) return;
-
-        var taskId = match[1];
+        var currentTaskId = null;
         var dealId = null;
         var client = null;
+        var floatBtn = null;
 
-        var floatBtn = createFloatButton();
-        document.body.appendChild(floatBtn.el);
+        // Модуль задач Bitrix24 — SPA: переход между задачами не всегда
+        // перезагружает страницу, поэтому BX.ready срабатывает только один раз.
+        // Перечитываем taskId из URL при каждой мутации DOM, чтобы кнопка
+        // появлялась/пересоздавалась и без полного reload.
+        function sync() {
+            var match = window.location.href.match(TASK_URL_RE);
+            var taskId = match ? match[1] : null;
 
-        loadTaskDeal(taskId).then(function (info) {
-            dealId = info.dealId;
-            client = info.client;
-            return refreshCount();
-        }).catch(function () {});
+            if (taskId === currentTaskId) return;
+            currentTaskId = taskId;
+            dealId = null;
+            client = null;
 
-        floatBtn.el.addEventListener('click', function () {
-            openPanel(taskId, function () { return { dealId: dealId, client: client }; });
-        });
+            if (floatBtn) {
+                floatBtn.el.remove();
+                floatBtn = null;
+            }
 
-        function refreshCount() {
-            return listPrints(taskId).then(function (items) {
-                floatBtn.setCount(items.length);
+            if (!taskId) return;
+
+            floatBtn = createFloatButton();
+            document.body.appendChild(floatBtn.el);
+
+            floatBtn.el.addEventListener('click', function () {
+                openPanel(taskId, function () { return { dealId: dealId, client: client }; });
             });
+
+            loadTaskDeal(taskId).then(function (info) {
+                dealId = info.dealId;
+                client = info.client;
+                return refreshCount();
+            }).catch(function () {});
+
+            function refreshCount() {
+                return listPrints(taskId).then(function (items) {
+                    if (floatBtn) floatBtn.setCount(items.length);
+                });
+            }
         }
+
+        sync();
+
+        var navObserver = new MutationObserver(function () { sync(); });
+        navObserver.observe(document.body, { childList: true, subtree: true });
     });
 
     // ===== BITRIX BRIDGE =====
