@@ -3,55 +3,45 @@
 
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
-    var TASK_URL_RE = /tasks\/task\/view\/(\d+)/;
     var IDB_NAME = 'crystal_print_panel';
     var IDB_STORE = 'handles';
     var ROOT_DIR_KEY = 'printRootDir';
+    var CARD_SELECTOR = '.tasks-full-card-content[data-task-card-scroll]';
+    var CHIPS_SELECTOR = '.tasks-full-card-chips';
+    var CHIP_ID = 'crystal-print-chip';
+    var BADGE_ID = 'crystal-print-chip-badge';
 
     BX.ready(function () {
         var currentTaskId = null;
         var dealId = null;
         var client = null;
-        var floatBtn = null;
 
         // Модуль задач Bitrix24 — SPA: переход между задачами не всегда
         // перезагружает страницу, поэтому BX.ready срабатывает только один раз.
-        // Перечитываем taskId из URL при каждой мутации DOM, чтобы кнопка
-        // появлялась/пересоздавалась и без полного reload.
+        // Карточка задачи сама несёт свой ID в data-task-card-scroll — читаем
+        // его при каждой мутации DOM, чтобы чип появлялся/пересоздавался и
+        // без полного reload (Bitrix иногда пересобирает ряд чипов целиком).
         function sync() {
-            var match = window.location.href.match(TASK_URL_RE);
-            var taskId = match ? match[1] : null;
+            var card = document.querySelector(CARD_SELECTOR);
+            var taskId = card ? card.getAttribute('data-task-card-scroll') : null;
 
-            if (taskId === currentTaskId) return;
-            currentTaskId = taskId;
-            dealId = null;
-            client = null;
+            if (taskId !== currentTaskId) {
+                currentTaskId = taskId;
+                dealId = null;
+                client = null;
 
-            if (floatBtn) {
-                floatBtn.el.remove();
-                floatBtn = null;
+                var oldChip = document.getElementById(CHIP_ID);
+                if (oldChip) oldChip.remove();
+
+                if (taskId) {
+                    loadTaskDeal(taskId).then(function (info) {
+                        dealId = info.dealId;
+                        client = info.client;
+                    }).catch(function () {});
+                }
             }
 
-            if (!taskId) return;
-
-            floatBtn = createFloatButton();
-            document.body.appendChild(floatBtn.el);
-
-            floatBtn.el.addEventListener('click', function () {
-                openPanel(taskId, function () { return { dealId: dealId, client: client }; });
-            });
-
-            loadTaskDeal(taskId).then(function (info) {
-                dealId = info.dealId;
-                client = info.client;
-                return refreshCount();
-            }).catch(function () {});
-
-            function refreshCount() {
-                return listPrints(taskId).then(function (items) {
-                    if (floatBtn) floatBtn.setCount(items.length);
-                });
-            }
+            if (taskId && card) insertChip(card, taskId, function () { return { dealId: dealId, client: client }; });
         }
 
         sync();
@@ -117,32 +107,54 @@
         });
     }
 
-    // ===== FLOATING BUTTON =====
+    // ===== ЧИП В КАРТОЧКЕ ЗАДАЧИ (ряд .tasks-full-card-chips: Результаты, Файлы, Теги...) =====
 
-    function createFloatButton() {
-        var btn = document.createElement('div');
-        btn.style.cssText =
-            'position:fixed;right:20px;bottom:20px;z-index:9000;' +
-            'background:#2fc6f6;color:#fff;padding:10px 16px;border-radius:24px;' +
-            'font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);' +
-            'display:flex;align-items:center;gap:6px;user-select:none;';
-        btn.textContent = '🖨 Печати';
+    function insertChip(card, taskId, getInfo) {
+        if (document.getElementById(CHIP_ID)) return;
+
+        var chipsWrap = card.querySelector(CHIPS_SELECTOR);
+        if (!chipsWrap) return;
+
+        var chip = document.createElement('div');
+        chip.id = CHIP_ID;
+        chip.className = 'ui-chip --shadow-accent --l --compact';
+        chip.tabIndex = 0;
+
+        var icon = document.createElement('div');
+        icon.className = 'ui-chip-icon';
+        icon.textContent = '🖨';
+        chip.appendChild(icon);
+
+        var text = document.createElement('div');
+        text.className = 'ui-chip-text';
+        text.textContent = 'Печати';
+        chip.appendChild(text);
 
         var badge = document.createElement('span');
-        badge.style.cssText = 'background:#fff;color:#2fc6f6;border-radius:10px;padding:0 7px;font-size:12px;display:none;';
-        btn.appendChild(badge);
+        badge.id = BADGE_ID;
+        badge.style.cssText = 'display:none;margin-left:6px;background:#2fc6f6;color:#fff;border-radius:9px;padding:0 6px;font-size:11px;line-height:16px;';
+        chip.appendChild(badge);
 
-        return {
-            el: btn,
-            setCount: function (n) {
-                if (n > 0) {
-                    badge.textContent = n;
-                    badge.style.display = 'inline-block';
-                } else {
-                    badge.style.display = 'none';
-                }
+        chip.addEventListener('click', function () {
+            openPanel(taskId, getInfo);
+        });
+
+        chipsWrap.insertBefore(chip, chipsWrap.firstChild);
+
+        refreshChipCount(taskId);
+    }
+
+    function refreshChipCount(taskId) {
+        return listPrints(taskId).then(function (items) {
+            var badge = document.getElementById(BADGE_ID);
+            if (!badge) return;
+            if (items.length > 0) {
+                badge.textContent = items.length;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
             }
-        };
+        }).catch(function () {});
     }
 
     // ===== PANEL (overlay, закрывается только по ✕) =====
