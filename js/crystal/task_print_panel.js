@@ -98,6 +98,28 @@
         }).then(function (r) { return r.json(); });
     }
 
+    // Справочники тканей/цветов — грузятся один раз за сессию страницы и кэшируются,
+    // список большой и одинаков для всех задач, смысла дёргать заново нет.
+    var fabricsCache = null;
+    function listFabrics() {
+        if (!fabricsCache) {
+            fabricsCache = fetch(CRYSTAL_BASE + '/api/fabrics', { headers: { 'X-Api-Key': API_KEY } })
+                .then(function (r) { return r.json(); })
+                .catch(function (e) { fabricsCache = null; throw e; });
+        }
+        return fabricsCache;
+    }
+
+    var fabricColorsCache = null;
+    function listFabricColors() {
+        if (!fabricColorsCache) {
+            fabricColorsCache = fetch(CRYSTAL_BASE + '/api/fabrics/colors', { headers: { 'X-Api-Key': API_KEY } })
+                .then(function (r) { return r.json(); })
+                .catch(function (e) { fabricColorsCache = null; throw e; });
+        }
+        return fabricColorsCache;
+    }
+
     function fetchPrintFile(id) {
         return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/file', {
             headers: { 'X-Api-Key': API_KEY }
@@ -233,10 +255,15 @@
                 row.appendChild(comment);
             }
 
-            if (item.printSettings && item.printSettings.raw) {
+            var settingsLines = formatPrintSettings(item.printSettings);
+            if (settingsLines.length) {
                 var settings = document.createElement('div');
-                settings.style.cssText = 'color:#888;font-size:12px;margin-bottom:6px;white-space:pre-wrap;';
-                settings.textContent = 'Настройки: ' + item.printSettings.raw;
+                settings.style.cssText = 'color:#888;font-size:12px;margin-bottom:6px;';
+                settingsLines.forEach(function (line) {
+                    var lineEl = document.createElement('div');
+                    lineEl.textContent = line;
+                    settings.appendChild(lineEl);
+                });
                 row.appendChild(settings);
             }
 
@@ -297,10 +324,8 @@
         commentInput.style.cssText = 'width:100%;min-height:44px;margin-bottom:8px;padding:6px;box-sizing:border-box;';
         container.appendChild(commentInput);
 
-        var settingsInput = document.createElement('textarea');
-        settingsInput.placeholder = 'Настройки принтера / теплопресса';
-        settingsInput.style.cssText = 'width:100%;min-height:44px;margin-bottom:8px;padding:6px;box-sizing:border-box;';
-        container.appendChild(settingsInput);
+        var printSettingsFields = renderPrintSettingsFields();
+        container.appendChild(printSettingsFields.el);
 
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
@@ -320,13 +345,13 @@
                 if (info.dealId) fd.append('dealId', info.dealId);
                 if (info.client) fd.append('client', info.client);
                 fd.append('comment', commentInput.value || '');
-                fd.append('printSettings', JSON.stringify({ raw: settingsInput.value || '' }));
+                fd.append('printSettings', JSON.stringify(printSettingsFields.getValue()));
                 if (currentBitrixUser && currentBitrixUser.id) fd.append('uploadedById', String(currentBitrixUser.id));
                 return uploadPrint(fd);
             }).then(function () {
                 fileInput.value = '';
                 commentInput.value = '';
-                settingsInput.value = '';
+                printSettingsFields.reset();
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Загрузить';
                 onUploaded();
@@ -337,6 +362,464 @@
             });
         };
         container.appendChild(submitBtn);
+    }
+
+    // ===== СТРУКТУРИРОВАННЫЕ НАСТРОЙКИ ПЕЧАТИ (графика / заливка / теплоперенос) =====
+
+    var HEAT_DEFAULTS = {
+        crocodile: { time: 60, temperature: 205 },
+        hippo: { time: 80, temperature: 190 }
+    };
+
+    function numOrNull(v) {
+        if (v === '' || v === null || v === undefined) return null;
+        var n = Number(v);
+        return isNaN(n) ? null : n;
+    }
+
+    function formatPrintSettings(ps) {
+        var lines = [];
+        if (!ps) return lines;
+
+        if (ps.graphicSize && (ps.graphicSize.width || ps.graphicSize.height)) {
+            lines.push('Графика: ' + (ps.graphicSize.width || '?') + '×' + (ps.graphicSize.height || '?') + ' мм');
+        }
+
+        if (ps.fill && ps.fill.enabled) {
+            var colorLabel = '';
+            if (ps.fill.colorMode === 'picker' && ps.fill.color) {
+                colorLabel = ', цвет: ' + ps.fill.color.colorName + ' (' + ps.fill.color.fabricCode + ')';
+            } else if (ps.fill.colorMode === 'text' && ps.fill.colorText) {
+                colorLabel = ', цвет: ' + ps.fill.colorText;
+            }
+            lines.push('Заливка: ' + (ps.fill.width || '?') + '×' + (ps.fill.height || '?') + ' мм' + colorLabel);
+        }
+
+        if (ps.heatTransfer && (ps.heatTransfer.time || ps.heatTransfer.temperature)) {
+            var pressLabel = ps.heatTransfer.pressType === 'hippo' ? 'Бегемот' : 'Крокодил';
+            lines.push('Пресс: ' + pressLabel + ', ' + (ps.heatTransfer.time || '?') + ' сек, ' + (ps.heatTransfer.temperature || '?') + '°C');
+        }
+
+        if (!lines.length && ps.raw) lines.push(ps.raw);
+        return lines;
+    }
+
+    function sectionTitle(text) {
+        var t = document.createElement('div');
+        t.style.cssText = 'font-weight:600;font-size:13px;margin:14px 0 8px;color:#333;';
+        t.textContent = text;
+        return t;
+    }
+
+    function numberField(labelText) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'flex:1;';
+        var label = document.createElement('div');
+        label.style.cssText = 'font-size:12px;color:#666;margin-bottom:4px;';
+        label.textContent = labelText;
+        wrap.appendChild(label);
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.style.cssText = 'width:100%;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;';
+        wrap.appendChild(input);
+        return { el: wrap, input: input };
+    }
+
+    // Универсальный переключатель на N вариантов (булев тоггл, тип пресса, режим цвета — всё через него)
+    function segmentedToggle(options, defaultValue) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:inline-flex;border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:8px;';
+
+        var current = defaultValue;
+        var changeHandlers = [];
+        var buttons = [];
+
+        function paint() {
+            buttons.forEach(function (b) {
+                if (b.value === current) {
+                    b.btn.style.background = '#2fc6f6';
+                    b.btn.style.color = '#fff';
+                } else {
+                    b.btn.style.background = '#fff';
+                    b.btn.style.color = '#333';
+                }
+            });
+        }
+
+        options.forEach(function (opt) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = opt.label;
+            btn.style.cssText = 'border:none;padding:6px 12px;font-size:12px;cursor:pointer;';
+            btn.onclick = function () {
+                if (current === opt.value) return;
+                current = opt.value;
+                paint();
+                changeHandlers.forEach(function (h) { h(current); });
+            };
+            buttons.push({ btn: btn, value: opt.value });
+            wrap.appendChild(btn);
+        });
+        paint();
+
+        return {
+            el: wrap,
+            getValue: function () { return current; },
+            setValue: function (v) { current = v; paint(); },
+            onChange: function (h) { changeHandlers.push(h); }
+        };
+    }
+
+    // Числовое поле с кнопками-пресетами и плашкой предупреждения при нестандартном значении
+    function presetNumberField(labelText, presets, unit) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'margin-bottom:12px;';
+
+        var label = document.createElement('div');
+        label.style.cssText = 'font-size:12px;color:#666;margin-bottom:4px;';
+        label.textContent = labelText;
+        wrap.appendChild(label);
+
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.style.cssText = 'width:80px;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;';
+        row.appendChild(input);
+
+        var manualHandlers = [];
+        presets.forEach(function (p) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+            btn.textContent = p + (unit || '');
+            btn.onclick = function () {
+                input.value = p;
+                manualHandlers.forEach(function (h) { h(p); });
+            };
+            row.appendChild(btn);
+        });
+        wrap.appendChild(row);
+
+        var warning = document.createElement('div');
+        warning.style.cssText = 'display:none;margin-top:6px;background:#fff3cd;color:#856404;border:1px solid #ffe69c;border-radius:6px;padding:6px 8px;font-size:12px;';
+        warning.textContent = '⚠ Внимание, это особенная настройка.';
+        wrap.appendChild(warning);
+
+        input.addEventListener('input', function () {
+            manualHandlers.forEach(function (h) { h(input.value); });
+        });
+
+        return {
+            el: wrap,
+            getValue: function () { return input.value; },
+            setValue: function (v) { input.value = v; },
+            setWarning: function (show) { warning.style.display = show ? 'block' : 'none'; },
+            onManualChange: function (h) { manualHandlers.push(h); }
+        };
+    }
+
+    function renderPrintSettingsFields() {
+        var state = { fabricColor: null };
+        var wrap = document.createElement('div');
+
+        // ---- Размер графики ----
+        wrap.appendChild(sectionTitle('Размер графики'));
+        var graphicRow = document.createElement('div');
+        graphicRow.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+        var graphicWidth = numberField('Ш, мм');
+        var graphicHeight = numberField('В, мм');
+        graphicRow.appendChild(graphicWidth.el);
+        graphicRow.appendChild(graphicHeight.el);
+        wrap.appendChild(graphicRow);
+
+        // ---- Заливка ----
+        wrap.appendChild(sectionTitle('Заливка'));
+        var fillToggle = segmentedToggle([{ label: 'Нет', value: false }, { label: 'Есть', value: true }], false);
+        wrap.appendChild(fillToggle.el);
+
+        var fillDetails = document.createElement('div');
+        fillDetails.style.cssText = 'display:none;padding:10px;background:#f8f9fb;border-radius:8px;margin-bottom:8px;';
+        wrap.appendChild(fillDetails);
+
+        var fillSizeRow = document.createElement('div');
+        fillSizeRow.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;';
+        var fillWidth = numberField('Ш, мм');
+        var fillHeight = numberField('В, мм');
+        fillSizeRow.appendChild(fillWidth.el);
+        fillSizeRow.appendChild(fillHeight.el);
+        fillDetails.appendChild(fillSizeRow);
+
+        var colorModeLabel = document.createElement('div');
+        colorModeLabel.style.cssText = 'font-size:12px;color:#666;margin-bottom:4px;';
+        colorModeLabel.textContent = 'Цвет ткани:';
+        fillDetails.appendChild(colorModeLabel);
+
+        var colorModeToggle = segmentedToggle([{ label: 'Выбрать из списка', value: 'picker' }, { label: 'Свой текст', value: 'text' }], 'picker');
+        fillDetails.appendChild(colorModeToggle.el);
+
+        var colorPickBtn = document.createElement('button');
+        colorPickBtn.type = 'button';
+        colorPickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+        colorPickBtn.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;text-align:left;box-sizing:border-box;';
+        var swatch = document.createElement('span');
+        swatch.style.cssText = 'display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #ccc;flex-shrink:0;background:#eee;';
+        var pickLabel = document.createElement('span');
+        pickLabel.textContent = 'Выбрать цвет ткани…';
+        colorPickBtn.appendChild(swatch);
+        colorPickBtn.appendChild(pickLabel);
+        colorPickBtn.onclick = function () {
+            openFabricColorPicker(function (picked) {
+                state.fabricColor = picked;
+                swatch.style.background = picked.hex || '#eee';
+                pickLabel.textContent = picked.colorName + ' (' + picked.fabricCode + ')';
+            });
+        };
+        fillDetails.appendChild(colorPickBtn);
+
+        var colorTextInput = document.createElement('input');
+        colorTextInput.type = 'text';
+        colorTextInput.placeholder = 'Например: красный лён';
+        colorTextInput.style.cssText = 'display:none;width:100%;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;';
+        fillDetails.appendChild(colorTextInput);
+
+        colorModeToggle.onChange(function (mode) {
+            colorPickBtn.style.display = mode === 'picker' ? 'flex' : 'none';
+            colorTextInput.style.display = mode === 'text' ? 'block' : 'none';
+        });
+
+        fillToggle.onChange(function (enabled) {
+            fillDetails.style.display = enabled ? 'block' : 'none';
+        });
+
+        // ---- Теплоперенос ----
+        wrap.appendChild(sectionTitle('Настройки теплопереноса'));
+
+        var pressLabel = document.createElement('div');
+        pressLabel.style.cssText = 'font-size:12px;color:#666;margin-bottom:4px;';
+        pressLabel.textContent = 'Тип пресса:';
+        wrap.appendChild(pressLabel);
+
+        var pressToggle = segmentedToggle([{ label: 'Крокодил', value: 'crocodile' }, { label: 'Бегемот', value: 'hippo' }], 'crocodile');
+        wrap.appendChild(pressToggle.el);
+
+        var timeField = presetNumberField('Время переноса, сек', [60, 80]);
+        wrap.appendChild(timeField.el);
+
+        var tempField = presetNumberField('Температура, °C', [190, 205]);
+        wrap.appendChild(tempField.el);
+
+        function applyDefaults(pressType) {
+            var d = HEAT_DEFAULTS[pressType];
+            timeField.setValue(d.time);
+            timeField.setWarning(false);
+            tempField.setValue(d.temperature);
+            tempField.setWarning(false);
+        }
+        pressToggle.onChange(function (val) { applyDefaults(val); });
+
+        timeField.onManualChange(function (val) {
+            timeField.setWarning(Number(val) !== HEAT_DEFAULTS[pressToggle.getValue()].time);
+        });
+        tempField.onManualChange(function (val) {
+            tempField.setWarning(Number(val) !== HEAT_DEFAULTS[pressToggle.getValue()].temperature);
+        });
+
+        applyDefaults('crocodile');
+
+        function reset() {
+            graphicWidth.input.value = '';
+            graphicHeight.input.value = '';
+            fillToggle.setValue(false);
+            fillDetails.style.display = 'none';
+            fillWidth.input.value = '';
+            fillHeight.input.value = '';
+            colorModeToggle.setValue('picker');
+            colorPickBtn.style.display = 'flex';
+            colorTextInput.style.display = 'none';
+            colorTextInput.value = '';
+            state.fabricColor = null;
+            swatch.style.background = '#eee';
+            pickLabel.textContent = 'Выбрать цвет ткани…';
+            pressToggle.setValue('crocodile');
+            applyDefaults('crocodile');
+        }
+
+        return {
+            el: wrap,
+            reset: reset,
+            getValue: function () {
+                return {
+                    graphicSize: { width: numOrNull(graphicWidth.input.value), height: numOrNull(graphicHeight.input.value) },
+                    fill: {
+                        enabled: fillToggle.getValue(),
+                        width: numOrNull(fillWidth.input.value),
+                        height: numOrNull(fillHeight.input.value),
+                        colorMode: colorModeToggle.getValue(),
+                        color: colorModeToggle.getValue() === 'picker' ? state.fabricColor : null,
+                        colorText: colorModeToggle.getValue() === 'text' ? colorTextInput.value : ''
+                    },
+                    heatTransfer: {
+                        pressType: pressToggle.getValue(),
+                        time: numOrNull(timeField.getValue()),
+                        temperature: numOrNull(tempField.getValue())
+                    }
+                };
+            }
+        };
+    }
+
+    // Пикер цвета ткани: чипы тканей → чипы цветов выбранной ткани (список большой, select неудобен)
+    function openFabricColorPicker(onPick) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText =
+            'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9600;' +
+            'display:flex;align-items:center;justify-content:center;';
+
+        var box = document.createElement('div');
+        box.style.cssText =
+            'background:#fff;border-radius:10px;width:560px;max-width:94vw;max-height:80vh;' +
+            'overflow-y:auto;padding:18px;position:relative;font-size:14px;color:#333;';
+
+        var closeBtn = document.createElement('div');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;cursor:pointer;font-size:16px;color:#888;';
+        closeBtn.onclick = function () { overlay.remove(); };
+        box.appendChild(closeBtn);
+
+        var title = document.createElement('h3');
+        title.style.cssText = 'margin:0 0 12px;font-size:15px;padding-right:20px;';
+        title.textContent = 'Выберите ткань';
+        box.appendChild(title);
+
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Поиск…';
+        searchInput.style.cssText = 'width:100%;padding:7px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;';
+        box.appendChild(searchInput);
+
+        var chipsWrap = document.createElement('div');
+        chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+        box.appendChild(chipsWrap);
+
+        var loading = document.createElement('div');
+        loading.style.cssText = 'color:#999;';
+        loading.textContent = 'Загрузка…';
+        chipsWrap.appendChild(loading);
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function chip(label, onClick) {
+            var el = document.createElement('div');
+            el.textContent = label;
+            el.style.cssText = 'padding:8px 14px;border:1px solid #ddd;border-radius:20px;cursor:pointer;font-size:13px;';
+            el.onmouseenter = function () { el.style.background = '#f2f7fb'; };
+            el.onmouseleave = function () { el.style.background = '#fff'; };
+            el.onclick = onClick;
+            return el;
+        }
+
+        function renderFabricStep(fabrics, colors) {
+            title.textContent = 'Выберите ткань';
+            closeBtn.onclick = function () { overlay.remove(); };
+
+            function paint(items) {
+                chipsWrap.innerHTML = '';
+                if (!items.length) {
+                    var empty = document.createElement('div');
+                    empty.style.color = '#999';
+                    empty.textContent = 'Ничего не найдено';
+                    chipsWrap.appendChild(empty);
+                    return;
+                }
+                items.forEach(function (f) {
+                    var label = f.name ? (f.name + ' (' + f.code + ')') : f.code;
+                    chipsWrap.appendChild(chip(label, function () {
+                        renderColorStep(f, colors.filter(function (c) { return c.fabricCode === f.code; }), fabrics, colors);
+                    }));
+                });
+            }
+
+            searchInput.value = '';
+            searchInput.oninput = function () {
+                var q = searchInput.value.toLowerCase();
+                paint(fabrics.filter(function (f) {
+                    return (f.name || '').toLowerCase().indexOf(q) !== -1 || (f.code || '').toLowerCase().indexOf(q) !== -1;
+                }));
+            };
+            paint(fabrics);
+        }
+
+        function renderColorStep(fabric, fabricColors, allFabrics, allColors) {
+            title.textContent = 'Цвет ткани: ' + (fabric.name || fabric.code);
+
+            chipsWrap.innerHTML = '';
+            var backBtn = document.createElement('div');
+            backBtn.textContent = '← Назад к тканям';
+            backBtn.style.cssText = 'color:#2fc6f6;cursor:pointer;font-size:12px;width:100%;margin-bottom:4px;';
+            backBtn.onclick = function () { renderFabricStep(allFabrics, allColors); };
+            chipsWrap.appendChild(backBtn);
+
+            var chipsRow = document.createElement('div');
+            chipsRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;width:100%;';
+            chipsWrap.appendChild(chipsRow);
+
+            function paint(items) {
+                chipsRow.innerHTML = '';
+                if (!items.length) {
+                    var empty = document.createElement('div');
+                    empty.style.color = '#999';
+                    empty.textContent = 'Цвета не найдены';
+                    chipsRow.appendChild(empty);
+                    return;
+                }
+                items.forEach(function (c) {
+                    var el = document.createElement('div');
+                    el.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #ddd;border-radius:20px;cursor:pointer;font-size:13px;';
+                    var dot = document.createElement('span');
+                    dot.style.cssText = 'display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #ccc;background:' + (c.hex || '#eee') + ';';
+                    el.appendChild(dot);
+                    var lbl = document.createElement('span');
+                    lbl.textContent = c.name;
+                    el.appendChild(lbl);
+                    el.onmouseenter = function () { el.style.background = '#f2f7fb'; };
+                    el.onmouseleave = function () { el.style.background = '#fff'; };
+                    el.onclick = function () {
+                        onPick({
+                            fabricCode: fabric.code,
+                            fabricName: fabric.name || null,
+                            colorId: c.id,
+                            colorCode: c.code,
+                            colorName: c.name,
+                            hex: c.hex || null
+                        });
+                        overlay.remove();
+                    };
+                    chipsRow.appendChild(el);
+                });
+            }
+
+            searchInput.value = '';
+            searchInput.oninput = function () {
+                var q = searchInput.value.toLowerCase();
+                paint(fabricColors.filter(function (c) {
+                    return (c.name || '').toLowerCase().indexOf(q) !== -1 || (c.code || '').toLowerCase().indexOf(q) !== -1;
+                }));
+            };
+            paint(fabricColors);
+        }
+
+        Promise.all([listFabrics(), listFabricColors()]).then(function (res) {
+            renderFabricStep(res[0] || [], res[1] || []);
+        }).catch(function (e) {
+            chipsWrap.innerHTML = '';
+            var err = document.createElement('div');
+            err.style.color = '#c0392b';
+            err.textContent = 'Не удалось загрузить список тканей: ' + e.message;
+            chipsWrap.appendChild(err);
+        });
     }
 
     // ===== FILE SYSTEM ACCESS (скачивание в папку клиента на ПК) =====
