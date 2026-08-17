@@ -385,6 +385,14 @@
             lines.push('Графика: ' + (ps.graphicSize.width || '?') + '×' + (ps.graphicSize.height || '?') + ' мм');
         }
 
+        if (ps.printFabric) {
+            if (ps.printFabric.colorMode === 'picker' && ps.printFabric.color) {
+                lines.push('Ткань для печати: ' + ps.printFabric.color.colorName + ' (' + ps.printFabric.color.fabricCode + ')');
+            } else if (ps.printFabric.colorMode === 'text' && ps.printFabric.colorText) {
+                lines.push('Ткань для печати: ' + ps.printFabric.colorText);
+            }
+        }
+
         if (ps.fill && ps.fill.enabled) {
             var colorLabel = '';
             if (ps.fill.colorMode === 'picker' && ps.fill.color) {
@@ -520,8 +528,67 @@
         };
     }
 
-    function renderPrintSettingsFields() {
+    // Переключатель "выбрать цвет ткани из списка / вписать текстом" — используется и для
+    // ткани, на которой печатаем, и для цвета заливки, поэтому вынесен в отдельный конструктор.
+    function renderFabricColorPicker(placeholderText) {
         var state = { fabricColor: null };
+        var wrap = document.createElement('div');
+
+        var modeToggle = segmentedToggle([{ label: 'Выбрать из списка', value: 'picker' }, { label: 'Свой текст', value: 'text' }], 'picker');
+        wrap.appendChild(modeToggle.el);
+
+        var pickBtn = document.createElement('button');
+        pickBtn.type = 'button';
+        pickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+        pickBtn.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;text-align:left;box-sizing:border-box;';
+        var swatch = document.createElement('span');
+        swatch.style.cssText = 'display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #ccc;flex-shrink:0;background:#eee;';
+        var pickLabel = document.createElement('span');
+        pickLabel.textContent = placeholderText;
+        pickBtn.appendChild(swatch);
+        pickBtn.appendChild(pickLabel);
+        pickBtn.onclick = function () {
+            openFabricColorPicker(function (picked) {
+                state.fabricColor = picked;
+                swatch.style.background = picked.hex || '#eee';
+                pickLabel.textContent = picked.colorName + ' (' + picked.fabricCode + ')';
+            });
+        };
+        wrap.appendChild(pickBtn);
+
+        var textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.placeholder = 'Например: красный лён';
+        textInput.style.cssText = 'display:none;width:100%;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;';
+        wrap.appendChild(textInput);
+
+        modeToggle.onChange(function (mode) {
+            pickBtn.style.display = mode === 'picker' ? 'flex' : 'none';
+            textInput.style.display = mode === 'text' ? 'block' : 'none';
+        });
+
+        return {
+            el: wrap,
+            getValue: function () {
+                return {
+                    colorMode: modeToggle.getValue(),
+                    color: modeToggle.getValue() === 'picker' ? state.fabricColor : null,
+                    colorText: modeToggle.getValue() === 'text' ? textInput.value : ''
+                };
+            },
+            reset: function () {
+                modeToggle.setValue('picker');
+                pickBtn.style.display = 'flex';
+                textInput.style.display = 'none';
+                textInput.value = '';
+                state.fabricColor = null;
+                swatch.style.background = '#eee';
+                pickLabel.textContent = placeholderText;
+            }
+        };
+    }
+
+    function renderPrintSettingsFields() {
         var wrap = document.createElement('div');
 
         // ---- Размер графики ----
@@ -533,6 +600,11 @@
         graphicRow.appendChild(graphicWidth.el);
         graphicRow.appendChild(graphicHeight.el);
         wrap.appendChild(graphicRow);
+
+        // ---- Ткань, на которой печатаем ----
+        wrap.appendChild(sectionTitle('Ткань для печати'));
+        var printFabricField = renderFabricColorPicker('Выбрать ткань для печати…');
+        wrap.appendChild(printFabricField.el);
 
         // ---- Заливка ----
         wrap.appendChild(sectionTitle('Заливка'));
@@ -556,38 +628,8 @@
         colorModeLabel.textContent = 'Цвет ткани:';
         fillDetails.appendChild(colorModeLabel);
 
-        var colorModeToggle = segmentedToggle([{ label: 'Выбрать из списка', value: 'picker' }, { label: 'Свой текст', value: 'text' }], 'picker');
-        fillDetails.appendChild(colorModeToggle.el);
-
-        var colorPickBtn = document.createElement('button');
-        colorPickBtn.type = 'button';
-        colorPickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
-        colorPickBtn.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;text-align:left;box-sizing:border-box;';
-        var swatch = document.createElement('span');
-        swatch.style.cssText = 'display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #ccc;flex-shrink:0;background:#eee;';
-        var pickLabel = document.createElement('span');
-        pickLabel.textContent = 'Выбрать цвет ткани…';
-        colorPickBtn.appendChild(swatch);
-        colorPickBtn.appendChild(pickLabel);
-        colorPickBtn.onclick = function () {
-            openFabricColorPicker(function (picked) {
-                state.fabricColor = picked;
-                swatch.style.background = picked.hex || '#eee';
-                pickLabel.textContent = picked.colorName + ' (' + picked.fabricCode + ')';
-            });
-        };
-        fillDetails.appendChild(colorPickBtn);
-
-        var colorTextInput = document.createElement('input');
-        colorTextInput.type = 'text';
-        colorTextInput.placeholder = 'Например: красный лён';
-        colorTextInput.style.cssText = 'display:none;width:100%;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;';
-        fillDetails.appendChild(colorTextInput);
-
-        colorModeToggle.onChange(function (mode) {
-            colorPickBtn.style.display = mode === 'picker' ? 'flex' : 'none';
-            colorTextInput.style.display = mode === 'text' ? 'block' : 'none';
-        });
+        var fillColorField = renderFabricColorPicker('Выбрать цвет ткани…');
+        fillDetails.appendChild(fillColorField.el);
 
         fillToggle.onChange(function (enabled) {
             fillDetails.style.display = enabled ? 'block' : 'none';
@@ -631,17 +673,12 @@
         function reset() {
             graphicWidth.input.value = '';
             graphicHeight.input.value = '';
+            printFabricField.reset();
             fillToggle.setValue(false);
             fillDetails.style.display = 'none';
             fillWidth.input.value = '';
             fillHeight.input.value = '';
-            colorModeToggle.setValue('picker');
-            colorPickBtn.style.display = 'flex';
-            colorTextInput.style.display = 'none';
-            colorTextInput.value = '';
-            state.fabricColor = null;
-            swatch.style.background = '#eee';
-            pickLabel.textContent = 'Выбрать цвет ткани…';
+            fillColorField.reset();
             pressToggle.setValue('crocodile');
             applyDefaults('crocodile');
         }
@@ -650,15 +687,17 @@
             el: wrap,
             reset: reset,
             getValue: function () {
+                var fillColor = fillColorField.getValue();
                 return {
                     graphicSize: { width: numOrNull(graphicWidth.input.value), height: numOrNull(graphicHeight.input.value) },
+                    printFabric: printFabricField.getValue(),
                     fill: {
                         enabled: fillToggle.getValue(),
                         width: numOrNull(fillWidth.input.value),
                         height: numOrNull(fillHeight.input.value),
-                        colorMode: colorModeToggle.getValue(),
-                        color: colorModeToggle.getValue() === 'picker' ? state.fabricColor : null,
-                        colorText: colorModeToggle.getValue() === 'text' ? colorTextInput.value : ''
+                        colorMode: fillColor.colorMode,
+                        color: fillColor.color,
+                        colorText: fillColor.colorText
                     },
                     heatTransfer: {
                         pressType: pressToggle.getValue(),
