@@ -1280,6 +1280,10 @@
             var btns = document.createElement('div');
             btns.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
 
+            var savedInfo = document.createElement('div');
+            savedInfo.style.cssText = 'display:none;font-size:11px;color:#27ae60;margin-top:4px;word-break:break-all;width:100%;';
+            row.appendChild(savedInfo);
+
             if (item.originalName) {
                 var dlBtn = document.createElement('button');
                 dlBtn.type = 'button';
@@ -1287,9 +1291,16 @@
                 dlBtn.textContent = 'Скачать';
                 dlBtn.onclick = function () {
                     dlBtn.disabled = true;
+                    dlBtn.textContent = 'Скачивание…';
+                    savedInfo.style.display = 'none';
                     downloadToFolder(item, function () { return { dealId: item.dealId, client: item.client }; }, item.taskId)
-                        .then(function () { dlBtn.textContent = 'Готово ✓'; })
-                        .catch(function (e) { alert(e.message); dlBtn.disabled = false; });
+                        .then(function (result) {
+                            dlBtn.textContent = 'Скачать';
+                            dlBtn.disabled = false;
+                            savedInfo.textContent = 'Сохранено: ' + result.folderName + ' / ' + result.fileName;
+                            savedInfo.style.display = 'block';
+                        })
+                        .catch(function (e) { alert(e.message); dlBtn.textContent = 'Скачать'; dlBtn.disabled = false; });
                 };
                 btns.appendChild(dlBtn);
             }
