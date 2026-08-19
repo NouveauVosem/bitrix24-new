@@ -65,18 +65,19 @@ if ($dealId) {
     $arFields['UF_CRM_TASK'] = array_merge($arFields['UF_CRM_TASK'] ?? [], ['D_' . $dealId]);
 }
 
-$task = new CTaskItem(0, $GLOBALS['USER']->GetID());
-$result = CTaskItem::add($arFields, $GLOBALS['USER']->GetID());
+ob_start();
+$obTask = new CTasks();
+$newTaskId = $obTask->Add($arFields);
+ob_end_clean();
 
-if (!$result || !is_object($result)) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to create task']);
+if (!$newTaskId) {
+    $err = $obTask->LAST_ERROR ?: 'Failed to create task';
+    echo json_encode(['status' => 'error', 'message' => $err]);
     die();
 }
 
-$newTaskId = $result->getId();
-
 echo json_encode([
-    'status'     => 'success',
-    'taskId'     => $newTaskId,
-    'taskUrl'    => $baseUrl . '/company/personal/user/0/tasks/task/view/' . $newTaskId . '/',
+    'status'  => 'success',
+    'taskId'  => $newTaskId,
+    'taskUrl' => $baseUrl . '/company/personal/user/0/tasks/task/view/' . $newTaskId . '/',
 ], JSON_UNESCAPED_UNICODE);
