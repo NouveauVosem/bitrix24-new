@@ -91,6 +91,72 @@
         });
     }
 
+    function createPrintJob(fd) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/create', {
+            method: 'POST',
+            headers: { 'X-Api-Key': API_KEY },
+            body: fd
+        }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) throw new Error(body.message || 'Ошибка создания');
+                return body;
+            });
+        });
+    }
+
+    function attachPrintFile(id, fd) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/file', {
+            method: 'POST',
+            headers: { 'X-Api-Key': API_KEY },
+            body: fd
+        }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) throw new Error(body.message || 'Ошибка загрузки файла');
+                return body;
+            });
+        });
+    }
+
+    function updatePrintStatus(id, status) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/status', {
+            method: 'PATCH',
+            headers: { 'X-Api-Key': API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        }).then(function (r) { return r.json(); });
+    }
+
+    function addReference(id, fd) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references', {
+            method: 'POST',
+            headers: { 'X-Api-Key': API_KEY },
+            body: fd
+        }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) throw new Error(body.message || 'Ошибка загрузки референса');
+                return body;
+            });
+        });
+    }
+
+    function deleteReference(id, remotePath) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/' + encodeURIComponent(remotePath), {
+            method: 'DELETE',
+            headers: { 'X-Api-Key': API_KEY }
+        }).then(function (r) { return r.json(); });
+    }
+
+    function referenceFileUrl(id, remotePath) {
+        return CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/' + encodeURIComponent(remotePath) + '/file?key=' + encodeURIComponent(API_KEY);
+    }
+
+    function saveBitrixTaskId(id, bitrixTaskId) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/bitrix-task', {
+            method: 'PATCH',
+            headers: { 'X-Api-Key': API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bitrixTaskId: String(bitrixTaskId) })
+        }).then(function (r) { return r.json(); });
+    }
+
     function deletePrint(id) {
         return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id), {
             method: 'DELETE',
@@ -127,6 +193,48 @@
             if (!r.ok) throw new Error('Не удалось скачать файл');
             return r.blob();
         });
+    }
+
+    // ===== СТАТУСЫ =====
+
+    var STATUSES = [
+        { value: 'pending',  label: 'Запрос создан',          color: '#aaa' },
+        { value: 'ready',    label: 'Файл готов к печати',    color: '#2fc6f6' },
+        { value: 'printed',  label: 'Напечатано',             color: '#f39c12' },
+        { value: 'applied',  label: 'Нанесено на ткань',      color: '#27ae60' },
+    ];
+
+    function statusInfo(value) {
+        for (var i = 0; i < STATUSES.length; i++) {
+            if (STATUSES[i].value === value) return STATUSES[i];
+        }
+        return { value: value, label: value, color: '#aaa' };
+    }
+
+    function renderStatusBadge(status) {
+        var info = statusInfo(status);
+        var el = document.createElement('span');
+        el.style.cssText = 'display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:' + info.color + ';';
+        el.textContent = info.label;
+        return el;
+    }
+
+    function renderStatusSelector(currentStatus, onSelect) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;';
+        STATUSES.forEach(function (s) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = s.label;
+            var active = s.value === currentStatus;
+            btn.style.cssText = 'padding:3px 10px;border-radius:12px;font-size:12px;cursor:pointer;border:2px solid ' + s.color + ';' +
+                'background:' + (active ? s.color : '#fff') + ';color:' + (active ? '#fff' : s.color) + ';font-weight:' + (active ? '600' : '400') + ';';
+            btn.onclick = function () {
+                if (!active) onSelect(s.value);
+            };
+            wrap.appendChild(btn);
+        });
+        return wrap;
     }
 
     // ===== ЧИП В КАРТОЧКЕ ЗАДАЧИ (ряд .tasks-full-card-chips: Результаты, Файлы, Теги...) =====
@@ -243,9 +351,34 @@
             var row = document.createElement('div');
             row.style.cssText = 'border:1px solid #eee;border-radius:8px;padding:10px 12px;margin-bottom:10px;';
 
+            // --- Статус ---
+            var statusRow = document.createElement('div');
+            statusRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+            statusRow.appendChild(renderStatusBadge(item.status || 'pending'));
+
+            var toggleStatusBtn = document.createElement('button');
+            toggleStatusBtn.type = 'button';
+            toggleStatusBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+            toggleStatusBtn.textContent = 'Изменить';
+            statusRow.appendChild(toggleStatusBtn);
+            row.appendChild(statusRow);
+
+            var statusSelector = renderStatusSelector(item.status || 'pending', function (newStatus) {
+                updatePrintStatus(item.id, newStatus).then(onChanged).catch(function (e) {
+                    alert('Ошибка: ' + e.message);
+                });
+            });
+            statusSelector.style.display = 'none';
+            row.appendChild(statusSelector);
+
+            toggleStatusBtn.onclick = function () {
+                statusSelector.style.display = statusSelector.style.display === 'none' ? 'flex' : 'none';
+            };
+
+            // --- Название файла ---
             var name = document.createElement('div');
             name.style.cssText = 'font-weight:600;margin-bottom:4px;';
-            name.textContent = item.originalName;
+            name.textContent = item.originalName || '(файл не прикреплён)';
             row.appendChild(name);
 
             if (item.comment) {
@@ -272,46 +405,214 @@
             date.textContent = new Date(item.createdAt).toLocaleString('ru-RU');
             row.appendChild(date);
 
-            var actions = document.createElement('div');
-            actions.style.cssText = 'display:flex;gap:8px;';
+            // --- Референсы ---
+            if ((item.references || []).length) {
+                var refsTitle = document.createElement('div');
+                refsTitle.style.cssText = 'font-size:12px;color:#666;font-weight:600;margin-bottom:6px;';
+                refsTitle.textContent = 'Референсы:';
+                row.appendChild(refsTitle);
 
-            var downloadBtn = document.createElement('button');
-            downloadBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
-            downloadBtn.textContent = 'Скачать в папку';
+                var refsGrid = document.createElement('div');
+                refsGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;';
+                item.references.forEach(function (ref) {
+                    var isImage = ref.mimeType && ref.mimeType.indexOf('image/') === 0;
+                    var refWrap = document.createElement('div');
+                    refWrap.style.cssText = 'position:relative;width:70px;';
 
-            var savedInfo = document.createElement('div');
-            savedInfo.style.cssText = 'display:none;font-size:12px;color:#27ae60;margin-top:4px;word-break:break-all;';
+                    var fileUrl = referenceFileUrl(item.id, ref.remotePath);
+                    if (isImage) {
+                        var img = document.createElement('img');
+                        img.src = fileUrl;
+                        img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:pointer;';
+                        img.onclick = function () { window.open(fileUrl, '_blank'); };
+                        refWrap.appendChild(img);
+                    } else {
+                        var fileLink = document.createElement('a');
+                        fileLink.href = fileUrl;
+                        fileLink.target = '_blank';
+                        fileLink.style.cssText = 'display:flex;align-items:center;justify-content:center;width:70px;height:70px;border:1px solid #eee;border-radius:6px;font-size:11px;color:#555;text-align:center;padding:4px;box-sizing:border-box;word-break:break-all;';
+                        fileLink.textContent = ref.originalName;
+                        refWrap.appendChild(fileLink);
+                    }
 
-            downloadBtn.onclick = function () {
-                downloadBtn.disabled = true;
-                downloadBtn.textContent = 'Скачивание…';
-                savedInfo.style.display = 'none';
-                downloadToFolder(item, getInfo, taskId)
-                    .then(function (result) {
-                        downloadBtn.textContent = 'Скачать в папку';
-                        downloadBtn.disabled = false;
-                        savedInfo.textContent = 'Сохранено: ' + result.folderName + ' / ' + result.fileName;
-                        savedInfo.style.display = 'block';
-                    })
-                    .catch(function (e) {
-                        alert('Ошибка скачивания: ' + e.message);
-                        downloadBtn.textContent = 'Скачать в папку';
-                        downloadBtn.disabled = false;
-                    });
+                    var delRefBtn = document.createElement('button');
+                    delRefBtn.type = 'button';
+                    delRefBtn.textContent = '✕';
+                    delRefBtn.style.cssText = 'position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:18px;padding:0;';
+                    delRefBtn.onclick = function () {
+                        if (!confirm('Удалить референс "' + ref.originalName + '"?')) return;
+                        deleteReference(item.id, ref.remotePath).then(onChanged).catch(function (e) { alert(e.message); });
+                    };
+                    refWrap.appendChild(delRefBtn);
+                    refsGrid.appendChild(refWrap);
+                });
+                row.appendChild(refsGrid);
+            }
+
+            // --- Загрузить референс ---
+            var addRefWrap = document.createElement('div');
+            addRefWrap.style.cssText = 'margin-bottom:10px;';
+            var addRefToggle = document.createElement('button');
+            addRefToggle.type = 'button';
+            addRefToggle.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+            addRefToggle.textContent = '+ Добавить референс';
+            addRefWrap.appendChild(addRefToggle);
+
+            var addRefForm = document.createElement('div');
+            addRefForm.style.cssText = 'display:none;margin-top:6px;';
+            var refInput = document.createElement('input');
+            refInput.type = 'file';
+            refInput.accept = 'image/*,.pdf';
+            refInput.style.cssText = 'font-size:12px;';
+            var refUploadBtn = document.createElement('button');
+            refUploadBtn.type = 'button';
+            refUploadBtn.className = 'ui-btn ui-btn-primary ui-btn-xs';
+            refUploadBtn.style.marginLeft = '6px';
+            refUploadBtn.textContent = 'Загрузить';
+            refUploadBtn.onclick = function () {
+                var f = refInput.files[0];
+                if (!f) { alert('Выберите файл'); return; }
+                refUploadBtn.disabled = true;
+                var fd = new FormData();
+                fd.append('file', f, f.name);
+                addReference(item.id, fd).then(onChanged).catch(function (e) {
+                    alert('Ошибка: ' + e.message);
+                    refUploadBtn.disabled = false;
+                });
             };
-            actions.appendChild(downloadBtn);
+            addRefForm.appendChild(refInput);
+            addRefForm.appendChild(refUploadBtn);
+            addRefToggle.onclick = function () {
+                addRefForm.style.display = addRefForm.style.display === 'none' ? 'flex' : 'none';
+                addRefForm.style.alignItems = 'center';
+            };
+            addRefWrap.appendChild(addRefForm);
+            row.appendChild(addRefWrap);
+
+            // --- Кнопки действий ---
+            var actions = document.createElement('div');
+            actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+
+            // Прикрепить файл (если его нет)
+            if (!item.originalName) {
+                var attachWrap = document.createElement('div');
+                var attachInput = document.createElement('input');
+                attachInput.type = 'file';
+                attachInput.style.display = 'none';
+                var attachBtn = document.createElement('button');
+                attachBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
+                attachBtn.textContent = 'Прикрепить файл печати';
+                attachBtn.onclick = function () { attachInput.click(); };
+                attachInput.onchange = function () {
+                    var f = attachInput.files[0];
+                    if (!f) return;
+                    attachBtn.disabled = true;
+                    attachBtn.textContent = 'Загрузка…';
+                    var fd = new FormData();
+                    fd.append('file', f, f.name);
+                    attachPrintFile(item.id, fd).then(onChanged).catch(function (e) {
+                        alert('Ошибка: ' + e.message);
+                        attachBtn.disabled = false;
+                        attachBtn.textContent = 'Прикрепить файл печати';
+                    });
+                };
+                attachWrap.appendChild(attachInput);
+                attachWrap.appendChild(attachBtn);
+                actions.appendChild(attachWrap);
+            } else {
+                var downloadBtn = document.createElement('button');
+                downloadBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
+                downloadBtn.textContent = 'Скачать в папку';
+
+                var savedInfo = document.createElement('div');
+                savedInfo.style.cssText = 'display:none;font-size:12px;color:#27ae60;margin-top:4px;word-break:break-all;width:100%;';
+
+                downloadBtn.onclick = function () {
+                    downloadBtn.disabled = true;
+                    downloadBtn.textContent = 'Скачивание…';
+                    savedInfo.style.display = 'none';
+                    downloadToFolder(item, getInfo, taskId)
+                        .then(function (result) {
+                            downloadBtn.textContent = 'Скачать в папку';
+                            downloadBtn.disabled = false;
+                            savedInfo.textContent = 'Сохранено: ' + result.folderName + ' / ' + result.fileName;
+                            savedInfo.style.display = 'block';
+                        })
+                        .catch(function (e) {
+                            alert('Ошибка скачивания: ' + e.message);
+                            downloadBtn.textContent = 'Скачать в папку';
+                            downloadBtn.disabled = false;
+                        });
+                };
+                actions.appendChild(downloadBtn);
+                row.appendChild(savedInfo);
+            }
+
+            // Создать задачу
+            if (!item.bitrixTaskId) {
+                var taskBtn = document.createElement('button');
+                taskBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
+                taskBtn.textContent = 'Создать задачу';
+                taskBtn.onclick = function () {
+                    var info = getInfo();
+                    openUserPicker(function (user) {
+                        taskBtn.disabled = true;
+                        taskBtn.textContent = 'Создание…';
+                        var settingsText = formatPrintSettings(item.printSettings).join('\n');
+                        fetch('/local/ajax/crystal/create_print_task.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                printJobId: item.id,
+                                taskId: taskId,
+                                dealId: info.dealId || null,
+                                client: info.client || null,
+                                fileName: item.originalName || null,
+                                settingsSummary: settingsText,
+                                responsibleId: user.id
+                            })
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (resp) {
+                            if (resp.status !== 'success') throw new Error(resp.message || 'Ошибка');
+                            return saveBitrixTaskId(item.id, resp.taskId).then(function () {
+                                taskBtn.textContent = 'Задача #' + resp.taskId + ' → ' + user.name;
+                                taskBtn.disabled = true;
+                                if (resp.taskUrl) {
+                                    var link = document.createElement('a');
+                                    link.href = resp.taskUrl;
+                                    link.target = '_blank';
+                                    link.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+                                    link.textContent = 'Открыть';
+                                    actions.appendChild(link);
+                                }
+                            });
+                        })
+                        .catch(function (e) {
+                            alert('Ошибка: ' + e.message);
+                            taskBtn.disabled = false;
+                            taskBtn.textContent = 'Создать задачу';
+                        });
+                    });
+                };
+                actions.appendChild(taskBtn);
+            } else {
+                var taskLink = document.createElement('span');
+                taskLink.style.cssText = 'font-size:12px;color:#27ae60;align-self:center;';
+                taskLink.textContent = 'Задача Б24 #' + item.bitrixTaskId;
+                actions.appendChild(taskLink);
+            }
 
             var delBtn = document.createElement('button');
             delBtn.className = 'ui-btn ui-btn-danger ui-btn-sm';
             delBtn.textContent = 'Удалить';
             delBtn.onclick = function () {
-                if (!confirm('Удалить "' + item.originalName + '"?')) return;
+                if (!confirm('Удалить printjob "' + (item.originalName || item.id) + '"?')) return;
                 deletePrint(item.id).then(onChanged);
             };
             actions.appendChild(delBtn);
 
             row.appendChild(actions);
-            row.appendChild(savedInfo);
             container.appendChild(row);
         });
     }
@@ -319,8 +620,30 @@
     function renderUploadForm(container, taskId, getInfo, onUploaded) {
         var fileLabel = document.createElement('div');
         fileLabel.style.cssText = 'font-weight:600;margin-bottom:8px;';
-        fileLabel.textContent = 'Добавить файл для печати';
+        fileLabel.textContent = 'Добавить печать';
         container.appendChild(fileLabel);
+
+        // Быстрое создание запроса без файла (конструктор ставит задачу)
+        var quickBtn = document.createElement('button');
+        quickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+        quickBtn.style.cssText = 'margin-bottom:12px;';
+        quickBtn.textContent = '+ Создать запрос без файла';
+        quickBtn.onclick = function () {
+            quickBtn.disabled = true;
+            var info = getInfo();
+            var fd = new FormData();
+            fd.append('taskId', taskId);
+            if (info.dealId) fd.append('dealId', info.dealId);
+            if (info.client) fd.append('client', info.client);
+            createPrintJob(fd).then(function () {
+                quickBtn.disabled = false;
+                onUploaded();
+            }).catch(function (e) {
+                alert('Ошибка: ' + e.message);
+                quickBtn.disabled = false;
+            });
+        };
+        container.appendChild(quickBtn);
 
         var fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -867,6 +1190,76 @@
             err.textContent = 'Не удалось загрузить список тканей: ' + e.message;
             chipsWrap.appendChild(err);
         });
+    }
+
+    // ===== ПИКЕР ПОЛЬЗОВАТЕЛЯ БИТРИКС =====
+
+    function openUserPicker(onPick) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText =
+            'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9600;' +
+            'display:flex;align-items:center;justify-content:center;';
+
+        var box = document.createElement('div');
+        box.style.cssText =
+            'background:#fff;border-radius:10px;width:360px;max-width:92vw;max-height:70vh;' +
+            'overflow-y:auto;padding:18px;position:relative;font-size:14px;color:#333;';
+
+        var closeBtn = document.createElement('div');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;cursor:pointer;font-size:16px;color:#888;';
+        closeBtn.onclick = function () { overlay.remove(); };
+        box.appendChild(closeBtn);
+
+        var title = document.createElement('h3');
+        title.style.cssText = 'margin:0 0 12px;font-size:15px;';
+        title.textContent = 'Кому поставить задачу?';
+        box.appendChild(title);
+
+        var search = document.createElement('input');
+        search.type = 'text';
+        search.placeholder = 'Поиск по имени…';
+        search.style.cssText = 'width:100%;padding:7px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;margin-bottom:10px;';
+        box.appendChild(search);
+
+        var list = document.createElement('div');
+        box.appendChild(list);
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function loadUsers(q) {
+            list.innerHTML = '<div style="color:#999;font-size:13px;">Загрузка…</div>';
+            fetch('/local/ajax/crystal/get_users.php?q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(function (users) {
+                    list.innerHTML = '';
+                    if (!users.length) {
+                        list.innerHTML = '<div style="color:#999;font-size:13px;">Не найдено</div>';
+                        return;
+                    }
+                    users.forEach(function (u) {
+                        var row = document.createElement('div');
+                        row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;';
+                        row.textContent = u.name + ' (#' + u.id + ')';
+                        row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
+                        row.onmouseleave = function () { row.style.background = ''; };
+                        row.onclick = function () { overlay.remove(); onPick(u); };
+                        list.appendChild(row);
+                    });
+                })
+                .catch(function () {
+                    list.innerHTML = '<div style="color:#c0392b;font-size:13px;">Ошибка загрузки</div>';
+                });
+        }
+
+        var searchTimer;
+        search.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () { loadUsers(search.value); }, 300);
+        });
+
+        loadUsers('');
     }
 
     // ===== FILE SYSTEM ACCESS (скачивание в папку клиента на ПК) =====
