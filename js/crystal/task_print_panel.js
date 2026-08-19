@@ -1145,7 +1145,7 @@
     // ===== ОЧЕРЕДЬ ПЕЧАТИ =====
 
     var QUEUE_WIDGET_ID = 'crystal-print-queue';
-    var QUEUE_CONTAINER_SELECTOR = '.tasks-task-list-view, .tasks-list-view, [data-task-list]';
+    var QUEUE_CONTAINER_SELECTOR = '.main-grid-container';
 
     function initPrintQueue() {
         var queueObserver = new MutationObserver(function () { syncPrintQueue(); });
