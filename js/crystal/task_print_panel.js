@@ -3,7 +3,7 @@
 
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
-    var PINNED_USER_IDS = [19, 53];
+    var PRINT_QUEUE_USER_IDS = [19, 23, 26, 53]; // Павел, Ярослав, Наталья, Лиля
     var IDB_NAME = 'crystal_print_panel';
     var IDB_STORE = 'handles';
     var ROOT_DIR_KEY = 'printRootDir';
@@ -49,6 +49,12 @@
 
         var navObserver = new MutationObserver(function () { sync(); });
         navObserver.observe(document.body, { childList: true, subtree: true });
+
+        // ===== ОЧЕРЕДЬ ПЕЧАТИ (на странице списка задач) =====
+        loadCurrentUser().then(function (user) {
+            if (!user || PRINT_QUEUE_USER_IDS.indexOf(user.id) === -1) return;
+            initPrintQueue();
+        });
     });
 
     // ===== BITRIX BRIDGE =====
@@ -75,6 +81,12 @@
 
     function listPrints(taskId) {
         return fetch(CRYSTAL_BASE + '/api/print-jobs?taskId=' + encodeURIComponent(taskId), {
+            headers: { 'X-Api-Key': API_KEY }
+        }).then(function (r) { return r.json(); });
+    }
+
+    function listPrintsByStatus(status) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs?status=' + encodeURIComponent(status), {
             headers: { 'X-Api-Key': API_KEY }
         }).then(function (r) { return r.json(); });
     }
@@ -148,14 +160,6 @@
 
     function referenceFileUrl(id, remotePath) {
         return CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/' + encodeURIComponent(remotePath) + '/file?key=' + encodeURIComponent(API_KEY);
-    }
-
-    function saveBitrixTaskId(id, bitrixTaskId) {
-        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/bitrix-task', {
-            method: 'PATCH',
-            headers: { 'X-Api-Key': API_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bitrixTaskId: String(bitrixTaskId) })
-        }).then(function (r) { return r.json(); });
     }
 
     function deletePrint(id) {
@@ -547,61 +551,6 @@
                 };
                 actions.appendChild(downloadBtn);
                 row.appendChild(savedInfo);
-            }
-
-            // Создать задачу
-            if (!item.bitrixTaskId) {
-                var taskBtn = document.createElement('button');
-                taskBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-                taskBtn.textContent = 'Создать задачу';
-                taskBtn.onclick = function () {
-                    var info = getInfo();
-                    openUserPicker(function (user) {
-                        taskBtn.disabled = true;
-                        taskBtn.textContent = 'Создание…';
-                        var settingsText = formatPrintSettings(item.printSettings).join('\n');
-                        fetch('/local/ajax/crystal/create_print_task.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                printJobId: item.id,
-                                taskId: taskId,
-                                dealId: info.dealId || null,
-                                client: info.client || null,
-                                fileName: item.originalName || null,
-                                settingsSummary: settingsText,
-                                responsibleId: user.id
-                            })
-                        })
-                        .then(function (r) { return r.json(); })
-                        .then(function (resp) {
-                            if (resp.status !== 'success') throw new Error(resp.message || 'Ошибка');
-                            return saveBitrixTaskId(item.id, resp.taskId).then(function () {
-                                taskBtn.textContent = 'Задача #' + resp.taskId + ' → ' + user.name;
-                                taskBtn.disabled = true;
-                                if (resp.taskUrl) {
-                                    var link = document.createElement('a');
-                                    link.href = resp.taskUrl;
-                                    link.target = '_blank';
-                                    link.className = 'ui-btn ui-btn-light-border ui-btn-sm';
-                                    link.textContent = 'Открыть';
-                                    actions.appendChild(link);
-                                }
-                            });
-                        })
-                        .catch(function (e) {
-                            alert('Ошибка: ' + e.message);
-                            taskBtn.disabled = false;
-                            taskBtn.textContent = 'Создать задачу';
-                        });
-                    });
-                };
-                actions.appendChild(taskBtn);
-            } else {
-                var taskLink = document.createElement('span');
-                taskLink.style.cssText = 'font-size:12px;color:#27ae60;align-self:center;';
-                taskLink.textContent = 'Задача Б24 #' + item.bitrixTaskId;
-                actions.appendChild(taskLink);
             }
 
             var delBtn = document.createElement('button');
@@ -1193,94 +1142,174 @@
         });
     }
 
-    // ===== ПИКЕР ПОЛЬЗОВАТЕЛЯ БИТРИКС =====
+    // ===== ОЧЕРЕДЬ ПЕЧАТИ =====
 
-    function openUserPicker(onPick) {
-        var overlay = document.createElement('div');
-        overlay.style.cssText =
-            'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9600;' +
-            'display:flex;align-items:center;justify-content:center;';
+    var QUEUE_WIDGET_ID = 'crystal-print-queue';
+    var QUEUE_CONTAINER_SELECTOR = '.tasks-task-list-view, .tasks-list-view, [data-task-list]';
 
-        var box = document.createElement('div');
-        box.style.cssText =
-            'background:#fff;border-radius:10px;width:360px;max-width:92vw;max-height:70vh;' +
-            'overflow-y:auto;padding:18px;position:relative;font-size:14px;color:#333;';
+    function initPrintQueue() {
+        var queueObserver = new MutationObserver(function () { syncPrintQueue(); });
+        queueObserver.observe(document.body, { childList: true, subtree: true });
+        syncPrintQueue();
+    }
 
-        var closeBtn = document.createElement('div');
-        closeBtn.textContent = '✕';
-        closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;cursor:pointer;font-size:16px;color:#888;';
-        closeBtn.onclick = function () { overlay.remove(); };
-        box.appendChild(closeBtn);
+    function syncPrintQueue() {
+        var isTasksPage = /\/tasks\//.test(window.location.pathname);
+        var existing = document.getElementById(QUEUE_WIDGET_ID);
 
-        var title = document.createElement('h3');
-        title.style.cssText = 'margin:0 0 12px;font-size:15px;';
-        title.textContent = 'Кому поставить задачу?';
-        box.appendChild(title);
-
-        var search = document.createElement('input');
-        search.type = 'text';
-        search.placeholder = 'Поиск по имени…';
-        search.style.cssText = 'width:100%;padding:7px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;margin-bottom:10px;';
-        box.appendChild(search);
-
-        var list = document.createElement('div');
-        box.appendChild(list);
-
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-
-        var allUsers = [];
-
-        function makeUserRow(u, pinned) {
-            var row = document.createElement('div');
-            row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;' +
-                (pinned ? 'font-weight:600;' : '');
-            if (pinned) {
-                var dot = document.createElement('span');
-                dot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:#2fc6f6;flex-shrink:0;display:inline-block;';
-                row.appendChild(dot);
-            }
-            var label = document.createElement('span');
-            label.textContent = u.name + ' (#' + u.id + ')';
-            row.appendChild(label);
-            row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
-            row.onmouseleave = function () { row.style.background = ''; };
-            row.onclick = function () { overlay.remove(); onPick(u); };
-            return row;
+        if (!isTasksPage) {
+            if (existing) existing.remove();
+            return;
         }
 
-        function paintUsers(q) {
-            var lq = q.toLowerCase();
-            var filtered = q
-                ? allUsers.filter(function (u) { return u.name.toLowerCase().indexOf(lq) !== -1; })
-                : allUsers;
-            list.innerHTML = '';
-            if (!filtered.length) {
-                list.innerHTML = '<div style="color:#999;font-size:13px;">Не найдено</div>';
-                return;
-            }
+        if (existing) return; // уже вставлен
 
-            var pinned = filtered.filter(function (u) { return PINNED_USER_IDS.indexOf(u.id) !== -1; });
-            var rest   = filtered.filter(function (u) { return PINNED_USER_IDS.indexOf(u.id) === -1; });
+        var container = document.querySelector(QUEUE_CONTAINER_SELECTOR);
+        if (!container) return;
 
-            if (pinned.length) {
-                pinned.forEach(function (u) { list.appendChild(makeUserRow(u, true)); });
-                var sep = document.createElement('div');
-                sep.style.cssText = 'border-top:1px solid #eee;margin:6px 0;';
-                list.appendChild(sep);
-            }
-            rest.forEach(function (u) { list.appendChild(makeUserRow(u, false)); });
-        }
+        var widget = document.createElement('div');
+        widget.id = QUEUE_WIDGET_ID;
+        widget.style.cssText =
+            'background:#fff;border:1px solid #e0e8f0;border-radius:10px;padding:14px 16px;' +
+            'margin-bottom:14px;font-size:13px;color:#333;';
 
-        list.innerHTML = '<div style="color:#999;font-size:13px;">Загрузка…</div>';
-        fetch('/local/ajax/crystal/get_users.php')
-            .then(function (r) { return r.json(); })
-            .then(function (users) { allUsers = users; paintUsers(''); })
-            .catch(function () {
-                list.innerHTML = '<div style="color:#c0392b;font-size:13px;">Ошибка загрузки</div>';
+        var header = document.createElement('div');
+        header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;';
+
+        var headerTitle = document.createElement('span');
+        headerTitle.style.cssText = 'font-weight:700;font-size:14px;flex:1;';
+        headerTitle.textContent = '🖨 Очередь печати';
+        header.appendChild(headerTitle);
+
+        var refreshBtn = document.createElement('button');
+        refreshBtn.type = 'button';
+        refreshBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+        refreshBtn.textContent = 'Обновить';
+        refreshBtn.onclick = function () { loadQueue(); };
+        header.appendChild(refreshBtn);
+
+        var toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+        toggleBtn.textContent = '▲';
+        header.appendChild(toggleBtn);
+
+        widget.appendChild(header);
+
+        var body = document.createElement('div');
+        widget.appendChild(body);
+
+        toggleBtn.onclick = function () {
+            var collapsed = body.style.display === 'none';
+            body.style.display = collapsed ? 'block' : 'none';
+            toggleBtn.textContent = collapsed ? '▲' : '▼';
+        };
+
+        container.parentNode.insertBefore(widget, container);
+
+        function loadQueue() {
+            body.innerHTML = '<div style="color:#999;">Загрузка…</div>';
+            listPrintsByStatus('ready').then(function (items) {
+                renderQueue(body, items);
+            }).catch(function (e) {
+                body.innerHTML = '<div style="color:#c0392b;">Ошибка: ' + e.message + '</div>';
             });
+        }
 
-        search.addEventListener('input', function () { paintUsers(search.value); });
+        loadQueue();
+    }
+
+    function renderQueue(container, items) {
+        container.innerHTML = '';
+
+        if (!items.length) {
+            var empty = document.createElement('div');
+            empty.style.cssText = 'color:#999;padding:4px 0;';
+            empty.textContent = 'Нет файлов, готовых к печати';
+            container.appendChild(empty);
+            return;
+        }
+
+        items.forEach(function (item) {
+            var row = document.createElement('div');
+            row.style.cssText =
+                'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;' +
+                'border:1px solid #eee;margin-bottom:8px;flex-wrap:wrap;';
+
+            // Клиент + файл
+            var info = document.createElement('div');
+            info.style.cssText = 'flex:1;min-width:0;';
+
+            var clientEl = document.createElement('div');
+            clientEl.style.cssText = 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            clientEl.textContent = item.client || 'Клиент не указан';
+            info.appendChild(clientEl);
+
+            var fileEl = document.createElement('div');
+            fileEl.style.cssText = 'font-size:12px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            fileEl.textContent = item.originalName || '(файл не прикреплён)';
+            info.appendChild(fileEl);
+
+            var settingsLines = formatPrintSettings(item.printSettings);
+            if (settingsLines.length) {
+                var settingsEl = document.createElement('div');
+                settingsEl.style.cssText = 'font-size:11px;color:#888;margin-top:2px;';
+                settingsEl.textContent = settingsLines.join(' · ');
+                info.appendChild(settingsEl);
+            }
+
+            row.appendChild(info);
+
+            // Референсы-превью
+            if ((item.references || []).length) {
+                var refsWrap = document.createElement('div');
+                refsWrap.style.cssText = 'display:flex;gap:4px;';
+                item.references.slice(0, 3).forEach(function (ref) {
+                    if (ref.mimeType && ref.mimeType.indexOf('image/') === 0) {
+                        var img = document.createElement('img');
+                        img.src = referenceFileUrl(item.id, ref.remotePath);
+                        img.style.cssText = 'width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #eee;cursor:pointer;';
+                        img.onclick = function () { window.open(img.src, '_blank'); };
+                        refsWrap.appendChild(img);
+                    }
+                });
+                row.appendChild(refsWrap);
+            }
+
+            // Кнопки
+            var btns = document.createElement('div');
+            btns.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
+
+            if (item.originalName) {
+                var dlBtn = document.createElement('button');
+                dlBtn.type = 'button';
+                dlBtn.className = 'ui-btn ui-btn-primary ui-btn-xs';
+                dlBtn.textContent = 'Скачать';
+                dlBtn.onclick = function () {
+                    dlBtn.disabled = true;
+                    downloadToFolder(item, function () { return { dealId: item.dealId, client: item.client }; }, item.taskId)
+                        .then(function () { dlBtn.textContent = 'Готово ✓'; })
+                        .catch(function (e) { alert(e.message); dlBtn.disabled = false; });
+                };
+                btns.appendChild(dlBtn);
+            }
+
+            var printedBtn = document.createElement('button');
+            printedBtn.type = 'button';
+            printedBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+            printedBtn.textContent = 'Напечатано';
+            printedBtn.onclick = function () {
+                updatePrintStatus(item.id, 'printed').then(function () {
+                    row.style.opacity = '0.4';
+                    printedBtn.textContent = 'Готово ✓';
+                    printedBtn.disabled = true;
+                }).catch(function (e) { alert(e.message); });
+            };
+            btns.appendChild(printedBtn);
+
+            row.appendChild(btns);
+            container.appendChild(row);
+        });
     }
 
     // ===== FILE SYSTEM ACCESS (скачивание в папку клиента на ПК) =====
