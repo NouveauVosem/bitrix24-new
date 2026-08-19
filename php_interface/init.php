@@ -37,7 +37,9 @@ function addCustomAssets() {
 	$asset->addJs("/local/js/crystal/deal_commercial_offer.js");
 	$asset->addJs("/local/js/crystal/deal_product_crystal_params.js");
 	$asset->addJs("/local/js/crystal/deal_product_catalog.js");
-	$asset->addJs("/local/js/crystal/task_print_panel.js");
+	$asset->addJs("/local/js/crystal/tasks/utils.js");
+	$asset->addJs("/local/js/crystal/tasks/task_print_panel.js");
+	$asset->addJs("/local/js/crystal/tasks/task_print_queue.js");
 
 }
 
