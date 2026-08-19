@@ -3,6 +3,7 @@
 
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
+    var PINNED_USER_IDS = [19, 53];
     var IDB_NAME = 'crystal_print_panel';
     var IDB_STORE = 'handles';
     var ROOT_DIR_KEY = 'printRootDir';
@@ -1230,24 +1231,45 @@
 
         var allUsers = [];
 
+        function makeUserRow(u, pinned) {
+            var row = document.createElement('div');
+            row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;' +
+                (pinned ? 'font-weight:600;' : '');
+            if (pinned) {
+                var dot = document.createElement('span');
+                dot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:#2fc6f6;flex-shrink:0;display:inline-block;';
+                row.appendChild(dot);
+            }
+            var label = document.createElement('span');
+            label.textContent = u.name + ' (#' + u.id + ')';
+            row.appendChild(label);
+            row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
+            row.onmouseleave = function () { row.style.background = ''; };
+            row.onclick = function () { overlay.remove(); onPick(u); };
+            return row;
+        }
+
         function paintUsers(q) {
+            var lq = q.toLowerCase();
             var filtered = q
-                ? allUsers.filter(function (u) { return u.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; })
+                ? allUsers.filter(function (u) { return u.name.toLowerCase().indexOf(lq) !== -1; })
                 : allUsers;
             list.innerHTML = '';
             if (!filtered.length) {
                 list.innerHTML = '<div style="color:#999;font-size:13px;">Не найдено</div>';
                 return;
             }
-            filtered.forEach(function (u) {
-                var row = document.createElement('div');
-                row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;';
-                row.textContent = u.name + ' (#' + u.id + ')';
-                row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
-                row.onmouseleave = function () { row.style.background = ''; };
-                row.onclick = function () { overlay.remove(); onPick(u); };
-                list.appendChild(row);
-            });
+
+            var pinned = filtered.filter(function (u) { return PINNED_USER_IDS.indexOf(u.id) !== -1; });
+            var rest   = filtered.filter(function (u) { return PINNED_USER_IDS.indexOf(u.id) === -1; });
+
+            if (pinned.length) {
+                pinned.forEach(function (u) { list.appendChild(makeUserRow(u, true)); });
+                var sep = document.createElement('div');
+                sep.style.cssText = 'border-top:1px solid #eee;margin:6px 0;';
+                list.appendChild(sep);
+            }
+            rest.forEach(function (u) { list.appendChild(makeUserRow(u, false)); });
         }
 
         list.innerHTML = '<div style="color:#999;font-size:13px;">Загрузка…</div>';
