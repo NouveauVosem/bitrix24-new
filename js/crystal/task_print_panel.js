@@ -1228,38 +1228,37 @@
         overlay.appendChild(box);
         document.body.appendChild(overlay);
 
-        function loadUsers(q) {
-            list.innerHTML = '<div style="color:#999;font-size:13px;">Загрузка…</div>';
-            fetch('/local/ajax/crystal/get_users.php?q=' + encodeURIComponent(q))
-                .then(function (r) { return r.json(); })
-                .then(function (users) {
-                    list.innerHTML = '';
-                    if (!users.length) {
-                        list.innerHTML = '<div style="color:#999;font-size:13px;">Не найдено</div>';
-                        return;
-                    }
-                    users.forEach(function (u) {
-                        var row = document.createElement('div');
-                        row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;';
-                        row.textContent = u.name + ' (#' + u.id + ')';
-                        row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
-                        row.onmouseleave = function () { row.style.background = ''; };
-                        row.onclick = function () { overlay.remove(); onPick(u); };
-                        list.appendChild(row);
-                    });
-                })
-                .catch(function () {
-                    list.innerHTML = '<div style="color:#c0392b;font-size:13px;">Ошибка загрузки</div>';
-                });
+        var allUsers = [];
+
+        function paintUsers(q) {
+            var filtered = q
+                ? allUsers.filter(function (u) { return u.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; })
+                : allUsers;
+            list.innerHTML = '';
+            if (!filtered.length) {
+                list.innerHTML = '<div style="color:#999;font-size:13px;">Не найдено</div>';
+                return;
+            }
+            filtered.forEach(function (u) {
+                var row = document.createElement('div');
+                row.style.cssText = 'padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;';
+                row.textContent = u.name + ' (#' + u.id + ')';
+                row.onmouseenter = function () { row.style.background = '#f2f7fb'; };
+                row.onmouseleave = function () { row.style.background = ''; };
+                row.onclick = function () { overlay.remove(); onPick(u); };
+                list.appendChild(row);
+            });
         }
 
-        var searchTimer;
-        search.addEventListener('input', function () {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(function () { loadUsers(search.value); }, 300);
-        });
+        list.innerHTML = '<div style="color:#999;font-size:13px;">Загрузка…</div>';
+        fetch('/local/ajax/crystal/get_users.php')
+            .then(function (r) { return r.json(); })
+            .then(function (users) { allUsers = users; paintUsers(''); })
+            .catch(function () {
+                list.innerHTML = '<div style="color:#c0392b;font-size:13px;">Ошибка загрузки</div>';
+            });
 
-        loadUsers('');
+        search.addEventListener('input', function () { paintUsers(search.value); });
     }
 
     // ===== FILE SYSTEM ACCESS (скачивание в папку клиента на ПК) =====

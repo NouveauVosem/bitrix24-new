@@ -7,25 +7,20 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_be
 
 header('Content-Type: application/json; charset=utf-8');
 
-$q = trim($_GET['q'] ?? '');
-
-$filter = ['ACTIVE' => 'Y'];
-if ($q !== '') {
-    $filter['%NAME'] = $q . '%';
-}
-
-$res = CUser::GetList('NAME', 'ASC', $filter, [
-    'FIELDS' => ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME', 'EMAIL', 'PERSONAL_PHOTO'],
-    'NAV_PARAMS' => ['nPageSize' => 30],
+$res = CUser::GetList('LAST_NAME', 'ASC', ['ACTIVE' => 'Y'], [
+    'FIELDS' => ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME', 'EMAIL'],
+    'NAV_PARAMS' => ['nPageSize' => 500],
 ]);
 
 $users = [];
 while ($u = $res->Fetch()) {
-    $name = trim($u['NAME'] . ' ' . $u['LAST_NAME']);
-    if ($u['SECOND_NAME']) $name = trim($u['NAME'] . ' ' . $u['SECOND_NAME'] . ' ' . $u['LAST_NAME']);
+    $parts = array_filter([$u['NAME'], $u['SECOND_NAME'], $u['LAST_NAME']]);
+    $name = trim(implode(' ', $parts)) ?: $u['EMAIL'];
+    // пропускаем технических пользователей без имени
+    if (!$name || $name === $u['EMAIL'] && empty($u['NAME']) && empty($u['LAST_NAME'])) continue;
     $users[] = [
         'id'   => (int)$u['ID'],
-        'name' => $name ?: $u['EMAIL'],
+        'name' => $name,
     ];
 }
 
