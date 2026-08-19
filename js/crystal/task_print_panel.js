@@ -278,13 +278,20 @@
             var downloadBtn = document.createElement('button');
             downloadBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
             downloadBtn.textContent = 'Скачать в папку';
+
+            var savedInfo = document.createElement('div');
+            savedInfo.style.cssText = 'display:none;font-size:12px;color:#27ae60;margin-top:4px;word-break:break-all;';
+
             downloadBtn.onclick = function () {
                 downloadBtn.disabled = true;
                 downloadBtn.textContent = 'Скачивание…';
+                savedInfo.style.display = 'none';
                 downloadToFolder(item, getInfo, taskId)
-                    .then(function () {
-                        downloadBtn.textContent = 'Готово ✓';
-                        setTimeout(function () { downloadBtn.textContent = 'Скачать в папку'; downloadBtn.disabled = false; }, 1500);
+                    .then(function (result) {
+                        downloadBtn.textContent = 'Скачать в папку';
+                        downloadBtn.disabled = false;
+                        savedInfo.textContent = 'Сохранено: ' + result.folderName + ' / ' + result.fileName;
+                        savedInfo.style.display = 'block';
                     })
                     .catch(function (e) {
                         alert('Ошибка скачивания: ' + e.message);
@@ -304,6 +311,7 @@
             actions.appendChild(delBtn);
 
             row.appendChild(actions);
+            row.appendChild(savedInfo);
             container.appendChild(row);
         });
     }
@@ -928,7 +936,11 @@
                 return fetchPrintFile(item.id).then(function (blob) {
                     return clientDirHandle.getFileHandle(item.originalName, { create: true }).then(function (fileHandle) {
                         return fileHandle.createWritable().then(function (writable) {
-                            return writable.write(blob).then(function () { return writable.close(); });
+                            return writable.write(blob).then(function () {
+                                return writable.close().then(function () {
+                                    return { folderName: folderName, fileName: item.originalName };
+                                });
+                            });
                         });
                     });
                 });
