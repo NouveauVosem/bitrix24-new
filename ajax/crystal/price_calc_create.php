@@ -24,16 +24,18 @@ curl_setopt_array($ch, [
         'X-Api-Key: legenda',
     ],
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 30,
+    CURLOPT_TIMEOUT        => 70,
 ]);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 if (curl_errno($ch)) {
+    $curlError = curl_error($ch);
+    $curlErrno = curl_errno($ch);
     curl_close($ch);
     http_response_code(502);
-    echo json_encode(['status' => 'error', 'message' => 'Ошибка соединения с Crystal API']);
+    echo json_encode(['status' => 'error', 'message' => 'Ошибка соединения с Crystal API', 'debug' => $curlError, 'errno' => $curlErrno]);
     exit;
 }
 
