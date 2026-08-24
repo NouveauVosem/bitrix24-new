@@ -1029,11 +1029,10 @@ BX.ready(function () {
                     };
                     console.log('[Crystal] price-calculations/crm/create payload:', requestPayload);
 
-                    fetch('https://crystal.alvla.tools/api/price-calculations/crm/create', {
+                    fetch('/local/ajax/crystal/price_calc_create.php', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'X-Api-Key': 'legenda'
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(requestPayload)
                     })
