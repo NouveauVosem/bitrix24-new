@@ -232,38 +232,53 @@
             cardMain.style.cssText = 'flex:1;min-width:0;';
             cardBody.appendChild(cardMain);
 
-            // --- Колонка ткани (справа) ---
+            // --- Колонка ткани + заливки (справа) ---
             var ps = item.printSettings;
             var fabricColor = ps && ps.printFabric && ps.printFabric.colorMode === 'picker' && ps.printFabric.color
                 ? ps.printFabric.color : null;
-            if (fabricColor) {
+            var fillColor = ps && ps.fill && ps.fill.enabled && ps.fill.colorMode === 'picker' && ps.fill.color
+                ? ps.fill.color : null;
+
+            if (fabricColor || fillColor) {
                 var fabricCol = document.createElement('div');
-                fabricCol.style.cssText = 'flex-shrink:0;width:68px;text-align:center;';
+                fabricCol.style.cssText = 'flex-shrink:0;width:72px;display:flex;flex-direction:column;gap:12px;';
 
-                var swatch = document.createElement('div');
-                swatch.style.cssText = 'width:56px;height:56px;border-radius:6px;border:1px solid rgba(0,0,0,.12);margin:0 auto 5px;background:' + (fabricColor.hex || '#eee') + ';';
-                fabricCol.appendChild(swatch);
+                function makeSwatchBlock(color, labelText) {
+                    var block = document.createElement('div');
+                    block.style.cssText = 'text-align:center;';
 
-                if (fabricColor.fabricCode) {
-                    var swatchFabric = document.createElement('div');
-                    swatchFabric.style.cssText = 'font-size:10px;color:#aaa;margin-bottom:2px;';
-                    swatchFabric.textContent = '(' + fabricColor.fabricCode + ')';
-                    fabricCol.appendChild(swatchFabric);
+                    var blockLabel = document.createElement('div');
+                    blockLabel.style.cssText = 'font-size:10px;color:#aaa;margin-bottom:4px;';
+                    blockLabel.textContent = labelText;
+                    block.appendChild(blockLabel);
+
+                    var swatch = document.createElement('div');
+                    swatch.style.cssText = 'width:56px;height:56px;border-radius:6px;border:1px solid rgba(0,0,0,.12);margin:0 auto 5px;background:' + (color.hex || '#eee') + ';';
+                    block.appendChild(swatch);
+
+                    if (color.fabricCode) {
+                        var swatchFabric = document.createElement('div');
+                        swatchFabric.style.cssText = 'font-size:10px;color:#aaa;margin-bottom:2px;';
+                        swatchFabric.textContent = '(' + color.fabricCode + ')';
+                        block.appendChild(swatchFabric);
+                    }
+                    if (color.colorName) {
+                        var swatchName = document.createElement('div');
+                        swatchName.style.cssText = 'font-size:12px;font-weight:600;color:#444;word-break:break-word;margin-bottom:1px;';
+                        swatchName.textContent = color.colorName;
+                        block.appendChild(swatchName);
+                    }
+                    if (color.colorCode) {
+                        var swatchCode = document.createElement('div');
+                        swatchCode.style.cssText = 'font-size:11px;color:#888;';
+                        swatchCode.textContent = color.colorCode;
+                        block.appendChild(swatchCode);
+                    }
+                    return block;
                 }
 
-                if (fabricColor.colorName) {
-                    var swatchName = document.createElement('div');
-                    swatchName.style.cssText = 'font-size:12px;font-weight:600;color:#444;word-break:break-word;margin-bottom:1px;';
-                    swatchName.textContent = fabricColor.colorName;
-                    fabricCol.appendChild(swatchName);
-                }
-
-                if (fabricColor.colorCode) {
-                    var swatchCode = document.createElement('div');
-                    swatchCode.style.cssText = 'font-size:11px;color:#888;';
-                    swatchCode.textContent = fabricColor.colorCode;
-                    fabricCol.appendChild(swatchCode);
-                }
+                if (fabricColor) fabricCol.appendChild(makeSwatchBlock(fabricColor, 'Нанести на ткань:'));
+                if (fillColor) fabricCol.appendChild(makeSwatchBlock(fillColor, 'Заливка:'));
 
                 cardBody.appendChild(fabricCol);
             }
