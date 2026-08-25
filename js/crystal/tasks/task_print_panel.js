@@ -224,42 +224,93 @@
                 statusSelector.style.display = statusSelector.style.display === 'none' ? 'flex' : 'none';
             };
 
+            // --- Основное тело карточки: левая часть + колонка ткани ---
+            var cardBody = document.createElement('div');
+            cardBody.style.cssText = 'display:flex;gap:12px;align-items:flex-start;';
+
+            var cardMain = document.createElement('div');
+            cardMain.style.cssText = 'flex:1;min-width:0;';
+            cardBody.appendChild(cardMain);
+
+            // --- Колонка ткани (справа) ---
+            var ps = item.printSettings;
+            var fabricColor = ps && ps.printFabric && ps.printFabric.colorMode === 'picker' && ps.printFabric.color
+                ? ps.printFabric.color : null;
+            if (fabricColor) {
+                var fabricCol = document.createElement('div');
+                fabricCol.style.cssText = 'flex-shrink:0;width:68px;text-align:center;';
+
+                var swatch = document.createElement('div');
+                swatch.style.cssText = 'width:56px;height:56px;border-radius:6px;border:1px solid rgba(0,0,0,.12);margin:0 auto 5px;background:' + (fabricColor.hex || '#eee') + ';';
+                fabricCol.appendChild(swatch);
+
+                if (fabricColor.fabricCode) {
+                    var swatchFabric = document.createElement('div');
+                    swatchFabric.style.cssText = 'font-size:10px;color:#aaa;margin-bottom:2px;';
+                    swatchFabric.textContent = '(' + fabricColor.fabricCode + ')';
+                    fabricCol.appendChild(swatchFabric);
+                }
+
+                if (fabricColor.colorName) {
+                    var swatchName = document.createElement('div');
+                    swatchName.style.cssText = 'font-size:12px;font-weight:600;color:#444;word-break:break-word;margin-bottom:1px;';
+                    swatchName.textContent = fabricColor.colorName;
+                    fabricCol.appendChild(swatchName);
+                }
+
+                if (fabricColor.colorCode) {
+                    var swatchCode = document.createElement('div');
+                    swatchCode.style.cssText = 'font-size:11px;color:#888;';
+                    swatchCode.textContent = fabricColor.colorCode;
+                    fabricCol.appendChild(swatchCode);
+                }
+
+                cardBody.appendChild(fabricCol);
+            }
+
+            row.appendChild(cardBody);
+
             // --- Название файла ---
             var name = document.createElement('div');
             name.style.cssText = 'font-weight:600;margin-bottom:4px;';
             name.textContent = item.originalName || '(файл не прикреплён)';
-            row.appendChild(name);
+            cardMain.appendChild(name);
 
             if (item.comment) {
                 var comment = document.createElement('div');
                 comment.style.cssText = 'color:#555;font-size:13px;margin-bottom:4px;white-space:pre-wrap;';
                 comment.textContent = item.comment;
-                row.appendChild(comment);
+                cardMain.appendChild(comment);
             }
 
             var settingsLines = CrystalPrint.formatPrintSettings(item.printSettings);
             if (settingsLines.length) {
                 var settings = document.createElement('div');
-                settings.style.cssText = 'color:#888;font-size:12px;margin-bottom:6px;';
+                settings.style.cssText = 'margin-bottom:6px;';
                 settingsLines.forEach(function (line) {
+                    if (line.indexOf('Ткань для печати:') === 0) return; // рендерится отдельно в колонке
+                    var isMain = line.indexOf('Графика:') === 0;
                     var lineEl = document.createElement('div');
+                    lineEl.style.cssText = isMain
+                        ? 'color:#444;font-size:14px;font-weight:600;margin-bottom:2px;'
+                        : 'color:#999;font-size:12px;margin-bottom:1px;';
                     lineEl.textContent = line;
                     settings.appendChild(lineEl);
                 });
-                row.appendChild(settings);
+                cardMain.appendChild(settings);
             }
 
             var date = document.createElement('div');
             date.style.cssText = 'color:#aaa;font-size:12px;margin-bottom:8px;';
             date.textContent = new Date(item.createdAt).toLocaleString('ru-RU');
-            row.appendChild(date);
+            cardMain.appendChild(date);
 
             // --- Референсы ---
             if ((item.references || []).length) {
                 var refsTitle = document.createElement('div');
                 refsTitle.style.cssText = 'font-size:12px;color:#666;font-weight:600;margin-bottom:6px;';
                 refsTitle.textContent = 'Референсы:';
-                row.appendChild(refsTitle);
+                cardMain.appendChild(refsTitle);
 
                 var refsGrid = document.createElement('div');
                 refsGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;';
@@ -295,7 +346,7 @@
                     refWrap.appendChild(delRefBtn);
                     refsGrid.appendChild(refWrap);
                 });
-                row.appendChild(refsGrid);
+                cardMain.appendChild(refsGrid);
             }
 
             // --- Загрузить референс ---
@@ -336,7 +387,7 @@
                 addRefForm.style.alignItems = 'center';
             };
             addRefWrap.appendChild(addRefForm);
-            row.appendChild(addRefWrap);
+            cardMain.appendChild(addRefWrap);
 
             // --- Кнопки действий ---
             var actions = document.createElement('div');
@@ -393,7 +444,7 @@
                         });
                 };
                 actions.appendChild(downloadBtn);
-                row.appendChild(savedInfo);
+                cardMain.appendChild(savedInfo);
             }
 
             var delBtn = document.createElement('button');
@@ -405,7 +456,7 @@
             };
             actions.appendChild(delBtn);
 
-            row.appendChild(actions);
+            cardMain.appendChild(actions);
             container.appendChild(row);
         });
     }

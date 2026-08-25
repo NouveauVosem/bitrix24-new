@@ -195,7 +195,9 @@
 
         if (ps.printFabric) {
             if (ps.printFabric.colorMode === 'picker' && ps.printFabric.color) {
-                lines.push('Ткань для печати: ' + ps.printFabric.color.colorName + ' (' + ps.printFabric.color.fabricCode + ')');
+                var pfc = ps.printFabric.color;
+                var pfcLabel = pfc.colorName + (pfc.colorCode ? ' ' + pfc.colorCode : '') + ' (' + pfc.fabricCode + ')';
+                lines.push('Ткань для печати: ' + pfcLabel);
             } else if (ps.printFabric.colorMode === 'text' && ps.printFabric.colorText) {
                 lines.push('Ткань для печати: ' + ps.printFabric.colorText);
             }
