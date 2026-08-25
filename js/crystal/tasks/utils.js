@@ -218,6 +218,13 @@
             lines.push('Пресс: ' + pressLabel + ', ' + (ps.heatTransfer.time || '?') + ' сек, ' + (ps.heatTransfer.temperature || '?') + '°C');
         }
 
+        if (ps.dashedBorder && ps.dashedBorder.enabled) {
+            var shapeLabel = ps.dashedBorder.shape === 'oval' ? 'Овал' : 'Квадрат';
+            var borderLine = 'Пунктирная рамка (' + shapeLabel + '): ' + (ps.dashedBorder.width || '?') + '×' + (ps.dashedBorder.height || '?') + ' мм';
+            if (ps.dashedBorder.shape !== 'oval' && ps.dashedBorder.radius) borderLine += ', R' + ps.dashedBorder.radius;
+            lines.push(borderLine);
+        }
+
         if (!lines.length && ps.raw) lines.push(ps.raw);
         return lines;
     }
@@ -444,6 +451,44 @@
             fillDetails.style.display = enabled ? 'block' : 'none';
         });
 
+        // ---- Пунктирная рамка ----
+        wrap.appendChild(sectionTitle('Пунктирная рамка'));
+        var borderToggle = segmentedToggle([{ label: 'Нет', value: false }, { label: 'Есть', value: true }], false);
+        wrap.appendChild(borderToggle.el);
+
+        var borderDetails = document.createElement('div');
+        borderDetails.style.cssText = 'display:none;padding:10px;background:#f8f9fb;border-radius:8px;margin-bottom:8px;';
+        wrap.appendChild(borderDetails);
+
+        var borderShapeLabel = document.createElement('div');
+        borderShapeLabel.style.cssText = 'font-size:12px;color:#666;margin-bottom:4px;';
+        borderShapeLabel.textContent = 'Форма:';
+        borderDetails.appendChild(borderShapeLabel);
+
+        var borderShapeToggle = segmentedToggle([{ label: 'Квадрат', value: 'rect' }, { label: 'Овал', value: 'oval' }], 'rect');
+        borderDetails.appendChild(borderShapeToggle.el);
+
+        var borderSizeRow = document.createElement('div');
+        borderSizeRow.style.cssText = 'display:flex;gap:8px;margin-top:8px;margin-bottom:8px;';
+        var borderWidth = numberField('Ш, мм');
+        var borderHeight = numberField('В, мм');
+        borderSizeRow.appendChild(borderWidth.el);
+        borderSizeRow.appendChild(borderHeight.el);
+        borderDetails.appendChild(borderSizeRow);
+
+        var borderRadiusWrap = document.createElement('div');
+        borderDetails.appendChild(borderRadiusWrap);
+        var borderRadius = numberField('Радиус скругления, мм');
+        borderRadiusWrap.appendChild(borderRadius.el);
+
+        borderShapeToggle.onChange(function (shape) {
+            borderRadiusWrap.style.display = shape === 'oval' ? 'none' : 'block';
+        });
+
+        borderToggle.onChange(function (enabled) {
+            borderDetails.style.display = enabled ? 'block' : 'none';
+        });
+
         // ---- Теплоперенос ----
         wrap.appendChild(sectionTitle('Настройки теплопереноса'));
 
@@ -488,6 +533,13 @@
             fillWidth.input.value = '';
             fillHeight.input.value = '';
             fillColorField.reset();
+            borderToggle.setValue(false);
+            borderDetails.style.display = 'none';
+            borderShapeToggle.setValue('rect');
+            borderRadiusWrap.style.display = 'block';
+            borderWidth.input.value = '';
+            borderHeight.input.value = '';
+            borderRadius.input.value = '';
             pressToggle.setValue('crocodile');
             applyDefaults('crocodile');
         }
@@ -512,6 +564,13 @@
                         pressType: pressToggle.getValue(),
                         time: numOrNull(timeField.getValue()),
                         temperature: numOrNull(tempField.getValue())
+                    },
+                    dashedBorder: {
+                        enabled: borderToggle.getValue(),
+                        shape: borderShapeToggle.getValue(),
+                        width: numOrNull(borderWidth.input.value),
+                        height: numOrNull(borderHeight.input.value),
+                        radius: borderShapeToggle.getValue() === 'oval' ? null : numOrNull(borderRadius.input.value)
                     }
                 };
             }
