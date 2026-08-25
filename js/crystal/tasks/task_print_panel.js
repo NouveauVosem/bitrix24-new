@@ -276,6 +276,24 @@
             name.textContent = item.originalName || '(файл не прикреплён)';
             cardMain.appendChild(name);
 
+            if (item.qtyOrder || item.qtyArchive) {
+                var qtyDisplay = document.createElement('div');
+                qtyDisplay.style.cssText = 'display:flex;gap:12px;margin-bottom:6px;';
+                if (item.qtyOrder) {
+                    var qtyOrderEl = document.createElement('div');
+                    qtyOrderEl.style.cssText = 'font-size:12px;color:#555;';
+                    qtyOrderEl.innerHTML = '<span style="color:#aaa;">На заказ:</span> <strong>' + item.qtyOrder + '</strong> шт';
+                    qtyDisplay.appendChild(qtyOrderEl);
+                }
+                if (item.qtyArchive) {
+                    var qtyArchiveEl = document.createElement('div');
+                    qtyArchiveEl.style.cssText = 'font-size:12px;color:#555;';
+                    qtyArchiveEl.innerHTML = '<span style="color:#aaa;">В архив:</span> <strong>' + item.qtyArchive + '</strong> шт';
+                    qtyDisplay.appendChild(qtyArchiveEl);
+                }
+                cardMain.appendChild(qtyDisplay);
+            }
+
             if (item.comment) {
                 var comment = document.createElement('div');
                 comment.style.cssText = 'color:#555;font-size:13px;margin-bottom:4px;white-space:pre-wrap;';
@@ -462,9 +480,34 @@
     }
 
     function renderUploadForm(container, taskId, getInfo, onUploaded) {
+        // --- Кол-во ---
+        var qtyRow = document.createElement('div');
+        qtyRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
+
+        function makeQtyField(labelText) {
+            var wrap = document.createElement('div');
+            wrap.style.cssText = 'flex:1;';
+            var label = document.createElement('div');
+            label.style.cssText = 'font-size:11px;color:#888;margin-bottom:3px;';
+            label.textContent = labelText;
+            wrap.appendChild(label);
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.style.cssText = 'width:100%;padding:6px;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;font-size:13px;';
+            wrap.appendChild(input);
+            return { el: wrap, input: input };
+        }
+
+        var qtyOrder = makeQtyField('Кол-во на заказ');
+        var qtyArchive = makeQtyField('Кол-во в архив');
+        qtyRow.appendChild(qtyOrder.el);
+        qtyRow.appendChild(qtyArchive.el);
+        container.appendChild(qtyRow);
+
         var quickBtn = document.createElement('button');
         quickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
-        quickBtn.style.cssText = 'margin-bottom:12px;';
+        quickBtn.style.cssText = 'margin-bottom:12px;width:100%;';
         quickBtn.textContent = '+ Создать запрос без файла';
         quickBtn.onclick = function () {
             quickBtn.disabled = true;
@@ -473,7 +516,11 @@
             fd.append('taskId', taskId);
             if (info.dealId) fd.append('dealId', info.dealId);
             if (info.client) fd.append('client', info.client);
+            if (qtyOrder.input.value) fd.append('qtyOrder', qtyOrder.input.value);
+            if (qtyArchive.input.value) fd.append('qtyArchive', qtyArchive.input.value);
             CrystalPrint.uploadPrint(fd).then(function () {
+                qtyOrder.input.value = '';
+                qtyArchive.input.value = '';
                 quickBtn.disabled = false;
                 onUploaded();
             }).catch(function (e) {
@@ -498,6 +545,7 @@
 
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
+        submitBtn.style.cssText = 'width:100%;';
         submitBtn.textContent = 'Загрузить';
         submitBtn.onclick = function () {
             var file = fileInput.files[0];
@@ -515,11 +563,15 @@
                 if (info.client) fd.append('client', info.client);
                 fd.append('comment', commentInput.value || '');
                 fd.append('printSettings', JSON.stringify(printSettingsFields.getValue()));
+                if (qtyOrder.input.value) fd.append('qtyOrder', qtyOrder.input.value);
+                if (qtyArchive.input.value) fd.append('qtyArchive', qtyArchive.input.value);
                 if (user && user.id) fd.append('uploadedById', String(user.id));
                 return CrystalPrint.uploadPrint(fd);
             }).then(function () {
                 fileInput.value = '';
                 commentInput.value = '';
+                qtyOrder.input.value = '';
+                qtyArchive.input.value = '';
                 printSettingsFields.reset();
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Загрузить';
