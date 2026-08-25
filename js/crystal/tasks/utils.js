@@ -83,14 +83,19 @@
     }
 
     function deleteReference(id, remotePath) {
-        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/' + encodeURIComponent(remotePath), {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references?path=' + encodeURIComponent(remotePath), {
             method: 'DELETE',
             headers: { 'X-Api-Key': API_KEY }
         }).then(function (r) { return r.json(); });
     }
 
-    function referenceFileUrl(id, remotePath) {
-        return CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/' + encodeURIComponent(remotePath) + '/file?key=' + encodeURIComponent(API_KEY);
+    function fetchReferenceBlob(id, remotePath) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/references/file?path=' + encodeURIComponent(remotePath), {
+            headers: { 'X-Api-Key': API_KEY }
+        }).then(function (r) {
+            if (!r.ok) throw new Error('Не удалось загрузить файл');
+            return r.blob();
+        });
     }
 
     function deletePrint(id) {
@@ -891,7 +896,7 @@
         updatePrintStatus: updatePrintStatus,
         addReference: addReference,
         deleteReference: deleteReference,
-        referenceFileUrl: referenceFileUrl,
+        fetchReferenceBlob: fetchReferenceBlob,
         deletePrint: deletePrint,
         // UI
         renderStatusBadge: renderStatusBadge,

@@ -337,19 +337,29 @@
                     var refWrap = document.createElement('div');
                     refWrap.style.cssText = 'position:relative;width:70px;';
 
-                    var fileUrl = CrystalPrint.referenceFileUrl(item.id, ref.remotePath);
                     if (isImage) {
                         var img = document.createElement('img');
-                        img.src = fileUrl;
                         img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #eee;cursor:pointer;';
-                        img.onclick = function () { window.open(fileUrl, '_blank'); };
+                        img.alt = ref.originalName;
+                        CrystalPrint.fetchReferenceBlob(item.id, ref.remotePath).then(function (blob) {
+                            var blobUrl = URL.createObjectURL(blob);
+                            img.src = blobUrl;
+                            img.onclick = function () { window.open(blobUrl, '_blank'); };
+                        }).catch(function () { img.style.opacity = '0.3'; });
                         refWrap.appendChild(img);
                     } else {
-                        var fileLink = document.createElement('a');
-                        fileLink.href = fileUrl;
-                        fileLink.target = '_blank';
-                        fileLink.style.cssText = 'display:flex;align-items:center;justify-content:center;width:70px;height:70px;border:1px solid #eee;border-radius:6px;font-size:11px;color:#555;text-align:center;padding:4px;box-sizing:border-box;word-break:break-all;';
+                        var fileLink = document.createElement('div');
+                        fileLink.style.cssText = 'display:flex;align-items:center;justify-content:center;width:70px;height:70px;border:1px solid #eee;border-radius:6px;font-size:11px;color:#2fc6f6;text-align:center;padding:4px;box-sizing:border-box;word-break:break-all;cursor:pointer;';
                         fileLink.textContent = ref.originalName;
+                        fileLink.onclick = function () {
+                            CrystalPrint.fetchReferenceBlob(item.id, ref.remotePath).then(function (blob) {
+                                var blobUrl = URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = blobUrl;
+                                a.download = ref.originalName;
+                                a.click();
+                            }).catch(function (e) { alert('Ошибка: ' + e.message); });
+                        };
                         refWrap.appendChild(fileLink);
                     }
 
