@@ -48,6 +48,19 @@
         });
     }
 
+    function updatePrint(id, fd) {
+        return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers: { 'X-Api-Key': API_KEY },
+            body: fd
+        }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) throw new Error(body.message || 'Ошибка обновления');
+                return body;
+            });
+        });
+    }
+
     function attachPrintFile(id, fd) {
         return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/file', {
             method: 'POST',
@@ -405,6 +418,23 @@
                 state.fabricColor = null;
                 swatch.style.background = '#eee';
                 pickLabel.textContent = placeholderText;
+            },
+            setValue: function (val) {
+                if (!val) return;
+                modeToggle.setValue(val.colorMode || 'picker');
+                if (val.colorMode === 'text') {
+                    pickBtn.style.display = 'none';
+                    textInput.style.display = 'block';
+                    textInput.value = val.colorText || '';
+                } else {
+                    pickBtn.style.display = 'flex';
+                    textInput.style.display = 'none';
+                    if (val.color) {
+                        state.fabricColor = val.color;
+                        swatch.style.background = val.color.hex || '#eee';
+                        pickLabel.textContent = val.color.colorName + (val.color.colorCode ? ' ' + val.color.colorCode : '') + ' (' + val.color.fabricCode + ')';
+                    }
+                }
             }
         };
     }
@@ -549,9 +579,44 @@
             applyDefaults('crocodile');
         }
 
+        function setValues(ps) {
+            if (!ps) return;
+            if (ps.graphicSize) {
+                graphicWidth.input.value = ps.graphicSize.width || '';
+                graphicHeight.input.value = ps.graphicSize.height || '';
+            }
+            if (ps.printFabric) printFabricField.setValue(ps.printFabric);
+            if (ps.fill) {
+                fillToggle.setValue(!!ps.fill.enabled);
+                fillDetails.style.display = ps.fill.enabled ? 'block' : 'none';
+                fillWidth.input.value = ps.fill.width || '';
+                fillHeight.input.value = ps.fill.height || '';
+                fillColorField.setValue({ colorMode: ps.fill.colorMode, color: ps.fill.color, colorText: ps.fill.colorText });
+            }
+            if (ps.dashedBorder) {
+                borderToggle.setValue(!!ps.dashedBorder.enabled);
+                borderDetails.style.display = ps.dashedBorder.enabled ? 'block' : 'none';
+                var shape = ps.dashedBorder.shape || 'rect';
+                borderShapeToggle.setValue(shape);
+                borderRadiusWrap.style.display = shape === 'oval' ? 'none' : 'block';
+                borderWidth.input.value = ps.dashedBorder.width || '';
+                borderHeight.input.value = ps.dashedBorder.height || '';
+                borderRadius.input.value = ps.dashedBorder.radius || '';
+            }
+            if (ps.heatTransfer) {
+                var press = ps.heatTransfer.pressType || 'crocodile';
+                pressToggle.setValue(press);
+                timeField.setValue(ps.heatTransfer.time || '');
+                tempField.setValue(ps.heatTransfer.temperature || '');
+                timeField.setWarning(ps.heatTransfer.time && Number(ps.heatTransfer.time) !== HEAT_DEFAULTS[press].time);
+                tempField.setWarning(ps.heatTransfer.temperature && Number(ps.heatTransfer.temperature) !== HEAT_DEFAULTS[press].temperature);
+            }
+        }
+
         return {
             el: wrap,
             reset: reset,
+            setValues: setValues,
             getValue: function () {
                 var fillColor = fillColorField.getValue();
                 return {
@@ -890,6 +955,7 @@
         loadCurrentUser: loadCurrentUser,
         // Crystal API
         listPrints: listPrints,
+        updatePrint: updatePrint,
         listPrintsByStatus: listPrintsByStatus,
         uploadPrint: uploadPrint,
         attachPrintFile: attachPrintFile,

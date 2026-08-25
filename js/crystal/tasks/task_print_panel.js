@@ -173,20 +173,20 @@
         overlay.appendChild(box);
         document.body.appendChild(overlay);
 
+        var formController = renderUploadForm(rightCol, taskId, getInfo, reload);
+
         function reload() {
             listWrap.innerHTML = 'Загрузка…';
             CrystalPrint.listPrints(taskId).then(function (items) {
-                renderList(listWrap, items, taskId, getInfo, reload);
+                renderList(listWrap, items, taskId, getInfo, reload, formController);
             }).catch(function (e) {
                 listWrap.textContent = 'Ошибка загрузки: ' + e.message;
             });
         }
         reload();
-
-        renderUploadForm(rightCol, taskId, getInfo, reload);
     }
 
-    function renderList(container, items, taskId, getInfo, onChanged) {
+    function renderList(container, items, taskId, getInfo, onChanged, formController) {
         container.innerHTML = '';
         if (!items.length) {
             var empty = document.createElement('div');
@@ -208,8 +208,16 @@
             var toggleStatusBtn = document.createElement('button');
             toggleStatusBtn.type = 'button';
             toggleStatusBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
-            toggleStatusBtn.textContent = 'Изменить';
+            toggleStatusBtn.textContent = 'Статус';
             statusRow.appendChild(toggleStatusBtn);
+
+            var editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+            editBtn.textContent = 'Редактировать';
+            editBtn.onclick = function () { formController.switchToEdit(item); };
+            statusRow.appendChild(editBtn);
+
             row.appendChild(statusRow);
 
             var statusSelector = CrystalPrint.renderStatusSelector(item.status || 'pending', function (newStatus) {
@@ -505,6 +513,9 @@
     }
 
     function renderUploadForm(container, taskId, getInfo, onUploaded) {
+        // Заголовок колонки — первый дочерний элемент container (добавлен в openPanel до вызова этой функции)
+        var formTitle = container.firstElementChild;
+
         // --- Кол-во ---
         var qtyRow = document.createElement('div');
         qtyRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
@@ -530,10 +541,12 @@
         qtyRow.appendChild(qtyArchive.el);
         container.appendChild(qtyRow);
 
+        var fileRow = document.createElement('div');
         var fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.style.cssText = 'display:block;margin-bottom:8px;';
-        container.appendChild(fileInput);
+        fileRow.appendChild(fileInput);
+        container.appendChild(fileRow);
 
         var commentInput = document.createElement('textarea');
         commentInput.placeholder = 'Комментарий';
@@ -543,51 +556,103 @@
         var printSettingsFields = CrystalPrint.renderPrintSettingsFields();
         container.appendChild(printSettingsFields.el);
 
+        // --- Кнопки ---
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:8px;';
+
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
-        submitBtn.style.cssText = 'width:100%;';
+        submitBtn.style.cssText = 'flex:1;';
         submitBtn.textContent = 'Создать без файла';
+        btnRow.appendChild(submitBtn);
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+        cancelBtn.style.cssText = 'display:none;';
+        cancelBtn.textContent = 'Отмена';
+        btnRow.appendChild(cancelBtn);
+
+        container.appendChild(btnRow);
+
+        // --- Режимы ---
+        var editingId = null;
+
+        function switchToCreate() {
+            editingId = null;
+            if (formTitle) { formTitle.textContent = 'Добавить печать'; }
+            fileRow.style.display = 'block';
+            submitBtn.textContent = fileInput.files[0] ? 'Загрузить' : 'Создать без файла';
+            cancelBtn.style.display = 'none';
+            fileInput.value = '';
+            commentInput.value = '';
+            qtyOrder.input.value = '';
+            qtyArchive.input.value = '';
+            printSettingsFields.reset();
+        }
+
+        function switchToEdit(item) {
+            editingId = item.id;
+            if (formTitle) { formTitle.textContent = 'Редактировать печать'; }
+            fileRow.style.display = 'none';
+            submitBtn.textContent = 'Обновить';
+            cancelBtn.style.display = '';
+            // Предзаполняем
+            commentInput.value = item.comment || '';
+            qtyOrder.input.value = item.qtyOrder || '';
+            qtyArchive.input.value = item.qtyArchive || '';
+            printSettingsFields.reset();
+            printSettingsFields.setValues(item.printSettings || {});
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        cancelBtn.onclick = switchToCreate;
 
         function updateSubmitLabel() {
-            submitBtn.textContent = fileInput.files[0] ? 'Загрузить' : 'Создать без файла';
+            if (!editingId) {
+                submitBtn.textContent = fileInput.files[0] ? 'Загрузить' : 'Создать без файла';
+            }
         }
         fileInput.addEventListener('change', updateSubmitLabel);
 
         submitBtn.onclick = function () {
-            var file = fileInput.files[0] || null;
-
             submitBtn.disabled = true;
-            submitBtn.textContent = file ? 'Загрузка…' : 'Создание…';
+            var prevText = submitBtn.textContent;
+            submitBtn.textContent = editingId ? 'Сохранение…' : (fileInput.files[0] ? 'Загрузка…' : 'Создание…');
 
-            CrystalPrint.loadCurrentUser().then(function (user) {
-                var info = getInfo();
-                var fd = new FormData();
-                if (file) fd.append('file', file, file.name);
-                fd.append('taskId', taskId);
-                if (info.dealId) fd.append('dealId', info.dealId);
-                if (info.client) fd.append('client', info.client);
-                fd.append('comment', commentInput.value || '');
-                fd.append('printSettings', JSON.stringify(printSettingsFields.getValue()));
-                if (qtyOrder.input.value) fd.append('qtyOrder', qtyOrder.input.value);
-                if (qtyArchive.input.value) fd.append('qtyArchive', qtyArchive.input.value);
-                if (user && user.id) fd.append('uploadedById', String(user.id));
-                return CrystalPrint.uploadPrint(fd);
-            }).then(function () {
-                fileInput.value = '';
-                commentInput.value = '';
-                qtyOrder.input.value = '';
-                qtyArchive.input.value = '';
-                printSettingsFields.reset();
+            var fd = new FormData();
+            fd.append('comment', commentInput.value || '');
+            fd.append('printSettings', JSON.stringify(printSettingsFields.getValue()));
+            if (qtyOrder.input.value) fd.append('qtyOrder', qtyOrder.input.value);
+            if (qtyArchive.input.value) fd.append('qtyArchive', qtyArchive.input.value);
+
+            var promise;
+            if (editingId) {
+                promise = CrystalPrint.updatePrint(editingId, fd);
+            } else {
+                var file = fileInput.files[0] || null;
+                promise = CrystalPrint.loadCurrentUser().then(function (user) {
+                    var info = getInfo();
+                    if (file) fd.append('file', file, file.name);
+                    fd.append('taskId', taskId);
+                    if (info.dealId) fd.append('dealId', info.dealId);
+                    if (info.client) fd.append('client', info.client);
+                    if (user && user.id) fd.append('uploadedById', String(user.id));
+                    return CrystalPrint.uploadPrint(fd);
+                });
+            }
+
+            promise.then(function () {
+                switchToCreate();
                 submitBtn.disabled = false;
-                updateSubmitLabel();
                 onUploaded();
             }).catch(function (e) {
                 alert('Ошибка: ' + e.message);
                 submitBtn.disabled = false;
-                updateSubmitLabel();
+                submitBtn.textContent = prevText;
             });
         };
-        container.appendChild(submitBtn);
+
+        return { switchToEdit: switchToEdit, switchToCreate: switchToCreate };
     }
 
 })();
