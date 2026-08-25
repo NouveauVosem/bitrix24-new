@@ -116,29 +116,59 @@
 
         var box = document.createElement('div');
         box.style.cssText =
-            'background:#fff;border-radius:10px;width:520px;max-width:92vw;max-height:85vh;' +
-            'overflow-y:auto;padding:20px;position:relative;font-size:14px;color:#333;';
+            'background:#fff;border-radius:10px;width:900px;max-width:95vw;max-height:88vh;' +
+            'display:flex;flex-direction:column;position:relative;font-size:14px;color:#333;overflow:hidden;';
+
+        // --- Хедер ---
+        var header = document.createElement('div');
+        header.style.cssText = 'padding:16px 20px 12px;border-bottom:1px solid #eee;flex-shrink:0;';
 
         var closeBtn = document.createElement('div');
         closeBtn.textContent = '✕';
-        closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;cursor:pointer;font-size:16px;color:#888;';
+        closeBtn.style.cssText = 'position:absolute;top:14px;right:18px;cursor:pointer;font-size:16px;color:#888;line-height:1;';
         closeBtn.onclick = function () { overlay.remove(); };
-        box.appendChild(closeBtn);
+        header.appendChild(closeBtn);
 
         var title = document.createElement('h3');
         title.textContent = 'Печати по задаче #' + taskId;
-        title.style.cssText = 'margin:0 0 14px;font-size:16px;';
-        box.appendChild(title);
+        title.style.cssText = 'margin:0 0 8px;font-size:16px;padding-right:24px;';
+        header.appendChild(title);
 
         var folderRow = CrystalPrint.renderFolderStatus();
-        box.appendChild(folderRow.el);
+        header.appendChild(folderRow.el);
+
+        box.appendChild(header);
+
+        // --- Двухколоночное тело ---
+        var body = document.createElement('div');
+        body.style.cssText = 'display:flex;flex:1;min-height:0;';
+
+        // Левая колонка — список
+        var leftCol = document.createElement('div');
+        leftCol.style.cssText =
+            'flex:1;min-width:0;overflow-y:auto;padding:16px 20px;border-right:1px solid #eee;';
+
+        var listTitle = document.createElement('div');
+        listTitle.style.cssText = 'font-weight:600;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;';
+        listTitle.textContent = 'Созданные печати';
+        leftCol.appendChild(listTitle);
 
         var listWrap = document.createElement('div');
-        box.appendChild(listWrap);
+        leftCol.appendChild(listWrap);
 
-        var uploadWrap = document.createElement('div');
-        uploadWrap.style.cssText = 'margin-top:16px;border-top:1px solid #eee;padding-top:14px;';
-        box.appendChild(uploadWrap);
+        // Правая колонка — форма
+        var rightCol = document.createElement('div');
+        rightCol.style.cssText =
+            'width:300px;flex-shrink:0;overflow-y:auto;padding:16px 20px;background:#fafafa;';
+
+        var formTitle = document.createElement('div');
+        formTitle.style.cssText = 'font-weight:600;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;';
+        formTitle.textContent = 'Добавить печать';
+        rightCol.appendChild(formTitle);
+
+        body.appendChild(leftCol);
+        body.appendChild(rightCol);
+        box.appendChild(body);
 
         overlay.appendChild(box);
         document.body.appendChild(overlay);
@@ -153,7 +183,7 @@
         }
         reload();
 
-        renderUploadForm(uploadWrap, taskId, getInfo, reload);
+        renderUploadForm(rightCol, taskId, getInfo, reload);
     }
 
     function renderList(container, items, taskId, getInfo, onChanged) {
@@ -381,11 +411,6 @@
     }
 
     function renderUploadForm(container, taskId, getInfo, onUploaded) {
-        var fileLabel = document.createElement('div');
-        fileLabel.style.cssText = 'font-weight:600;margin-bottom:8px;';
-        fileLabel.textContent = 'Добавить печать';
-        container.appendChild(fileLabel);
-
         var quickBtn = document.createElement('button');
         quickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
         quickBtn.style.cssText = 'margin-bottom:12px;';
