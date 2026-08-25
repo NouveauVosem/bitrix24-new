@@ -397,7 +397,7 @@
             fd.append('taskId', taskId);
             if (info.dealId) fd.append('dealId', info.dealId);
             if (info.client) fd.append('client', info.client);
-            CrystalPrint.createPrintJob(fd).then(function () {
+            CrystalPrint.uploadPrint(fd).then(function () {
                 quickBtn.disabled = false;
                 onUploaded();
             }).catch(function (e) {

@@ -48,19 +48,6 @@
         });
     }
 
-    function createPrintJob(fd) {
-        return fetch(CRYSTAL_BASE + '/api/print-jobs/create', {
-            method: 'POST',
-            headers: { 'X-Api-Key': API_KEY },
-            body: fd
-        }).then(function (r) {
-            return r.json().then(function (body) {
-                if (!r.ok) throw new Error(body.message || 'Ошибка создания');
-                return body;
-            });
-        });
-    }
-
     function attachPrintFile(id, fd) {
         return fetch(CRYSTAL_BASE + '/api/print-jobs/' + encodeURIComponent(id) + '/file', {
             method: 'POST',
@@ -839,7 +826,6 @@
         listPrints: listPrints,
         listPrintsByStatus: listPrintsByStatus,
         uploadPrint: uploadPrint,
-        createPrintJob: createPrintJob,
         attachPrintFile: attachPrintFile,
         updatePrintStatus: updatePrintStatus,
         addReference: addReference,
