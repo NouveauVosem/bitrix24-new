@@ -505,31 +505,6 @@
         qtyRow.appendChild(qtyArchive.el);
         container.appendChild(qtyRow);
 
-        var quickBtn = document.createElement('button');
-        quickBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
-        quickBtn.style.cssText = 'margin-bottom:12px;width:100%;';
-        quickBtn.textContent = '+ Создать запрос без файла';
-        quickBtn.onclick = function () {
-            quickBtn.disabled = true;
-            var info = getInfo();
-            var fd = new FormData();
-            fd.append('taskId', taskId);
-            if (info.dealId) fd.append('dealId', info.dealId);
-            if (info.client) fd.append('client', info.client);
-            if (qtyOrder.input.value) fd.append('qtyOrder', qtyOrder.input.value);
-            if (qtyArchive.input.value) fd.append('qtyArchive', qtyArchive.input.value);
-            CrystalPrint.uploadPrint(fd).then(function () {
-                qtyOrder.input.value = '';
-                qtyArchive.input.value = '';
-                quickBtn.disabled = false;
-                onUploaded();
-            }).catch(function (e) {
-                alert('Ошибка: ' + e.message);
-                quickBtn.disabled = false;
-            });
-        };
-        container.appendChild(quickBtn);
-
         var fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.style.cssText = 'display:block;margin-bottom:8px;';
@@ -546,18 +521,23 @@
         var submitBtn = document.createElement('button');
         submitBtn.className = 'ui-btn ui-btn-success ui-btn-sm';
         submitBtn.style.cssText = 'width:100%;';
-        submitBtn.textContent = 'Загрузить';
+        submitBtn.textContent = 'Создать без файла';
+
+        function updateSubmitLabel() {
+            submitBtn.textContent = fileInput.files[0] ? 'Загрузить' : 'Создать без файла';
+        }
+        fileInput.addEventListener('change', updateSubmitLabel);
+
         submitBtn.onclick = function () {
-            var file = fileInput.files[0];
-            if (!file) { alert('Выберите файл'); return; }
+            var file = fileInput.files[0] || null;
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Загрузка…';
+            submitBtn.textContent = file ? 'Загрузка…' : 'Создание…';
 
             CrystalPrint.loadCurrentUser().then(function (user) {
                 var info = getInfo();
                 var fd = new FormData();
-                fd.append('file', file, file.name);
+                if (file) fd.append('file', file, file.name);
                 fd.append('taskId', taskId);
                 if (info.dealId) fd.append('dealId', info.dealId);
                 if (info.client) fd.append('client', info.client);
@@ -574,12 +554,12 @@
                 qtyArchive.input.value = '';
                 printSettingsFields.reset();
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Загрузить';
+                updateSubmitLabel();
                 onUploaded();
             }).catch(function (e) {
-                alert('Ошибка загрузки: ' + e.message);
+                alert('Ошибка: ' + e.message);
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Загрузить';
+                updateSubmitLabel();
             });
         };
         container.appendChild(submitBtn);
