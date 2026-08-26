@@ -106,6 +106,13 @@
             var info = document.createElement('div');
             info.style.cssText = 'flex:1;min-width:0;';
 
+            if (item.dealId) {
+                var dealEl = document.createElement('div');
+                dealEl.style.cssText = 'font-size:11px;color:#888;margin-bottom:1px;';
+                dealEl.textContent = 'Сделка #' + item.dealId;
+                info.appendChild(dealEl);
+            }
+
             var clientEl = document.createElement('div');
             clientEl.style.cssText = 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
             clientEl.textContent = item.client || 'Клиент не указан';
@@ -116,6 +123,22 @@
             fileEl.textContent = item.originalName || '(файл не прикреплён)';
             info.appendChild(fileEl);
 
+            if (item.qtyOrder || item.qtyArchive) {
+                var qtyEl = document.createElement('div');
+                qtyEl.style.cssText = 'display:flex;gap:10px;font-size:12px;color:#555;margin-top:2px;';
+                if (item.qtyOrder) {
+                    var qtyOrderEl = document.createElement('div');
+                    qtyOrderEl.innerHTML = '<span style="color:#aaa;">На заказ:</span> <strong>' + item.qtyOrder + '</strong> шт';
+                    qtyEl.appendChild(qtyOrderEl);
+                }
+                if (item.qtyArchive) {
+                    var qtyArchiveEl = document.createElement('div');
+                    qtyArchiveEl.innerHTML = '<span style="color:#aaa;">В архив:</span> <strong>' + item.qtyArchive + '</strong> шт';
+                    qtyEl.appendChild(qtyArchiveEl);
+                }
+                info.appendChild(qtyEl);
+            }
+
             var settingsLines = CrystalPrint.formatPrintSettings(item.printSettings);
             if (settingsLines.length) {
                 var settingsEl = document.createElement('div');
@@ -125,6 +148,28 @@
             }
 
             row.appendChild(info);
+
+            // Квадратик цвета ткани для печати
+            var ps = item.printSettings;
+            var fabricColor = ps && ps.printFabric && ps.printFabric.colorMode === 'picker' && ps.printFabric.color
+                ? ps.printFabric.color : null;
+            if (fabricColor) {
+                var swatchWrap = document.createElement('div');
+                swatchWrap.style.cssText = 'flex-shrink:0;text-align:center;';
+
+                var swatch = document.createElement('div');
+                swatch.style.cssText =
+                    'width:40px;height:40px;border-radius:6px;border:1px solid rgba(0,0,0,.12);' +
+                    'background:' + (fabricColor.hex || '#eee') + ';margin-bottom:3px;';
+                swatchWrap.appendChild(swatch);
+
+                var swatchLabel = document.createElement('div');
+                swatchLabel.style.cssText = 'font-size:10px;color:#888;line-height:1.2;max-width:48px;word-break:break-word;';
+                swatchLabel.textContent = fabricColor.colorName || fabricColor.fabricCode || '';
+                swatchWrap.appendChild(swatchLabel);
+
+                row.appendChild(swatchWrap);
+            }
 
             // Референсы-превью
             if ((item.references || []).length) {
