@@ -593,7 +593,8 @@
         function switchToEdit(item) {
             editingId = item.id;
             if (formTitle) { formTitle.textContent = 'Редактировать печать'; }
-            fileRow.style.display = 'none';
+            fileRow.style.display = 'block';
+            fileInput.value = '';
             submitBtn.textContent = 'Обновить';
             cancelBtn.style.display = '';
             // Предзаполняем
@@ -627,7 +628,13 @@
 
             var promise;
             if (editingId) {
-                promise = CrystalPrint.updatePrint(editingId, fd);
+                var editFile = fileInput.files[0] || null;
+                promise = CrystalPrint.updatePrint(editingId, fd).then(function () {
+                    if (!editFile) return;
+                    var fileFd = new FormData();
+                    fileFd.append('file', editFile, editFile.name);
+                    return CrystalPrint.attachPrintFile(editingId, fileFd);
+                });
             } else {
                 var file = fileInput.files[0] || null;
                 promise = CrystalPrint.loadCurrentUser().then(function (user) {
