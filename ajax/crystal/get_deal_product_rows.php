@@ -38,28 +38,32 @@ foreach ($rawRows as $r) {
     }
 }
 
-// Fetch PROPERTY_70 from iblock catalog for all product IDs at once
+// Fetch PROPERTY_70 and IBLOCK_SECTION_ID from iblock catalog for all product IDs at once
 $property70Map = [];
+$sectionIdMap  = [];
 if (!empty($productIds) && \CModule::IncludeModule('iblock')) {
     $res = \CIBlockElement::GetList(
         [],
         ['ID' => $productIds, 'ACTIVE' => 'Y'],
         false,
         false,
-        ['ID', 'PROPERTY_70']
+        ['ID', 'IBLOCK_SECTION_ID', 'PROPERTY_70']
     );
     while ($el = $res->Fetch()) {
-        $property70Map[(int)$el['ID']] = $el['PROPERTY_70_VALUE'] ?? $el['PROPERTY_70'] ?? null;
+        $id = (int)$el['ID'];
+        $property70Map[$id] = $el['PROPERTY_70_VALUE'] ?? $el['PROPERTY_70'] ?? null;
+        $sectionIdMap[$id]  = (int)($el['IBLOCK_SECTION_ID'] ?? 0) ?: null;
     }
 }
 
 foreach ($rawRows as $r) {
     $pid = (int)$r['PRODUCT_ID'];
     $rows[] = [
-        'rowId'       => (int)$r['ID'],
-        'productId'   => $pid,
-        'productName' => $r['PRODUCT_NAME'],
-        'property70'  => $property70Map[$pid] ?? null,
+        'rowId'           => (int)$r['ID'],
+        'productId'       => $pid,
+        'productName'     => $r['PRODUCT_NAME'],
+        'property70'      => $property70Map[$pid] ?? null,
+        'productTypeId'   => $sectionIdMap[$pid] ?? null,
     ];
 }
 

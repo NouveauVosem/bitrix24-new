@@ -970,6 +970,7 @@ BX.ready(function () {
 
                 var bitrixProductId = null;
                 var warehouseType = null;
+                var productTypeId = null;
                 var transportServices = null;
 
                 var dm = window.location.href.match(/crm\/deal\/details\/(\d+)/);
@@ -1002,6 +1003,7 @@ BX.ready(function () {
                         if (match) {
                             if (match.productId) bitrixProductId = String(match.productId);
                             if (match.property70) warehouseType = match.property70;
+                            if (match.productTypeId) productTypeId = match.productTypeId;
                         }
 
                         if (resp.transportServices) transportServices = resp.transportServices;
@@ -1025,6 +1027,7 @@ BX.ready(function () {
                         clientCountry: dealCompanyCountry,
                         managerName: getManagerName(),
                         warehouseType: warehouseType,
+                        productTypeId: productTypeId,
                         transportServices: transportServices
                     };
                     console.log('[Crystal] price-calculations/crm/create payload:', requestPayload);
