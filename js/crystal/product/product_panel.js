@@ -155,11 +155,25 @@ BX.ready(function () {
                 (isRange ? ' --range' : '') +
                 (displaySec == null && !isRange ? ' --none' : '');
 
+            // norm diff badge
+            var normBadgeHtml = '';
+            if (isOverridden && op.timeSeconds != null) {
+                var diff = item.timeSecondsOverride - op.timeSeconds;
+                if (diff !== 0) {
+                    var absDiff = Math.abs(diff);
+                    var badgeCls = diff < 0 ? 'cwp-norm-badge --less' : 'cwp-norm-badge --more';
+                    var badgeText = diff < 0
+                        ? 'меньше нормы на ' + absDiff + ' с'
+                        : 'больше нормы на ' + absDiff + ' с';
+                    normBadgeHtml = '<span class="' + badgeCls + '">' + esc(badgeText) + '</span>';
+                }
+            }
+
             var row = document.createElement('div');
             row.className = 'cwp-op-row';
             row.innerHTML =
                 '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
-                '<span class="cwp-op-sub">' + esc(op.subgroup) + '</span>' +
+                '<span class="cwp-op-sub">' + esc(op.group) + ' — ' + esc(op.subgroup) + '</span>' +
                 '<span class="' + timeCls + '" ' +
                     'data-item-id="' + item.id + '" ' +
                     'data-op-id="' + item.operationId + '" ' +
@@ -167,6 +181,7 @@ BX.ready(function () {
                     'title="Нажмите чтобы изменить время">' +
                     esc(timeLabel) +
                 '</span>' +
+                normBadgeHtml +
                 '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать">&times;</button>';
 
             body.appendChild(row);

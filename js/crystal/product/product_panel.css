@@ -87,6 +87,24 @@
     text-align: right;
 }
 
+/* ── Norm diff badge ── */
+.cwp-norm-badge {
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 2px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.cwp-norm-badge.--less {
+    background: #fff3e0;
+    color: #e65100;
+}
+.cwp-norm-badge.--more {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
 .cwp-remove-btn {
     background: none;
     border: none;
