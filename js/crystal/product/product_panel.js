@@ -423,9 +423,21 @@ BX.ready(function () {
                     '</div>' +
                     '<div class="cwp-create-form">' +
                         '<div class="cwp-form-row">' +
-                            '<input class="cwp-form-input" data-field="type" placeholder="Тип производства" />' +
-                            '<input class="cwp-form-input" data-field="group" placeholder="Группа" />' +
-                            '<input class="cwp-form-input" data-field="subgroup" placeholder="Подгруппа" />' +
+                            '<div class="cwp-combobox" data-field="type">' +
+                                '<input type="text" class="cwp-form-input cwp-combobox-input" placeholder="Тип производства" autocomplete="off" />' +
+                                '<div class="cwp-combobox-dropdown"></div>' +
+                                '<div class="cwp-combobox-warning">Будет создан новый тип производства</div>' +
+                            '</div>' +
+                            '<div class="cwp-combobox" data-field="group">' +
+                                '<input type="text" class="cwp-form-input cwp-combobox-input" placeholder="Группа" autocomplete="off" />' +
+                                '<div class="cwp-combobox-dropdown"></div>' +
+                                '<div class="cwp-combobox-warning">Будет создана новая группа</div>' +
+                            '</div>' +
+                            '<div class="cwp-combobox" data-field="subgroup">' +
+                                '<input type="text" class="cwp-form-input cwp-combobox-input" placeholder="Подгруппа" autocomplete="off" />' +
+                                '<div class="cwp-combobox-dropdown"></div>' +
+                                '<div class="cwp-combobox-warning">Будет создана новая подгруппа</div>' +
+                            '</div>' +
                         '</div>' +
                         '<div class="cwp-form-row">' +
                             '<input class="cwp-form-input --wide" data-field="name" placeholder="Название операции" />' +
@@ -483,7 +495,13 @@ BX.ready(function () {
         // create form submit
         panel.querySelector('.cwp-form-submit-btn').addEventListener('click', function () {
             var data = {};
-            panel.querySelectorAll('.cwp-form-input[data-field]').forEach(function (el) {
+            // read combobox wrappers
+            panel.querySelectorAll('.cwp-combobox[data-field]').forEach(function (box) {
+                var field = box.getAttribute('data-field');
+                data[field] = box.querySelector('.cwp-combobox-input').value.trim() || null;
+            });
+            // read regular inputs / textarea
+            panel.querySelectorAll('.cwp-form-input[data-field], .cwp-form-textarea[data-field]').forEach(function (el) {
                 var field = el.getAttribute('data-field');
                 var val = el.value.trim();
                 data[field] = (field === 'timeSeconds') ? (val === '' ? null : parseInt(val, 10)) : (val || null);
@@ -492,6 +510,8 @@ BX.ready(function () {
             if (!data.name) { statusEl.textContent = 'Введите название'; return; }
             createOperationApi(data, panel);
         });
+
+        setupComboboxes(panel);
     }
 
     // ── API calls ─────────────────────────────────────────────────────────────
@@ -581,7 +601,8 @@ BX.ready(function () {
             body: JSON.stringify(data),
         }).then(function (newOp) {
             state.operations.push(newOp);
-            panel.querySelectorAll('.cwp-form-input[data-field]').forEach(function (el) { el.value = ''; });
+            panel.querySelectorAll('.cwp-form-input[data-field], .cwp-combobox-input').forEach(function (el) { el.value = ''; });
+            panel.querySelectorAll('.cwp-combobox-warning').forEach(function (el) { el.style.display = 'none'; });
             if (statusEl) {
                 statusEl.textContent = 'Создано!';
                 setTimeout(function () { statusEl.textContent = ''; }, 2000);
@@ -652,6 +673,60 @@ BX.ready(function () {
             if (e.key === 'Escape') { done = true; timeEl.textContent = origText; }
         });
         input.addEventListener('blur', commit);
+    }
+
+    function setupComboboxes(panel) {
+        panel.querySelectorAll('.cwp-combobox').forEach(function (box) {
+            var field    = box.getAttribute('data-field');
+            var input    = box.querySelector('.cwp-combobox-input');
+            var dropdown = box.querySelector('.cwp-combobox-dropdown');
+            var warning  = box.querySelector('.cwp-combobox-warning');
+
+            function getOptions() {
+                var seen = {};
+                state.operations.forEach(function (op) {
+                    var val = op[field];
+                    if (val) seen[val] = true;
+                });
+                return Object.keys(seen).sort();
+            }
+
+            function openDropdown() {
+                var q = input.value.toLowerCase().trim();
+                var filtered = getOptions().filter(function (o) {
+                    return !q || o.toLowerCase().indexOf(q) !== -1;
+                });
+                dropdown.innerHTML = '';
+                if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+                filtered.forEach(function (opt) {
+                    var item = document.createElement('div');
+                    item.className = 'cwp-combobox-option';
+                    item.textContent = opt;
+                    item.addEventListener('mousedown', function (e) {
+                        e.preventDefault(); // keep focus on input
+                        input.value = opt;
+                        dropdown.style.display = 'none';
+                        checkWarning();
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.style.display = 'block';
+            }
+
+            function checkWarning() {
+                var val = input.value.trim();
+                if (!val) { warning.style.display = 'none'; return; }
+                var exists = getOptions().indexOf(val) !== -1;
+                warning.style.display = exists ? 'none' : 'flex';
+            }
+
+            input.addEventListener('focus', openDropdown);
+            input.addEventListener('input', function () { openDropdown(); checkWarning(); });
+            input.addEventListener('blur', function () {
+                setTimeout(function () { dropdown.style.display = 'none'; }, 150);
+                checkWarning();
+            });
+        });
     }
 
     // ── mount ─────────────────────────────────────────────────────────────────
