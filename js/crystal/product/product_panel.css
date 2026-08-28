@@ -60,9 +60,10 @@
     font-size: 12px;
     color: #555;
     white-space: nowrap;
-    min-width: 54px;
+    min-width: 60px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 .cwp-op-time.--range { color: #e67e22; }
 .cwp-op-time.--none  { color: #bbb; font-style: italic; }
@@ -103,6 +104,10 @@
 .cwp-norm-badge.--more {
     background: #e8f5e9;
     color: #2e7d32;
+}
+.cwp-norm-badge.--norm {
+    background: #f0f0f0;
+    color: #999;
 }
 
 .cwp-remove-btn {

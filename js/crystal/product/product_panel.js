@@ -166,14 +166,16 @@ BX.ready(function () {
                         ? 'меньше нормы на ' + absDiff + ' с'
                         : 'больше нормы на ' + absDiff + ' с';
                     normBadgeHtml = '<span class="' + badgeCls + '">' + esc(badgeText) + '</span>';
+                } else {
+                    normBadgeHtml = '<span class="cwp-norm-badge --norm">по норме</span>';
                 }
+            } else if (!isOverridden && displaySec != null) {
+                normBadgeHtml = '<span class="cwp-norm-badge --norm">по норме</span>';
             }
 
             var row = document.createElement('div');
             row.className = 'cwp-op-row';
             row.innerHTML =
-                '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
-                '<span class="cwp-op-sub">' + esc(op.group) + ' — ' + esc(op.subgroup) + '</span>' +
                 '<span class="' + timeCls + '" ' +
                     'data-item-id="' + item.id + '" ' +
                     'data-op-id="' + item.operationId + '" ' +
@@ -182,6 +184,8 @@ BX.ready(function () {
                     esc(timeLabel) +
                 '</span>' +
                 normBadgeHtml +
+                '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
+                '<span class="cwp-op-sub">' + esc(op.group) + ' — ' + esc(op.subgroup) + '</span>' +
                 '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать">&times;</button>';
 
             body.appendChild(row);
