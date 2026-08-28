@@ -36,10 +36,16 @@ BX.ready(function () {
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function fmtTime(sec) {
+    function fmtSec(sec) {
         if (sec == null) return null;
+        return sec + ' с';
+    }
+
+    function fmtTotal(sec) {
+        if (!sec) return '';
         var m = Math.floor(sec / 60), s = sec % 60;
-        return m > 0 ? m + ' мин' + (s ? ' ' + s + ' с' : '') : sec + ' с';
+        var mins = m + ' мин' + (s ? ' ' + s + ' с' : '');
+        return sec + ' с (' + mins + ')';
     }
 
     function addedMap() {
@@ -100,7 +106,7 @@ BX.ready(function () {
         // header total
         var totalEl = panel.querySelector('.cwp-header-total');
         if (totalEl) {
-            totalEl.innerHTML = total > 0 ? 'Итого: <strong>' + fmtTime(total) + '</strong>' : '';
+            totalEl.innerHTML = total > 0 ? 'Итого: <strong>' + fmtTotal(total) + '</strong>' : '';
         }
 
         renderProfile(panel);
@@ -128,33 +134,111 @@ BX.ready(function () {
             var op = item.operation;
             if (!op) return;
 
-            var effectiveTime = item.timeSecondsOverride != null ? item.timeSecondsOverride : op.timeSeconds;
-            var timeHtml;
-            if (item.timeSecondsOverride != null) {
-                timeHtml = '<span class="cwp-op-time">' + esc(fmtTime(item.timeSecondsOverride)) + ' <span title="Переопределено">✎</span></span>';
-            } else if (op.timeSecondsMin != null && op.timeSecondsMax != null) {
-                timeHtml = '<span class="cwp-op-time --range">' + op.timeSecondsMin + '–' + op.timeSecondsMax + ' с</span>';
-            } else if (op.timeSeconds != null) {
-                timeHtml = '<span class="cwp-op-time">' + esc(fmtTime(op.timeSeconds)) + '</span>';
+            // Determine display value in seconds
+            var isOverridden = item.timeSecondsOverride != null;
+            var displaySec   = isOverridden ? item.timeSecondsOverride : op.timeSeconds;
+            var isRange      = !isOverridden && op.timeSecondsMin != null && op.timeSecondsMax != null;
+
+            var timeLabel;
+            if (isOverridden) {
+                timeLabel = displaySec + ' с ✎';
+            } else if (isRange) {
+                timeLabel = op.timeSecondsMin + '–' + op.timeSecondsMax + ' с';
+            } else if (displaySec != null) {
+                timeLabel = displaySec + ' с';
             } else {
-                timeHtml = '<span class="cwp-op-time --none">не задано</span>';
+                timeLabel = '—';
             }
+
+            var timeCls = 'cwp-op-time cwp-time-edit' +
+                (isOverridden ? ' --overridden' : '') +
+                (isRange ? ' --range' : '') +
+                (displaySec == null && !isRange ? ' --none' : '');
 
             var row = document.createElement('div');
             row.className = 'cwp-op-row';
             row.innerHTML =
                 '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
                 '<span class="cwp-op-sub">' + esc(op.subgroup) + '</span>' +
-                timeHtml +
-                '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать из профиля">&times;</button>';
+                '<span class="' + timeCls + '" ' +
+                    'data-item-id="' + item.id + '" ' +
+                    'data-op-id="' + item.operationId + '" ' +
+                    'data-current="' + (displaySec != null ? displaySec : '') + '" ' +
+                    'title="Нажмите чтобы изменить время">' +
+                    esc(timeLabel) +
+                '</span>' +
+                '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать">&times;</button>';
 
             body.appendChild(row);
         });
 
+        // Remove
         body.querySelectorAll('.cwp-remove-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 removeOperation(parseInt(btn.getAttribute('data-op-id'), 10));
             });
+        });
+
+        // Inline time edit
+        body.querySelectorAll('.cwp-time-edit').forEach(function (span) {
+            span.addEventListener('click', function () {
+                activateTimeInput(span);
+            });
+        });
+    }
+
+    function activateTimeInput(span) {
+        if (span.querySelector('input')) return; // already editing
+
+        var itemId  = parseInt(span.getAttribute('data-item-id'), 10);
+        var current = span.getAttribute('data-current');
+        var origText = span.textContent;
+
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.min  = '0';
+        input.className = 'cwp-time-input';
+        input.value = current || '';
+        input.placeholder = 'сек';
+
+        span.textContent = '';
+        span.appendChild(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+            var raw = input.value.trim();
+            var val = raw === '' ? null : parseInt(raw, 10);
+            if (val !== null && (isNaN(val) || val < 0)) {
+                span.textContent = origText; // revert on bad input
+                return;
+            }
+            saveTimeOverride(itemId, val, span, origText);
+        }
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { span.textContent = origText; }
+        });
+        input.addEventListener('blur', commit);
+    }
+
+    function saveTimeOverride(itemId, valueOrNull, span, origText) {
+        api('/work-profiles/items/' + itemId + '/time', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeSecondsOverride: valueOrNull }),
+        }).then(function () {
+            // update local state
+            if (state.profile && state.profile.items) {
+                state.profile.items.forEach(function (item) {
+                    if (item.id === itemId) item.timeSecondsOverride = valueOrNull;
+                });
+            }
+            render();
+        }).catch(function (err) {
+            console.error('[WorkProfile] time override error:', err);
+            if (span) span.textContent = origText;
         });
     }
 
@@ -254,9 +338,9 @@ BX.ready(function () {
                 if (op.timeSecondsMin != null && op.timeSecondsMax != null) {
                     timeHtml = '<span class="cwp-list-time --range">' + op.timeSecondsMin + '–' + op.timeSecondsMax + ' с</span>';
                 } else if (op.timeSeconds != null) {
-                    timeHtml = '<span class="cwp-list-time">' + esc(fmtTime(op.timeSeconds)) + '</span>';
+                    timeHtml = '<span class="cwp-list-time">' + op.timeSeconds + ' с</span>';
                 } else {
-                    timeHtml = '<span class="cwp-list-time --none">не задано</span>';
+                    timeHtml = '<span class="cwp-list-time --none">—</span>';
                 }
 
                 var row = document.createElement('div');

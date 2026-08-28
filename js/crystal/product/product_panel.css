@@ -66,6 +66,27 @@
 }
 .cwp-op-time.--range { color: #e67e22; }
 .cwp-op-time.--none  { color: #bbb; font-style: italic; }
+.cwp-time-edit {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 4px;
+    transition: background .1s;
+}
+.cwp-time-edit:hover { background: #e3f2fd; }
+.cwp-time-edit.--overridden { color: #1565c0; }
+.cwp-time-edit.--range { color: #e67e22; }
+.cwp-time-edit.--none { color: #bbb; font-style: italic; }
+
+.cwp-time-input {
+    width: 64px;
+    border: 1.5px solid #2196f3;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 12px;
+    outline: none;
+    text-align: right;
+}
+
 .cwp-remove-btn {
     background: none;
     border: none;
