@@ -368,17 +368,20 @@ BX.ready(function () {
                 row.innerHTML =
                     '<span class="cwp-list-check">✓</span>' +
                     '<span class="cwp-list-name">' + esc(op.name) + '</span>' +
-                    timeHtml;
+                    timeHtml +
+                    '<span class="cwp-list-norm-edit" title="Изменить норму">✎</span>';
 
-                if (!isAdded) {
-                    row.addEventListener('click', function () {
-                        addOperation(op.id);
-                    });
-                } else {
-                    row.addEventListener('click', function () {
-                        removeOperation(op.id);
-                    });
-                }
+                row.addEventListener('click', function (e) {
+                    if (e.target.classList.contains('cwp-list-norm-edit') ||
+                        e.target.tagName === 'INPUT') return;
+                    if (!isAdded) addOperation(op.id);
+                    else removeOperation(op.id);
+                });
+
+                row.querySelector('.cwp-list-norm-edit').addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    activateNormInput(row, op);
+                });
 
                 list.appendChild(row);
             });
@@ -413,6 +416,30 @@ BX.ready(function () {
                 '</div>' +
                 '<div class="cwp-search"><input type="text" placeholder="Поиск операции..." /></div>' +
                 '<div class="cwp-list"><div class="cwp-list-empty">Загрузка операций...</div></div>' +
+                '<div class="cwp-create-section">' +
+                    '<div class="cwp-create-toggle">' +
+                        '<span class="cwp-create-toggle-label">+ Создать операцию</span>' +
+                        '<span class="cwp-create-toggle-arrow">▼</span>' +
+                    '</div>' +
+                    '<div class="cwp-create-form">' +
+                        '<div class="cwp-form-row">' +
+                            '<input class="cwp-form-input" data-field="type" placeholder="Тип производства" />' +
+                            '<input class="cwp-form-input" data-field="group" placeholder="Группа" />' +
+                            '<input class="cwp-form-input" data-field="subgroup" placeholder="Подгруппа" />' +
+                        '</div>' +
+                        '<div class="cwp-form-row">' +
+                            '<input class="cwp-form-input --wide" data-field="name" placeholder="Название операции" />' +
+                            '<input class="cwp-form-input cwp-form-num" type="number" min="0" data-field="timeSeconds" placeholder="Сек. по норме" />' +
+                        '</div>' +
+                        '<div class="cwp-form-row">' +
+                            '<textarea class="cwp-form-input --wide cwp-form-textarea" data-field="description" placeholder="Описание" rows="2"></textarea>' +
+                        '</div>' +
+                        '<div class="cwp-form-row cwp-form-actions">' +
+                            '<button class="cwp-form-submit-btn">Создать</button>' +
+                            '<span class="cwp-form-status"></span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
             '</div>';
 
         // hide "Добавить вариацию"
@@ -441,6 +468,29 @@ BX.ready(function () {
                 state.searchQuery = q;
                 renderPickerList(panel);
             }, 150);
+        });
+
+        // create form toggle
+        var createToggle = panel.querySelector('.cwp-create-toggle');
+        var createForm   = panel.querySelector('.cwp-create-form');
+        var createArrow  = panel.querySelector('.cwp-create-toggle-arrow');
+        createToggle.addEventListener('click', function () {
+            var isOpen = createForm.style.display !== 'none';
+            createForm.style.display = isOpen ? 'none' : 'block';
+            createArrow.classList.toggle('--open', !isOpen);
+        });
+
+        // create form submit
+        panel.querySelector('.cwp-form-submit-btn').addEventListener('click', function () {
+            var data = {};
+            panel.querySelectorAll('.cwp-form-input[data-field]').forEach(function (el) {
+                var field = el.getAttribute('data-field');
+                var val = el.value.trim();
+                data[field] = (field === 'timeSeconds') ? (val === '' ? null : parseInt(val, 10)) : (val || null);
+            });
+            var statusEl = panel.querySelector('.cwp-form-status');
+            if (!data.name) { statusEl.textContent = 'Введите название'; return; }
+            createOperationApi(data, panel);
         });
     }
 
@@ -520,6 +570,88 @@ BX.ready(function () {
         }).catch(function (err) {
             console.error('[WorkProfile] remove op error:', err);
         });
+    }
+
+    function createOperationApi(data, panel) {
+        var statusEl = panel.querySelector('.cwp-form-status');
+        if (statusEl) statusEl.textContent = 'Сохранение...';
+        api('/work-profiles/operations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }).then(function (newOp) {
+            state.operations.push(newOp);
+            panel.querySelectorAll('.cwp-form-input[data-field]').forEach(function (el) { el.value = ''; });
+            if (statusEl) {
+                statusEl.textContent = 'Создано!';
+                setTimeout(function () { statusEl.textContent = ''; }, 2000);
+            }
+            renderPickerFilters(panel);
+            renderPickerList(panel);
+        }).catch(function (err) {
+            console.error('[WorkProfile] create op error:', err);
+            if (statusEl) statusEl.textContent = 'Ошибка: ' + err.message;
+        });
+    }
+
+    function updateOperationNorm(opId, timeSeconds) {
+        return api('/work-profiles/operations/' + opId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeSeconds: timeSeconds }),
+        }).then(function () {
+            state.operations.forEach(function (op) {
+                if (op.id === opId) op.timeSeconds = timeSeconds;
+            });
+            if (state.profile && state.profile.items) {
+                state.profile.items.forEach(function (item) {
+                    if (item.operationId === opId && item.operation) {
+                        item.operation.timeSeconds = timeSeconds;
+                    }
+                });
+            }
+        });
+    }
+
+    function activateNormInput(row, op) {
+        if (row.querySelector('.cwp-time-input')) return;
+        var timeEl = row.querySelector('.cwp-list-time');
+        if (!timeEl) return;
+        var origText = timeEl.textContent;
+
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.min  = '0';
+        input.className = 'cwp-time-input';
+        input.value = op.timeSeconds != null ? op.timeSeconds : '';
+        input.placeholder = 'сек';
+
+        timeEl.textContent = '';
+        timeEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        var done = false;
+        function commit() {
+            if (done) return;
+            done = true;
+            var raw = input.value.trim();
+            var val = raw === '' ? null : parseInt(raw, 10);
+            if (val !== null && (isNaN(val) || val < 0)) { timeEl.textContent = origText; return; }
+            updateOperationNorm(op.id, val).then(function () {
+                var panel = document.getElementById('cwp-panel');
+                if (panel) { renderPickerList(panel); render(); }
+            }).catch(function (err) {
+                console.error('[WorkProfile] update norm error:', err);
+                timeEl.textContent = origText;
+            });
+        }
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { done = true; timeEl.textContent = origText; }
+        });
+        input.addEventListener('blur', commit);
     }
 
     // ── mount ─────────────────────────────────────────────────────────────────

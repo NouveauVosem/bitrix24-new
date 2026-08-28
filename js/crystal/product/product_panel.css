@@ -279,3 +279,90 @@
     color: #bbb;
     font-size: 12px;
 }
+
+/* ── Norm edit button in picker list ── */
+.cwp-list-norm-edit {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: color .12s, background .12s;
+    line-height: 1;
+}
+.cwp-list-norm-edit:hover { color: #1565c0; background: #e3f2fd; }
+
+/* ── Create operation section ── */
+.cwp-create-section {
+    border-top: 1px solid #e8e8e8;
+}
+.cwp-create-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: background .1s;
+    user-select: none;
+}
+.cwp-create-toggle:hover { background: #f0f7ff; }
+.cwp-create-toggle-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+}
+.cwp-create-toggle-arrow {
+    font-size: 11px;
+    color: #bbb;
+    transition: transform .2s;
+}
+.cwp-create-toggle-arrow.--open { transform: rotate(180deg); }
+
+.cwp-create-form {
+    display: none;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #eee;
+}
+.cwp-form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.cwp-form-row:last-child { margin-bottom: 0; }
+.cwp-form-input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 9px;
+    font-size: 12px;
+    outline: none;
+    background: #fff;
+    font-family: inherit;
+    transition: border-color .15s;
+}
+.cwp-form-input:focus { border-color: #2196f3; }
+.cwp-form-input.--wide { flex: 2; }
+.cwp-form-num { width: 110px; flex: none; }
+.cwp-form-textarea { resize: vertical; min-height: 48px; }
+.cwp-form-actions { align-items: center; }
+.cwp-form-submit-btn {
+    padding: 6px 16px;
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.cwp-form-submit-btn:hover { background: #1565c0; }
+.cwp-form-status {
+    font-size: 11px;
+    color: #666;
+    margin-left: 8px;
+}
