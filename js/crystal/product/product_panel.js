@@ -676,15 +676,22 @@ BX.ready(function () {
     }
 
     function setupComboboxes(panel) {
-        panel.querySelectorAll('.cwp-combobox').forEach(function (box) {
+        var inputs = {}; // field → input element
+
+        function setupOne(box, onSelect) {
             var field    = box.getAttribute('data-field');
             var input    = box.querySelector('.cwp-combobox-input');
             var dropdown = box.querySelector('.cwp-combobox-dropdown');
             var warning  = box.querySelector('.cwp-combobox-warning');
 
+            inputs[field] = input;
+
             function getOptions() {
                 var seen = {};
+                var groupFilter = (field === 'subgroup' && inputs.group)
+                    ? inputs.group.value.trim() : null;
                 state.operations.forEach(function (op) {
+                    if (groupFilter && op.group !== groupFilter) return;
                     var val = op[field];
                     if (val) seen[val] = true;
                 });
@@ -703,10 +710,11 @@ BX.ready(function () {
                     item.className = 'cwp-combobox-option';
                     item.textContent = opt;
                     item.addEventListener('mousedown', function (e) {
-                        e.preventDefault(); // keep focus on input
+                        e.preventDefault();
                         input.value = opt;
                         dropdown.style.display = 'none';
                         checkWarning();
+                        if (onSelect) onSelect();
                     });
                     dropdown.appendChild(item);
                 });
@@ -716,16 +724,37 @@ BX.ready(function () {
             function checkWarning() {
                 var val = input.value.trim();
                 if (!val) { warning.style.display = 'none'; return; }
-                var exists = getOptions().indexOf(val) !== -1;
-                warning.style.display = exists ? 'none' : 'flex';
+                warning.style.display = getOptions().indexOf(val) !== -1 ? 'none' : 'flex';
             }
 
             input.addEventListener('focus', openDropdown);
-            input.addEventListener('input', function () { openDropdown(); checkWarning(); });
+            input.addEventListener('input', function () {
+                openDropdown();
+                checkWarning();
+                if (onSelect) onSelect();
+            });
             input.addEventListener('blur', function () {
                 setTimeout(function () { dropdown.style.display = 'none'; }, 150);
                 checkWarning();
             });
+        }
+
+        panel.querySelectorAll('.cwp-combobox').forEach(function (box) {
+            var field = box.getAttribute('data-field');
+            var onSelect = null;
+
+            if (field === 'group') {
+                onSelect = function () {
+                    // clear subgroup whenever group changes
+                    if (!inputs.subgroup) return;
+                    inputs.subgroup.value = '';
+                    var subBox = inputs.subgroup.closest('.cwp-combobox');
+                    subBox.querySelector('.cwp-combobox-warning').style.display = 'none';
+                    subBox.querySelector('.cwp-combobox-dropdown').style.display = 'none';
+                };
+            }
+
+            setupOne(box, onSelect);
         });
     }
 
