@@ -7,6 +7,13 @@ BX.ready(function () {
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
 
+    var ALLOWED_EDITORS = [26, 8, 19, 53];
+    var CURRENT_USER_ID = parseInt(BX.message('USER_ID') || '0', 10);
+
+    function canEdit() {
+        return ALLOWED_EDITORS.indexOf(CURRENT_USER_ID) !== -1;
+    }
+
     // ── state ────────────────────────────────────────────────────────────────
     var state = {
         profile:    null,   // WorkProfile | null
@@ -150,7 +157,8 @@ BX.ready(function () {
                 timeLabel = '—';
             }
 
-            var timeCls = 'cwp-op-time cwp-time-edit' +
+            var timeCls = 'cwp-op-time' +
+                (canEdit() ? ' cwp-time-edit' : '') +
                 (isOverridden ? ' --overridden' : '') +
                 (isRange ? ' --range' : '') +
                 (displaySec == null && !isRange ? ' --none' : '');
@@ -186,7 +194,7 @@ BX.ready(function () {
                 normBadgeHtml +
                 '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
                 '<span class="cwp-op-sub">' + esc(op.group) + ' — ' + esc(op.subgroup) + '</span>' +
-                '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать">&times;</button>';
+                (canEdit() ? '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать">&times;</button>' : '');
 
             body.appendChild(row);
         });
@@ -198,12 +206,14 @@ BX.ready(function () {
             });
         });
 
-        // Inline time edit
-        body.querySelectorAll('.cwp-time-edit').forEach(function (span) {
-            span.addEventListener('click', function () {
-                activateTimeInput(span);
+        // Inline time edit (only for allowed users)
+        if (canEdit()) {
+            body.querySelectorAll('.cwp-time-edit').forEach(function (span) {
+                span.addEventListener('click', function () {
+                    activateTimeInput(span);
+                });
             });
-        });
+        }
     }
 
     function activateTimeInput(span) {
@@ -369,19 +379,24 @@ BX.ready(function () {
                     '<span class="cwp-list-check">✓</span>' +
                     '<span class="cwp-list-name">' + esc(op.name) + '</span>' +
                     timeHtml +
-                    '<span class="cwp-list-norm-edit" title="Изменить норму">✎</span>';
+                    (canEdit() ? '<span class="cwp-list-norm-edit" title="Изменить норму">✎</span>' : '');
 
-                row.addEventListener('click', function (e) {
-                    if (e.target.classList.contains('cwp-list-norm-edit') ||
-                        e.target.tagName === 'INPUT') return;
-                    if (!isAdded) addOperation(op.id);
-                    else removeOperation(op.id);
-                });
+                if (canEdit()) {
+                    row.addEventListener('click', function (e) {
+                        if (e.target.classList.contains('cwp-list-norm-edit') ||
+                            e.target.tagName === 'INPUT') return;
+                        if (!isAdded) addOperation(op.id);
+                        else removeOperation(op.id);
+                    });
 
-                row.querySelector('.cwp-list-norm-edit').addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    activateNormInput(row, op);
-                });
+                    var normEditBtn = row.querySelector('.cwp-list-norm-edit');
+                    if (normEditBtn) {
+                        normEditBtn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            activateNormInput(row, op);
+                        });
+                    }
+                }
 
                 list.appendChild(row);
             });
@@ -457,6 +472,10 @@ BX.ready(function () {
         // hide "Добавить вариацию"
         var addVariationBlock = document.querySelector('.catalog-variation-grid-add-block');
         if (addVariationBlock) addVariationBlock.style.display = 'none';
+
+        if (!canEdit()) {
+            panel.querySelector('.cwp-picker-toggle').style.display = 'none';
+        }
 
         container.insertBefore(panel, container.firstChild);
 
