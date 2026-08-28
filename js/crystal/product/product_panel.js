@@ -1,7 +1,7 @@
 BX.ready(function () {
 
-    // Only on product pages: /crm/catalog/14/product/3864/
-    var productMatch = window.location.href.match(/\/crm\/catalog\/\d+\/product\/(\d+)/);
+    // Only on product pages: /shop/documents-catalog/14/product/3063/ or similar
+    var productMatch = window.location.href.match(/\/product\/(\d+)/);
     if (!productMatch) return;
 
     var BITRIX_PRODUCT_ID = parseInt(productMatch[1], 10);
