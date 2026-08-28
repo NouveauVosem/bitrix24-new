@@ -40,6 +40,8 @@ function addCustomAssets() {
 	$asset->addJs("/local/js/crystal/tasks/utils.js");
 	$asset->addJs("/local/js/crystal/tasks/task_print_panel.js");
 	$asset->addJs("/local/js/crystal/tasks/task_print_queue.js");
+	$asset->addCss("/local/js/crystal/product/product_panel.css");
+	$asset->addJs("/local/js/crystal/product/product_panel.js");
 
 }
 
