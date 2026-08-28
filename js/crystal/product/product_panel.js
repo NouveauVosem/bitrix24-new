@@ -1,6 +1,5 @@
 BX.ready(function () {
 
-    // Only on product pages: /shop/documents-catalog/14/product/3063/ or similar
     var productMatch = window.location.href.match(/\/product\/(\d+)/);
     if (!productMatch) return;
 
@@ -8,13 +7,20 @@ BX.ready(function () {
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
 
+    // ── state ────────────────────────────────────────────────────────────────
     var state = {
-        profile: null,      // WorkProfile | null
+        profile:    null,   // WorkProfile | null
         operations: [],     // TextileOperation[] — full catalogue
-        loading: true,
+        loading:    true,
+
+        // picker filters
+        activeGroups:    {},   // { groupName: true }
+        activeSubgroups: {},   // { subgroupName: true }
+        searchQuery:     '',
+        pickerOpen:      false,
     };
 
-    // ─── helpers ────────────────────────────────────────────────────────────
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     function api(path, options) {
         var opts = options || {};
@@ -26,29 +32,66 @@ BX.ready(function () {
         });
     }
 
+    function esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     function fmtTime(sec) {
-        var m = Math.floor(sec / 60);
-        var s = sec % 60;
-        return m > 0 ? m + ' мин ' + (s > 0 ? s + ' с' : '') : sec + ' с';
+        if (sec == null) return null;
+        var m = Math.floor(sec / 60), s = sec % 60;
+        return m > 0 ? m + ' мин' + (s ? ' ' + s + ' с' : '') : sec + ' с';
+    }
+
+    function addedMap() {
+        var map = {};
+        if (state.profile && state.profile.items) {
+            state.profile.items.forEach(function (item) { map[item.operationId] = item; });
+        }
+        return map;
     }
 
     function totalSeconds() {
         if (!state.profile || !state.profile.items) return 0;
         return state.profile.items.reduce(function (sum, item) {
-            return sum + (item.operation ? item.operation.timeSeconds : 0);
+            var t = item.timeSecondsOverride != null
+                ? item.timeSecondsOverride
+                : (item.operation ? item.operation.timeSeconds : null);
+            return sum + (t || 0);
         }, 0);
     }
 
-    function addedOperationIds() {
-        if (!state.profile || !state.profile.items) return {};
-        var map = {};
-        state.profile.items.forEach(function (item) { map[item.operationId] = true; });
-        return map;
+    function uniqueGroups() {
+        var seen = {};
+        state.operations.forEach(function (op) { seen[op.group] = true; });
+        return Object.keys(seen).sort();
     }
 
-    // ─── render panel ───────────────────────────────────────────────────────
+    function subgroupsForActiveGroups() {
+        var groups = Object.keys(state.activeGroups);
+        if (groups.length === 0) return [];
+        var seen = {};
+        state.operations.forEach(function (op) {
+            if (state.activeGroups[op.group]) seen[op.subgroup] = true;
+        });
+        return Object.keys(seen).sort();
+    }
 
-    function renderPanel() {
+    function filteredOps() {
+        var activeGroups    = Object.keys(state.activeGroups);
+        var activeSubgroups = Object.keys(state.activeSubgroups);
+        var q = state.searchQuery.toLowerCase().trim();
+
+        return state.operations.filter(function (op) {
+            if (activeGroups.length && !state.activeGroups[op.group]) return false;
+            if (activeSubgroups.length && !state.activeSubgroups[op.subgroup]) return false;
+            if (q && (op.name + ' ' + op.group + ' ' + op.subgroup).toLowerCase().indexOf(q) === -1) return false;
+            return true;
+        });
+    }
+
+    // ── render ───────────────────────────────────────────────────────────────
+
+    function render() {
         var panel = document.getElementById('cwp-panel');
         if (!panel) return;
 
@@ -57,52 +100,189 @@ BX.ready(function () {
         // header total
         var totalEl = panel.querySelector('.cwp-header-total');
         if (totalEl) {
-            totalEl.innerHTML = total > 0
-                ? 'Итого: <strong>' + fmtTime(total) + '</strong>'
-                : '';
+            totalEl.innerHTML = total > 0 ? 'Итого: <strong>' + fmtTime(total) + '</strong>' : '';
         }
 
-        // body
-        var body = panel.querySelector('.cwp-body');
-        body.innerHTML = '';
+        renderProfile(panel);
+        renderPickerFilters(panel);
+        renderPickerList(panel);
+    }
+
+    function renderProfile(panel) {
+        var body = panel.querySelector('.cwp-profile');
+        if (!body) return;
 
         if (state.loading) {
-            body.innerHTML = '<div class="cwp-loading">Загрузка...</div>';
+            body.innerHTML = '<div class="cwp-profile-empty">Загрузка...</div>';
             return;
         }
 
         var items = state.profile ? state.profile.items : [];
         if (!items || items.length === 0) {
-            body.innerHTML = '<div class="cwp-empty">Операции не добавлены</div>';
+            body.innerHTML = '<div class="cwp-profile-empty">Операции не добавлены</div>';
             return;
         }
 
+        body.innerHTML = '';
         items.forEach(function (item) {
             var op = item.operation;
             if (!op) return;
+
+            var effectiveTime = item.timeSecondsOverride != null ? item.timeSecondsOverride : op.timeSeconds;
+            var timeHtml;
+            if (item.timeSecondsOverride != null) {
+                timeHtml = '<span class="cwp-op-time">' + esc(fmtTime(item.timeSecondsOverride)) + ' <span title="Переопределено">✎</span></span>';
+            } else if (op.timeSecondsMin != null && op.timeSecondsMax != null) {
+                timeHtml = '<span class="cwp-op-time --range">' + op.timeSecondsMin + '–' + op.timeSecondsMax + ' с</span>';
+            } else if (op.timeSeconds != null) {
+                timeHtml = '<span class="cwp-op-time">' + esc(fmtTime(op.timeSeconds)) + '</span>';
+            } else {
+                timeHtml = '<span class="cwp-op-time --none">не задано</span>';
+            }
+
             var row = document.createElement('div');
-            row.className = 'cwp-item';
+            row.className = 'cwp-op-row';
             row.innerHTML =
-                '<span class="cwp-item-name">' + escHtml(op.name) + '</span>' +
-                '<span class="cwp-item-meta">' + escHtml(op.group) + ' / ' + escHtml(op.subgroup) + '</span>' +
-                '<span class="cwp-item-time">' + fmtTime(op.timeSeconds) + '</span>' +
-                '<button class="cwp-item-remove" title="Удалить">&times;</button>';
-            row.querySelector('.cwp-item-remove').addEventListener('click', function () {
-                removeOperation(item.operationId);
-            });
+                '<span class="cwp-op-name">' + esc(op.name) + '</span>' +
+                '<span class="cwp-op-sub">' + esc(op.subgroup) + '</span>' +
+                timeHtml +
+                '<button class="cwp-remove-btn" data-op-id="' + item.operationId + '" title="Убрать из профиля">&times;</button>';
+
             body.appendChild(row);
+        });
+
+        body.querySelectorAll('.cwp-remove-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                removeOperation(parseInt(btn.getAttribute('data-op-id'), 10));
+            });
         });
     }
 
-    function escHtml(s) {
-        return String(s)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+    function renderPickerFilters(panel) {
+        var groupWrap = panel.querySelector('.cwp-group-chips');
+        var subWrap   = panel.querySelector('.cwp-subgroup-chips');
+        if (!groupWrap || !subWrap) return;
+
+        // groups
+        var groups = uniqueGroups();
+        groupWrap.innerHTML = '';
+        groups.forEach(function (g) {
+            var chip = document.createElement('span');
+            chip.className = 'cwp-chip' + (state.activeGroups[g] ? ' --active' : '');
+            chip.textContent = g;
+            chip.addEventListener('click', function () {
+                if (state.activeGroups[g]) {
+                    delete state.activeGroups[g];
+                    // remove subgroups that no longer have a parent group
+                    pruneSubgroups();
+                } else {
+                    state.activeGroups[g] = true;
+                }
+                renderPickerFilters(panel);
+                renderPickerList(panel);
+            });
+            groupWrap.appendChild(chip);
+        });
+
+        // subgroups
+        var subs = subgroupsForActiveGroups();
+        subWrap.innerHTML = '';
+        if (subs.length === 0) {
+            subWrap.style.display = 'none';
+            return;
+        }
+        subWrap.style.display = 'flex';
+        subs.forEach(function (s) {
+            var chip = document.createElement('span');
+            chip.className = 'cwp-chip' + (state.activeSubgroups[s] ? ' --active' : '');
+            chip.textContent = s;
+            chip.addEventListener('click', function () {
+                if (state.activeSubgroups[s]) {
+                    delete state.activeSubgroups[s];
+                } else {
+                    state.activeSubgroups[s] = true;
+                }
+                renderPickerList(panel);
+                // re-render to update active state
+                renderPickerFilters(panel);
+            });
+            subWrap.appendChild(chip);
+        });
     }
 
-    // ─── inject panel DOM ───────────────────────────────────────────────────
+    function pruneSubgroups() {
+        var valid = {};
+        subgroupsForActiveGroups().forEach(function (s) { valid[s] = true; });
+        Object.keys(state.activeSubgroups).forEach(function (s) {
+            if (!valid[s]) delete state.activeSubgroups[s];
+        });
+    }
+
+    function renderPickerList(panel) {
+        var list = panel.querySelector('.cwp-list');
+        if (!list) return;
+
+        var ops    = filteredOps();
+        var added  = addedMap();
+
+        if (ops.length === 0) {
+            list.innerHTML = '<div class="cwp-list-empty">Ничего не найдено</div>';
+            return;
+        }
+
+        // group by group → subgroup
+        var grouped = {};
+        ops.forEach(function (op) {
+            var key = op.group + '////' + op.subgroup;
+            if (!grouped[key]) grouped[key] = { group: op.group, subgroup: op.subgroup, ops: [] };
+            grouped[key].ops.push(op);
+        });
+
+        list.innerHTML = '';
+        Object.keys(grouped).sort().forEach(function (key) {
+            var sec = grouped[key];
+
+            var hdr = document.createElement('div');
+            hdr.className = 'cwp-list-group-header';
+            hdr.textContent = sec.group + ' — ' + sec.subgroup;
+            list.appendChild(hdr);
+
+            sec.ops.forEach(function (op) {
+                var isAdded = !!added[op.id];
+
+                var timeHtml;
+                if (op.timeSecondsMin != null && op.timeSecondsMax != null) {
+                    timeHtml = '<span class="cwp-list-time --range">' + op.timeSecondsMin + '–' + op.timeSecondsMax + ' с</span>';
+                } else if (op.timeSeconds != null) {
+                    timeHtml = '<span class="cwp-list-time">' + esc(fmtTime(op.timeSeconds)) + '</span>';
+                } else {
+                    timeHtml = '<span class="cwp-list-time --none">не задано</span>';
+                }
+
+                var row = document.createElement('div');
+                row.className = 'cwp-list-row' + (isAdded ? ' --added' : '');
+                row.setAttribute('data-op-id', op.id);
+                row.innerHTML =
+                    '<span class="cwp-list-check">✓</span>' +
+                    '<span class="cwp-list-name">' + esc(op.name) + '</span>' +
+                    timeHtml;
+
+                if (!isAdded) {
+                    row.addEventListener('click', function () {
+                        addOperation(op.id);
+                    });
+                } else {
+                    row.addEventListener('click', function () {
+                        removeOperation(op.id);
+                    });
+                }
+
+                list.appendChild(row);
+            });
+        });
+    }
+
+    // ── panel DOM ─────────────────────────────────────────────────────────────
 
     function injectPanel(container) {
         if (document.getElementById('cwp-panel')) return;
@@ -115,53 +295,87 @@ BX.ready(function () {
                 '<span class="cwp-header-title">Операции</span>' +
                 '<span class="cwp-header-total"></span>' +
             '</div>' +
-            '<div class="cwp-body"><div class="cwp-loading">Загрузка...</div></div>' +
-            '<div class="cwp-footer">' +
-                '<button class="cwp-add-btn">+ Добавить операцию</button>' +
+            '<div class="cwp-profile"></div>' +
+
+            '<div class="cwp-picker-toggle">' +
+                '<span class="cwp-picker-toggle-label">+ Добавить операцию</span>' +
+                '<span class="cwp-picker-toggle-arrow">▼</span>' +
+            '</div>' +
+
+            '<div class="cwp-picker">' +
+                '<div class="cwp-filters">' +
+                    '<div class="cwp-filter-label">Группы</div>' +
+                    '<div class="cwp-chips cwp-group-chips"></div>' +
+                    '<div class="cwp-chips cwp-subgroup-chips" style="display:none"></div>' +
+                '</div>' +
+                '<div class="cwp-search"><input type="text" placeholder="Поиск операции..." /></div>' +
+                '<div class="cwp-list"><div class="cwp-list-empty">Загрузка операций...</div></div>' +
             '</div>';
 
-        // Hide "Добавить вариацию" button — nobody uses it
+        // hide "Добавить вариацию"
         var addVariationBlock = document.querySelector('.catalog-variation-grid-add-block');
         if (addVariationBlock) addVariationBlock.style.display = 'none';
 
         container.insertBefore(panel, container.firstChild);
 
-        panel.querySelector('.cwp-add-btn').addEventListener('click', openModal);
+        // picker toggle
+        var toggle     = panel.querySelector('.cwp-picker-toggle');
+        var pickerEl   = panel.querySelector('.cwp-picker');
+        var arrowEl    = panel.querySelector('.cwp-picker-toggle-arrow');
+        toggle.addEventListener('click', function () {
+            state.pickerOpen = !state.pickerOpen;
+            pickerEl.classList.toggle('--open', state.pickerOpen);
+            arrowEl.classList.toggle('--open', state.pickerOpen);
+        });
+
+        // search
+        var searchInput = panel.querySelector('.cwp-search input');
+        var searchTimer;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            var q = searchInput.value;
+            searchTimer = setTimeout(function () {
+                state.searchQuery = q;
+                renderPickerList(panel);
+            }, 150);
+        });
     }
 
-    // ─── API calls ──────────────────────────────────────────────────────────
+    // ── API calls ─────────────────────────────────────────────────────────────
 
     function loadProfile() {
         state.loading = true;
-        renderPanel();
+        render();
 
         api('/work-profiles/byBitrixId/' + BITRIX_PRODUCT_ID)
             .then(function (profile) {
                 state.profile = profile;
-                state.loading = false;
-                renderPanel();
             })
             .catch(function (err) {
-                if (err.message === 'Not found') {
-                    // no profile yet — that's fine
-                    state.profile = null;
-                } else {
-                    console.error('[WorkProfile] load error:', err);
-                }
+                if (err.message !== 'Not found') console.error('[WorkProfile] load error:', err);
+                state.profile = null;
+            })
+            .then(function () {
                 state.loading = false;
-                renderPanel();
+                render();
             });
     }
 
     function loadOperations() {
         api('/work-profiles/operations')
-            .then(function (ops) { state.operations = ops; })
+            .then(function (ops) {
+                state.operations = ops;
+                var panel = document.getElementById('cwp-panel');
+                if (panel) {
+                    renderPickerFilters(panel);
+                    renderPickerList(panel);
+                }
+            })
             .catch(function (err) { console.error('[WorkProfile] ops load error:', err); });
     }
 
     function ensureProfile(callback) {
         if (state.profile) { callback(state.profile); return; }
-
         api('/work-profiles/findOrCreate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -170,7 +384,7 @@ BX.ready(function () {
             state.profile = result.profile;
             callback(state.profile);
         }).catch(function (err) {
-            alert('Ошибка создания профиля: ' + err.message);
+            console.error('[WorkProfile] create profile error:', err);
         });
     }
 
@@ -181,12 +395,10 @@ BX.ready(function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ operationId: operationId }),
             }).then(function () {
-                // reload full profile to get fresh items with operations
                 return api('/work-profiles/byBitrixId/' + BITRIX_PRODUCT_ID);
-            }).then(function (profile) {
-                state.profile = profile;
-                renderPanel();
-                refreshModalAdded();
+            }).then(function (fresh) {
+                state.profile = fresh;
+                render();
             }).catch(function (err) {
                 console.error('[WorkProfile] add op error:', err);
             });
@@ -201,144 +413,30 @@ BX.ready(function () {
             state.profile.items = state.profile.items.filter(function (i) {
                 return i.operationId !== operationId;
             });
-            renderPanel();
-            refreshModalAdded();
+            render();
         }).catch(function (err) {
             console.error('[WorkProfile] remove op error:', err);
         });
     }
 
-    // ─── modal ──────────────────────────────────────────────────────────────
-
-    var modalEl = null;
-    var modalSearchTimeout = null;
-
-    function openModal() {
-        if (modalEl) return;
-
-        modalEl = document.createElement('div');
-        modalEl.className = 'cwp-modal-overlay';
-        modalEl.innerHTML =
-            '<div class="cwp-modal">' +
-                '<div class="cwp-modal-header">' +
-                    '<span>Выбор операции</span>' +
-                    '<button class="cwp-modal-close">&times;</button>' +
-                '</div>' +
-                '<div class="cwp-modal-search">' +
-                    '<input type="text" placeholder="Поиск операции..." />' +
-                '</div>' +
-                '<div class="cwp-modal-body">Загрузка...</div>' +
-            '</div>';
-
-        document.body.appendChild(modalEl);
-
-        modalEl.querySelector('.cwp-modal-close').addEventListener('click', closeModal);
-        modalEl.addEventListener('click', function (e) {
-            if (e.target === modalEl) closeModal();
-        });
-
-        var searchInput = modalEl.querySelector('input');
-        searchInput.addEventListener('input', function () {
-            clearTimeout(modalSearchTimeout);
-            var q = searchInput.value;
-            modalSearchTimeout = setTimeout(function () { renderModalList(q); }, 150);
-        });
-
-        renderModalList('');
-        setTimeout(function () { searchInput.focus(); }, 50);
-    }
-
-    function closeModal() {
-        if (modalEl) { modalEl.remove(); modalEl = null; }
-    }
-
-    function renderModalList(query) {
-        var body = modalEl && modalEl.querySelector('.cwp-modal-body');
-        if (!body) return;
-
-        var q = (query || '').toLowerCase().trim();
-        var added = addedOperationIds();
-
-        var ops = state.operations.filter(function (op) {
-            if (!q) return true;
-            return (op.name + ' ' + op.group + ' ' + op.subgroup + ' ' + op.productionType)
-                .toLowerCase().indexOf(q) !== -1;
-        });
-
-        if (ops.length === 0) {
-            body.innerHTML = '<div class="cwp-empty">Ничего не найдено</div>';
-            return;
-        }
-
-        // Group by group → subgroup
-        var groups = {};
-        ops.forEach(function (op) {
-            if (!groups[op.group]) groups[op.group] = {};
-            if (!groups[op.group][op.subgroup]) groups[op.group][op.subgroup] = [];
-            groups[op.group][op.subgroup].push(op);
-        });
-
-        var html = '';
-        Object.keys(groups).sort().forEach(function (grp) {
-            html += '<div class="cwp-modal-group">' + escHtml(grp) + '</div>';
-            Object.keys(groups[grp]).sort().forEach(function (sub) {
-                html += '<div class="cwp-modal-subgroup">' + escHtml(sub) + '</div>';
-                groups[grp][sub].forEach(function (op) {
-                    var isAdded = !!added[op.id];
-                    html +=
-                        '<div class="cwp-modal-op' + (isAdded ? ' --added' : '') + '" data-op-id="' + op.id + '">' +
-                            '<span class="cwp-modal-op-name">' + escHtml(op.name) + '</span>' +
-                            '<span class="cwp-modal-op-time">' + fmtTime(op.timeSeconds) + '</span>' +
-                            (isAdded
-                                ? '<span style="font-size:11px;color:#aaa">добавлена</span>'
-                                : '<button class="cwp-modal-op-add">+ Добавить</button>'
-                            ) +
-                        '</div>';
-                });
-            });
-        });
-
-        body.innerHTML = html;
-
-        body.querySelectorAll('.cwp-modal-op:not(.--added)').forEach(function (row) {
-            var btn = row.querySelector('.cwp-modal-op-add');
-            if (!btn) return;
-            btn.addEventListener('click', function () {
-                var opId = parseInt(row.getAttribute('data-op-id'), 10);
-                addOperation(opId);
-            });
-        });
-    }
-
-    function refreshModalAdded() {
-        if (!modalEl) return;
-        var searchInput = modalEl.querySelector('input');
-        renderModalList(searchInput ? searchInput.value : '');
-    }
-
-    // ─── mount ──────────────────────────────────────────────────────────────
+    // ── mount ─────────────────────────────────────────────────────────────────
 
     function tryMount() {
         var variationGrid = document.querySelector('.catalog-variation-grid');
         if (!variationGrid) return false;
-
         var container = variationGrid.parentElement;
         if (!container) return false;
-
         injectPanel(container);
         loadProfile();
         loadOperations();
         return true;
     }
 
-    // Wait for variation grid to appear
     if (!tryMount()) {
         var observer = new MutationObserver(function () {
             if (tryMount()) observer.disconnect();
         });
         observer.observe(document.body, { childList: true, subtree: true });
-
-        // Stop observing after 15s to avoid memory leak
         setTimeout(function () { observer.disconnect(); }, 15000);
     }
 
