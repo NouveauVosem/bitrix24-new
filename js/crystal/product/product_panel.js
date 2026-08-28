@@ -423,7 +423,7 @@ BX.ready(function () {
                     '</div>' +
                     '<div class="cwp-create-form">' +
                         '<div class="cwp-form-row">' +
-                            '<div class="cwp-combobox" data-field="type">' +
+                            '<div class="cwp-combobox" data-field="productionType">' +
                                 '<input type="text" class="cwp-form-input cwp-combobox-input" placeholder="Тип производства" autocomplete="off" />' +
                                 '<div class="cwp-combobox-dropdown"></div>' +
                                 '<div class="cwp-combobox-warning">Будет создан новый тип производства</div>' +
