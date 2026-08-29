@@ -544,7 +544,10 @@ BX.ready(function () {
         return fetch('/local/ajax/crystal/get_product_article.php?bitrixId=' + BITRIX_PRODUCT_ID)
             .then(function (r) { return r.json(); })
             .then(function (resp) {
-                ARTICLE = (resp && resp.found) ? resp.article : null;
+                var raw = (resp && resp.found) ? resp.article : null;
+                // article в Crystal ищется точным совпадением строки — обрезаем
+                // случайные пробелы по краям, иначе findOrCreate не найдёт сид.
+                ARTICLE = raw ? String(raw).trim() : null;
                 console.log('[WorkProfile] get_product_article.php response:', resp, '→ ARTICLE =', ARTICLE);
             })
             .catch(function (err) {

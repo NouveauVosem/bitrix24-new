@@ -34,9 +34,11 @@ $name   = $fields['NAME'] ?? '';
 // PROPERTY_ARTNUMBER часто пуст на уровне товара (iblock 14) — заполняется
 // только на офферах/SKU. В этом случае как и в get_catalog_products.php /
 // search_catalog_products.php парсим артикул из начала NAME.
-$article = $props['ARTNUMBER']['VALUE'] ?? null;
-if (!$article && preg_match('/\d+\.\d+\.\d+/', $name, $m)) {
-    $article = $m[0];
+// trim() обязателен: article ищется в Crystal точным совпадением строки
+// (WorkProfileService.getByArticle), лишний пробел по краям = "не найдено".
+$article = trim((string)($props['ARTNUMBER']['VALUE'] ?? ''));
+if ($article === '') {
+    $article = (preg_match('/\d+\.\d+\.\d+/', $name, $m)) ? $m[0] : null;
 }
 
 echo json_encode([
