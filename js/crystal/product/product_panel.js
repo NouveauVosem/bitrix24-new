@@ -22,6 +22,7 @@ BX.ready(function () {
     // ── state ────────────────────────────────────────────────────────────────
     var state = {
         profile:    null,   // WorkProfile | null
+        notFound:   false,  // true = ни byBitrixId, ни byArticle ничего не нашли — нужна явная кнопка "Создать профиль"
         operations: [],     // TextileOperation[] — full catalogue
         loading:    true,
 
@@ -132,6 +133,24 @@ BX.ready(function () {
 
         if (state.loading) {
             body.innerHTML = '<div class="cwp-profile-empty">Загрузка...</div>';
+            return;
+        }
+
+        if (state.notFound) {
+            body.innerHTML = '<div class="cwp-profile-empty">Профиль работ не найден</div>';
+            if (canEdit()) {
+                var createBtn = document.createElement('button');
+                createBtn.type = 'button';
+                createBtn.className = 'ui-btn ui-btn-primary ui-btn-sm';
+                createBtn.style.marginTop = '8px';
+                createBtn.textContent = 'Создать профиль';
+                createBtn.addEventListener('click', function () {
+                    createBtn.disabled = true;
+                    createBtn.textContent = 'Создание…';
+                    createProfileManually();
+                });
+                body.appendChild(createBtn);
+            }
             return;
         }
 
@@ -558,6 +577,7 @@ BX.ready(function () {
 
     function loadProfile() {
         state.loading = true;
+        state.notFound = false;
         render();
 
         api('/work-profiles/byBitrixId/' + BITRIX_PRODUCT_ID)
@@ -565,28 +585,52 @@ BX.ready(function () {
                 state.profile = profile;
             })
             .catch(function (err) {
-                console.log('[WorkProfile] byBitrixId 404/error, ARTICLE =', ARTICLE, 'err =', err.message);
                 if (err.message !== 'Not found') { console.error('[WorkProfile] load error:', err); state.profile = null; return; }
-                if (!ARTICLE) { console.log('[WorkProfile] no ARTICLE — skipping findOrCreate fallback'); state.profile = null; return; }
-                // Сидовый профиль может быть привязан только к артикулу —
-                // findOrCreate найдёт его по article и привяжет bitrixProductId.
-                console.log('[WorkProfile] calling findOrCreate with', { bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE });
-                return api('/work-profiles/findOrCreate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
-                }).then(function (result) {
-                    console.log('[WorkProfile] findOrCreate result:', result);
-                    state.profile = result.profile;
-                }).catch(function (err2) {
-                    console.error('[WorkProfile] link by article error:', err2);
-                    state.profile = null;
-                });
+                if (!ARTICLE) { state.profile = null; state.notFound = true; return; }
+
+                // GET byArticle — только чтение, ничего не создаёт. Если профиль
+                // найден, findOrCreate ниже гарантированно попадёт в ветку "найден
+                // по article" (совпадение уже подтверждено этим же запросом) и
+                // безопасно привяжет bitrixProductId, а не заведёт дубликат.
+                return api('/work-profiles/byArticle/' + encodeURIComponent(ARTICLE))
+                    .then(function () {
+                        return api('/work-profiles/findOrCreate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
+                        });
+                    })
+                    .then(function (result) {
+                        state.profile = result.profile;
+                    })
+                    .catch(function (err2) {
+                        if (err2.message !== 'Not found') console.error('[WorkProfile] link by article error:', err2);
+                        state.profile = null;
+                        state.notFound = true;
+                    });
             })
             .then(function () {
                 state.loading = false;
                 render();
             });
+    }
+
+    // Явное создание профиля по кнопке — единственное место, где реально
+    // может завестись новый (пустой) WorkProfile. Никогда не вызывается
+    // автоматически, чтобы несовпадение строки article не плодило дубликаты.
+    function createProfileManually() {
+        api('/work-profiles/findOrCreate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
+        }).then(function (result) {
+            state.profile = result.profile;
+            state.notFound = false;
+            render();
+        }).catch(function (err) {
+            console.error('[WorkProfile] create profile error:', err);
+            alert('Ошибка создания профиля: ' + err.message);
+        });
     }
 
     function loadOperations() {
