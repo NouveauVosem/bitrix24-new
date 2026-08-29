@@ -29,9 +29,18 @@ if (!$item) {
 
 $fields = $item->GetFields();
 $props  = $item->GetProperties();
+$name   = $fields['NAME'] ?? '';
+
+// PROPERTY_ARTNUMBER часто пуст на уровне товара (iblock 14) — заполняется
+// только на офферах/SKU. В этом случае как и в get_catalog_products.php /
+// search_catalog_products.php парсим артикул из начала NAME.
+$article = $props['ARTNUMBER']['VALUE'] ?? null;
+if (!$article && preg_match('/\d+\.\d+\.\d+/', $name, $m)) {
+    $article = $m[0];
+}
 
 echo json_encode([
     'found'   => true,
-    'article' => $props['ARTNUMBER']['VALUE'] ?? null,
-    'name'    => $fields['NAME'] ?? null,
+    'article' => $article,
+    'name'    => $name,
 ], JSON_UNESCAPED_UNICODE);
