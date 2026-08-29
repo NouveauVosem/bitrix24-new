@@ -543,8 +543,14 @@ BX.ready(function () {
     function loadArticle() {
         return fetch('/local/ajax/crystal/get_product_article.php?bitrixId=' + BITRIX_PRODUCT_ID)
             .then(function (r) { return r.json(); })
-            .then(function (resp) { ARTICLE = (resp && resp.found) ? resp.article : null; })
-            .catch(function () { ARTICLE = null; });
+            .then(function (resp) {
+                ARTICLE = (resp && resp.found) ? resp.article : null;
+                console.log('[WorkProfile] get_product_article.php response:', resp, '→ ARTICLE =', ARTICLE);
+            })
+            .catch(function (err) {
+                console.error('[WorkProfile] get_product_article.php error:', err);
+                ARTICLE = null;
+            });
     }
 
     function loadProfile() {
@@ -556,15 +562,18 @@ BX.ready(function () {
                 state.profile = profile;
             })
             .catch(function (err) {
+                console.log('[WorkProfile] byBitrixId 404/error, ARTICLE =', ARTICLE, 'err =', err.message);
                 if (err.message !== 'Not found') { console.error('[WorkProfile] load error:', err); state.profile = null; return; }
-                if (!ARTICLE) { state.profile = null; return; }
+                if (!ARTICLE) { console.log('[WorkProfile] no ARTICLE — skipping findOrCreate fallback'); state.profile = null; return; }
                 // Сидовый профиль может быть привязан только к артикулу —
                 // findOrCreate найдёт его по article и привяжет bitrixProductId.
+                console.log('[WorkProfile] calling findOrCreate with', { bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE });
                 return api('/work-profiles/findOrCreate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
                 }).then(function (result) {
+                    console.log('[WorkProfile] findOrCreate result:', result);
                     state.profile = result.profile;
                 }).catch(function (err2) {
                     console.error('[WorkProfile] link by article error:', err2);
