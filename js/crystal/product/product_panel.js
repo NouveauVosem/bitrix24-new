@@ -7,6 +7,11 @@ BX.ready(function () {
     var CRYSTAL_BASE = 'https://crystal.alvla.tools';
     var API_KEY = 'legenda';
 
+    // Сидовые профили (seed-work-profiles.ts) создаются только по article,
+    // bitrixProductId = null — привязка происходит лениво при первом открытии
+    // товара, поэтому артикул нужно слать наравне с bitrixId.
+    var ARTICLE = null;
+
     var ALLOWED_EDITORS = [26, 8, 19, 53];
     var CURRENT_USER_ID = parseInt(BX.message('USER_ID') || '0', 10);
 
@@ -535,6 +540,13 @@ BX.ready(function () {
 
     // ── API calls ─────────────────────────────────────────────────────────────
 
+    function loadArticle() {
+        return fetch('/local/ajax/crystal/get_product_article.php?bitrixId=' + BITRIX_PRODUCT_ID)
+            .then(function (r) { return r.json(); })
+            .then(function (resp) { ARTICLE = (resp && resp.found) ? resp.article : null; })
+            .catch(function () { ARTICLE = null; });
+    }
+
     function loadProfile() {
         state.loading = true;
         render();
@@ -544,8 +556,20 @@ BX.ready(function () {
                 state.profile = profile;
             })
             .catch(function (err) {
-                if (err.message !== 'Not found') console.error('[WorkProfile] load error:', err);
-                state.profile = null;
+                if (err.message !== 'Not found') { console.error('[WorkProfile] load error:', err); state.profile = null; return; }
+                if (!ARTICLE) { state.profile = null; return; }
+                // Сидовый профиль может быть привязан только к артикулу —
+                // findOrCreate найдёт его по article и привяжет bitrixProductId.
+                return api('/work-profiles/findOrCreate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
+                }).then(function (result) {
+                    state.profile = result.profile;
+                }).catch(function (err2) {
+                    console.error('[WorkProfile] link by article error:', err2);
+                    state.profile = null;
+                });
             })
             .then(function () {
                 state.loading = false;
@@ -571,7 +595,7 @@ BX.ready(function () {
         api('/work-profiles/findOrCreate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID }),
+            body: JSON.stringify({ bitrixProductId: BITRIX_PRODUCT_ID, article: ARTICLE }),
         }).then(function (result) {
             state.profile = result.profile;
             callback(state.profile);
@@ -785,7 +809,7 @@ BX.ready(function () {
         var container = variationGrid.parentElement;
         if (!container) return false;
         injectPanel(container);
-        loadProfile();
+        loadArticle().then(loadProfile);
         loadOperations();
         return true;
     }
