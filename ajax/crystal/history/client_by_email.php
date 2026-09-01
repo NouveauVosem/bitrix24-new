@@ -107,30 +107,11 @@ foreach ($matches as $m) {
 $contactIds = array_values(array_unique($contactIds));
 $companyIds = array_values(array_unique($companyIds));
 
-$companies = [];
-foreach ($companyIds as $cid) {
-    $c = CCrmCompany::GetByID($cid);
-    if (!$c) continue;
-    $countryRow = \Bitrix\Crm\CompanyTable::getList([
-        'filter' => ['=ID' => $cid],
-        'select' => ['UF_CRM_1717094712004'],
-    ])->fetch();
-    $companies[] = [
-        'id'      => $cid,
-        'name'    => $c['TITLE'],
-        'country' => $countryRow['UF_CRM_1717094712004'] ?? null,
-    ];
-}
-
-$contacts = [];
+// Контакты — только базовые поля здесь, компанию подставим позже одной пачкой
+$contactsRaw = [];
 foreach ($contactIds as $ctid) {
     $ct = CCrmContact::GetByID($ctid);
-    if (!$ct) continue;
-    $contacts[] = [
-        'id'         => $ctid,
-        'name'       => trim(($ct['NAME'] ?? '') . ' ' . ($ct['LAST_NAME'] ?? '')),
-        'company_id' => (int)($ct['COMPANY_ID'] ?? 0),
-    ];
+    if ($ct) $contactsRaw[$ctid] = $ct;
 }
 
 // ── Сделки найденных компаний/контактов ──────────────────────────────────────
@@ -153,6 +134,57 @@ $dealsRaw = \Bitrix\Crm\DealTable::getList([
 
 $totalOrdersFound = count($dealsRaw);
 $limitedDeals = array_slice($dealsRaw, 0, $limit);
+
+// ── Компании: email-матчи + компании контактов + компании сделок — одной пачкой ──
+// Так решается случай "у контакта несколько компаний": мы не гадаем, какая "главная",
+// а подтягиваем название/страну под company_id, который реально стоит на каждом контакте/сделке.
+$allCompanyIds = $companyIds;
+foreach ($contactsRaw as $ct) {
+    if (!empty($ct['COMPANY_ID'])) $allCompanyIds[] = (int)$ct['COMPANY_ID'];
+}
+foreach ($limitedDeals as $d) {
+    if (!empty($d['COMPANY_ID'])) $allCompanyIds[] = (int)$d['COMPANY_ID'];
+}
+$allCompanyIds = array_values(array_unique($allCompanyIds));
+
+$companyCountryMap = [];
+if (!empty($allCompanyIds)) {
+    $countryRows = \Bitrix\Crm\CompanyTable::getList([
+        'filter' => ['@ID' => $allCompanyIds],
+        'select' => ['ID', 'UF_CRM_1717094712004'],
+    ])->fetchAll();
+    foreach ($countryRows as $row) {
+        $companyCountryMap[$row['ID']] = $row['UF_CRM_1717094712004'];
+    }
+}
+
+$companyInfoMap = [];
+foreach ($allCompanyIds as $cid) {
+    $c = CCrmCompany::GetByID($cid);
+    if (!$c) continue;
+    $companyInfoMap[$cid] = [
+        'id'      => $cid,
+        'name'    => $c['TITLE'],
+        'country' => $companyCountryMap[$cid] ?? null,
+    ];
+}
+
+$companies = [];
+foreach ($companyIds as $cid) {
+    if (isset($companyInfoMap[$cid])) $companies[] = $companyInfoMap[$cid];
+}
+
+$contacts = [];
+foreach ($contactsRaw as $ctid => $ct) {
+    $contactCompanyId = (int)($ct['COMPANY_ID'] ?? 0);
+    $contacts[] = [
+        'id'              => $ctid,
+        'name'            => trim(($ct['NAME'] ?? '') . ' ' . ($ct['LAST_NAME'] ?? '')),
+        'company_id'      => $contactCompanyId,
+        'company_name'    => $companyInfoMap[$contactCompanyId]['name'] ?? null,
+        'company_country' => $companyInfoMap[$contactCompanyId]['country'] ?? null,
+    ];
+}
 
 $orders = [];
 if (!empty($limitedDeals)) {
@@ -179,18 +211,21 @@ if (!empty($limitedDeals)) {
     }
 
     foreach ($limitedDeals as $d) {
+        $dealCompanyId = (int)$d['COMPANY_ID'];
         $orders[] = [
-            'deal_id'       => $d['ID'],
-            'title'         => $d['TITLE'],
-            'date'          => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
-            'stage_id'      => $d['STAGE_ID'],
-            'currency'      => $d['UF_CRM_1718027018701'] ?: $d['CURRENCY_ID'],
-            'incoterms'     => $d['UF_CRM_1718024604516'],
-            'invoice_date'  => $d['UF_CRM_1741189617279'] ? (string)$d['UF_CRM_1741189617279'] : '',
-            'comments'      => $d['COMMENTS'],
-            'company_id'    => (int)$d['COMPANY_ID'],
-            'contact_id'    => (int)$d['CONTACT_ID'],
-            'products'      => $productsByDeal[$d['ID']] ?? [],
+            'deal_id'         => $d['ID'],
+            'title'           => $d['TITLE'],
+            'date'            => $d['DATE_CREATE'] ? (string)$d['DATE_CREATE'] : null,
+            'stage_id'        => $d['STAGE_ID'],
+            'currency'        => $d['UF_CRM_1718027018701'] ?: $d['CURRENCY_ID'],
+            'incoterms'       => $d['UF_CRM_1718024604516'],
+            'invoice_date'    => $d['UF_CRM_1741189617279'] ? (string)$d['UF_CRM_1741189617279'] : '',
+            'comments'        => $d['COMMENTS'],
+            'company_id'      => $dealCompanyId,
+            'company_name'    => $companyInfoMap[$dealCompanyId]['name'] ?? null,
+            'company_country' => $companyInfoMap[$dealCompanyId]['country'] ?? null,
+            'contact_id'      => (int)$d['CONTACT_ID'],
+            'products'        => $productsByDeal[$d['ID']] ?? [],
         ];
     }
 }
