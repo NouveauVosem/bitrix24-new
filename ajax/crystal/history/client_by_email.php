@@ -107,11 +107,19 @@ foreach ($matches as $m) {
 $contactIds = array_values(array_unique($contactIds));
 $companyIds = array_values(array_unique($companyIds));
 
-// Контакты — только базовые поля здесь, компанию подставим позже одной пачкой
+// Контакты — только базовые поля здесь, компанию подставим позже одной пачкой.
+// Берём через ORM (ContactTable), а не CCrmContact::GetByID: легаси-API требует
+// авторизованной сессии/прав пользователя и молча возвращает false при вызове
+// без сессии (как раз наш случай — Кристал стучится без логина в Bitrix24).
 $contactsRaw = [];
-foreach ($contactIds as $ctid) {
-    $ct = CCrmContact::GetByID($ctid);
-    if ($ct) $contactsRaw[$ctid] = $ct;
+if (!empty($contactIds)) {
+    $contactsFetched = \Bitrix\Crm\ContactTable::getList([
+        'filter' => ['@ID' => $contactIds],
+        'select' => ['ID', 'NAME', 'LAST_NAME', 'COMPANY_ID'],
+    ])->fetchAll();
+    foreach ($contactsFetched as $row) {
+        $contactsRaw[$row['ID']] = $row;
+    }
 }
 
 // ── Сделки найденных компаний/контактов ──────────────────────────────────────
@@ -147,26 +155,21 @@ foreach ($limitedDeals as $d) {
 }
 $allCompanyIds = array_values(array_unique($allCompanyIds));
 
-$companyCountryMap = [];
-if (!empty($allCompanyIds)) {
-    $countryRows = \Bitrix\Crm\CompanyTable::getList([
-        'filter' => ['@ID' => $allCompanyIds],
-        'select' => ['ID', 'UF_CRM_1717094712004'],
-    ])->fetchAll();
-    foreach ($countryRows as $row) {
-        $companyCountryMap[$row['ID']] = $row['UF_CRM_1717094712004'];
-    }
-}
-
+// Берём через ORM (CompanyTable), а не CCrmCompany::GetByID — по той же причине,
+// что и с контактами: легаси-API молча возвращает false без сессии пользователя.
 $companyInfoMap = [];
-foreach ($allCompanyIds as $cid) {
-    $c = CCrmCompany::GetByID($cid);
-    if (!$c) continue;
-    $companyInfoMap[$cid] = [
-        'id'      => $cid,
-        'name'    => $c['TITLE'],
-        'country' => $companyCountryMap[$cid] ?? null,
-    ];
+if (!empty($allCompanyIds)) {
+    $companiesFetched = \Bitrix\Crm\CompanyTable::getList([
+        'filter' => ['@ID' => $allCompanyIds],
+        'select' => ['ID', 'TITLE', 'UF_CRM_1717094712004'],
+    ])->fetchAll();
+    foreach ($companiesFetched as $row) {
+        $companyInfoMap[$row['ID']] = [
+            'id'      => (int)$row['ID'],
+            'name'    => $row['TITLE'],
+            'country' => $row['UF_CRM_1717094712004'],
+        ];
+    }
 }
 
 $companies = [];
