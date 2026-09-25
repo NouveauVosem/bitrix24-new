@@ -298,9 +298,13 @@
                 refsWrap.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
                 imageRefs.forEach(function (ref) {
                     var img = document.createElement('img');
-                    img.src = CrystalPrint.referenceFileUrl(item.id, ref.remotePath);
                     img.style.cssText = 'width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #eee;cursor:pointer;';
-                    img.onclick = function () { window.open(img.src, '_blank'); };
+                    img.alt = ref.originalName || '';
+                    CrystalPrint.fetchReferenceBlob(item.id, ref.remotePath).then(function (blob) {
+                        var blobUrl = URL.createObjectURL(blob);
+                        img.src = blobUrl;
+                        img.onclick = function () { window.open(blobUrl, '_blank'); };
+                    }).catch(function () { img.style.opacity = '0.3'; });
                     refsWrap.appendChild(img);
                 });
                 rightCol.appendChild(refsWrap);
