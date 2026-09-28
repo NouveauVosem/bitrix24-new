@@ -1146,6 +1146,40 @@
 
     var QUEUE_WIDGET_ID = 'crystal-print-queue';
     var QUEUE_CONTAINER_SELECTOR = '.main-grid-container';
+    var QUEUE_MODE_KEY = 'crystalPrintQueueMode';
+
+    // Режим «Все» показывает только активные задания — applied (нанесено) копились бы бесконечно.
+    // Порядок массива = порядок вывода в списке.
+    var QUEUE_ACTIVE_STATUSES = ['pending', 'ready', 'printed'];
+
+    // Какой следующий статус можно выставить прямо из очереди
+    var QUEUE_NEXT_STATUS = {
+        ready:   { value: 'printed', label: 'Напечатано' },
+        printed: { value: 'applied', label: 'Нанесено' }
+    };
+
+    function getQueueMode() {
+        try {
+            return localStorage.getItem(QUEUE_MODE_KEY) === 'all' ? 'all' : 'ready';
+        } catch (e) {
+            return 'ready';
+        }
+    }
+
+    function setQueueMode(mode) {
+        try { localStorage.setItem(QUEUE_MODE_KEY, mode); } catch (e) {}
+    }
+
+    function listActivePrints() {
+        return Promise.all(QUEUE_ACTIVE_STATUSES.map(function (status) {
+            return listPrintsByStatus(status).then(function (list) {
+                if (!Array.isArray(list)) throw new Error((list && list.message) || 'Некорректный ответ API');
+                return list;
+            });
+        })).then(function (lists) {
+            return [].concat.apply([], lists);
+        });
+    }
 
     function initPrintQueue() {
         var queueObserver = new MutationObserver(function () { syncPrintQueue(); });
@@ -1181,6 +1215,43 @@
         headerTitle.textContent = '🖨 Очередь печати';
         header.appendChild(headerTitle);
 
+        var mode = getQueueMode();
+        var allItems = null;
+
+        var modeSwitch = document.createElement('div');
+        modeSwitch.style.cssText = 'display:inline-flex;border:1px solid #c6cdd3;border-radius:6px;overflow:hidden;';
+        var modeBtns = {};
+        [{ value: 'ready', label: 'К печати' }, { value: 'all', label: 'Все' }].forEach(function (m) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.style.cssText = 'border:0;padding:3px 12px;font-size:12px;cursor:pointer;';
+            b.onclick = function () {
+                if (mode === m.value) return;
+                mode = m.value;
+                setQueueMode(mode);
+                paintModeSwitch();
+                renderCurrent();
+            };
+            modeBtns[m.value] = { el: b, label: m.label };
+            modeSwitch.appendChild(b);
+        });
+        header.appendChild(modeSwitch);
+
+        function paintModeSwitch() {
+            var readyCount = allItems
+                ? allItems.filter(function (it) { return it.status === 'ready'; }).length
+                : null;
+            Object.keys(modeBtns).forEach(function (key) {
+                var b = modeBtns[key];
+                var active = key === mode;
+                b.el.style.background = active ? '#2fc6f6' : '#fff';
+                b.el.style.color = active ? '#fff' : '#535c69';
+                b.el.style.fontWeight = active ? '600' : '400';
+                b.el.textContent = b.label + (key === 'ready' && readyCount !== null ? ' (' + readyCount + ')' : '');
+            });
+        }
+        paintModeSwitch();
+
         var refreshBtn = document.createElement('button');
         refreshBtn.type = 'button';
         refreshBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
@@ -1207,25 +1278,37 @@
 
         container.parentNode.insertBefore(widget, container);
 
+        // Всегда грузим все активные статусы: режимы переключаются без запроса,
+        // а счётчик «К печати (N)» доступен в обоих режимах.
         function loadQueue() {
             body.innerHTML = '<div style="color:#999;">Загрузка…</div>';
-            listPrintsByStatus('ready').then(function (items) {
-                renderQueue(body, items);
+            listActivePrints().then(function (items) {
+                allItems = items;
+                paintModeSwitch();
+                renderCurrent();
             }).catch(function (e) {
                 body.innerHTML = '<div style="color:#c0392b;">Ошибка: ' + e.message + '</div>';
             });
         }
 
+        function renderCurrent() {
+            if (!allItems) return;
+            var items = mode === 'all'
+                ? allItems
+                : allItems.filter(function (it) { return it.status === 'ready'; });
+            renderQueue(body, items, mode, paintModeSwitch);
+        }
+
         loadQueue();
     }
 
-    function renderQueue(container, items) {
+    function renderQueue(container, items, mode, onStatusChange) {
         container.innerHTML = '';
 
         if (!items.length) {
             var empty = document.createElement('div');
             empty.style.cssText = 'color:#999;padding:4px 0;';
-            empty.textContent = 'Нет файлов, готовых к печати';
+            empty.textContent = mode === 'all' ? 'Нет активных заданий' : 'Нет файлов, готовых к печати';
             container.appendChild(empty);
             return;
         }
@@ -1239,6 +1322,17 @@
             // Клиент + файл
             var info = document.createElement('div');
             info.style.cssText = 'flex:1;min-width:0;';
+
+            var badgeSlot = document.createElement('div');
+            badgeSlot.style.cssText = 'margin-bottom:3px;';
+            function renderBadge() {
+                badgeSlot.innerHTML = '';
+                badgeSlot.appendChild(renderStatusBadge(item.status || 'pending'));
+            }
+            if (mode === 'all') {
+                renderBadge();
+                info.appendChild(badgeSlot);
+            }
 
             var clientEl = document.createElement('div');
             clientEl.style.cssText = 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
@@ -1305,18 +1399,40 @@
                 btns.appendChild(dlBtn);
             }
 
-            var printedBtn = document.createElement('button');
-            printedBtn.type = 'button';
-            printedBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
-            printedBtn.textContent = 'Напечатано';
-            printedBtn.onclick = function () {
-                updatePrintStatus(item.id, 'printed').then(function () {
-                    row.style.opacity = '0.4';
-                    printedBtn.textContent = 'Готово ✓';
-                    printedBtn.disabled = true;
-                }).catch(function (e) { alert(e.message); });
-            };
-            btns.appendChild(printedBtn);
+            // Кнопка перехода на следующий статус — зависит от текущего статуса задания
+            var actionSlot = document.createElement('span');
+            actionSlot.style.display = 'contents';
+            btns.appendChild(actionSlot);
+
+            function renderAction() {
+                actionSlot.innerHTML = '';
+                var next = QUEUE_NEXT_STATUS[item.status];
+                if (!next) return;
+
+                var actionBtn = document.createElement('button');
+                actionBtn.type = 'button';
+                actionBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
+                actionBtn.textContent = next.label;
+                actionBtn.onclick = function () {
+                    actionBtn.disabled = true;
+                    updatePrintStatus(item.id, next.value).then(function () {
+                        item.status = next.value;
+                        onStatusChange();
+                        if (mode === 'all') {
+                            renderBadge();
+                            renderAction();
+                        } else {
+                            row.style.opacity = '0.4';
+                            actionBtn.textContent = 'Готово ✓';
+                        }
+                    }).catch(function (e) {
+                        actionBtn.disabled = false;
+                        alert(e.message);
+                    });
+                };
+                actionSlot.appendChild(actionBtn);
+            }
+            renderAction();
 
             row.appendChild(btns);
             container.appendChild(row);
