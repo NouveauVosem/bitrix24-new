@@ -965,6 +965,7 @@
         fetchReferenceBlob: fetchReferenceBlob,
         deletePrint: deletePrint,
         // UI
+        statusInfo: statusInfo,
         renderStatusBadge: renderStatusBadge,
         renderStatusSelector: renderStatusSelector,
         formatPrintSettings: formatPrintSettings,

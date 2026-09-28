@@ -3,6 +3,40 @@
 
     var QUEUE_WIDGET_ID = 'crystal-print-queue';
     var QUEUE_CONTAINER_SELECTOR = '.main-grid-container';
+    var QUEUE_MODE_KEY = 'crystalPrintQueueMode';
+
+    // Режим «Все» показывает только активные задания — applied (нанесено) копились бы бесконечно.
+    // Порядок массива = порядок вывода в списке.
+    var QUEUE_ACTIVE_STATUSES = ['pending', 'ready', 'printed'];
+
+    // Какой следующий статус можно выставить прямо из очереди
+    var QUEUE_NEXT_STATUS = {
+        ready:   { value: 'printed', label: 'Напечатано' },
+        printed: { value: 'applied', label: 'Нанесено' }
+    };
+
+    function getQueueMode() {
+        try {
+            return localStorage.getItem(QUEUE_MODE_KEY) === 'all' ? 'all' : 'ready';
+        } catch (e) {
+            return 'ready';
+        }
+    }
+
+    function setQueueMode(mode) {
+        try { localStorage.setItem(QUEUE_MODE_KEY, mode); } catch (e) {}
+    }
+
+    function listActivePrints() {
+        return Promise.all(QUEUE_ACTIVE_STATUSES.map(function (status) {
+            return CrystalPrint.listPrintsByStatus(status).then(function (list) {
+                if (!Array.isArray(list)) throw new Error((list && list.message) || 'Некорректный ответ API');
+                return list;
+            });
+        })).then(function (lists) {
+            return [].concat.apply([], lists);
+        });
+    }
 
     BX.ready(function () {
         CrystalPrint.loadCurrentUser().then(function (user) {
@@ -47,6 +81,43 @@
         headerTitle.textContent = '🖨 Очередь печати';
         header.appendChild(headerTitle);
 
+        var mode = getQueueMode();
+        var allItems = null;
+
+        var modeSwitch = document.createElement('div');
+        modeSwitch.style.cssText = 'display:inline-flex;border:1px solid #c6cdd3;border-radius:6px;overflow:hidden;';
+        var modeBtns = {};
+        [{ value: 'ready', label: 'К печати' }, { value: 'all', label: 'Все' }].forEach(function (m) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.style.cssText = 'border:0;padding:3px 12px;font-size:12px;cursor:pointer;';
+            b.onclick = function () {
+                if (mode === m.value) return;
+                mode = m.value;
+                setQueueMode(mode);
+                paintModeSwitch();
+                renderCurrent();
+            };
+            modeBtns[m.value] = { el: b, label: m.label };
+            modeSwitch.appendChild(b);
+        });
+        header.appendChild(modeSwitch);
+
+        function paintModeSwitch() {
+            var readyCount = allItems
+                ? allItems.filter(function (it) { return it.status === 'ready'; }).length
+                : null;
+            Object.keys(modeBtns).forEach(function (key) {
+                var b = modeBtns[key];
+                var active = key === mode;
+                b.el.style.background = active ? '#2fc6f6' : '#fff';
+                b.el.style.color = active ? '#fff' : '#535c69';
+                b.el.style.fontWeight = active ? '600' : '400';
+                b.el.textContent = b.label + (key === 'ready' && readyCount !== null ? ' (' + readyCount + ')' : '');
+            });
+        }
+        paintModeSwitch();
+
         var refreshBtn = document.createElement('button');
         refreshBtn.type = 'button';
         refreshBtn.className = 'ui-btn ui-btn-light-border ui-btn-xs';
@@ -73,25 +144,46 @@
 
         container.parentNode.insertBefore(widget, container);
 
+        // Всегда грузим все активные статусы: режимы переключаются без запроса,
+        // а счётчик «К печати (N)» доступен в обоих режимах.
         function loadQueue() {
             body.innerHTML = '<div style="color:#999;">Загрузка…</div>';
-            CrystalPrint.listPrintsByStatus('ready').then(function (items) {
-                renderQueue(body, items);
+            listActivePrints().then(function (items) {
+                allItems = items;
+                paintModeSwitch();
+                renderCurrent();
             }).catch(function (e) {
                 body.innerHTML = '<div style="color:#c0392b;">Ошибка: ' + e.message + '</div>';
             });
         }
 
+        function renderCurrent() {
+            if (!allItems) return;
+            var items = mode === 'all'
+                ? allItems
+                : allItems.filter(function (it) { return it.status === 'ready'; });
+            renderQueue(body, items, mode, paintModeSwitch);
+        }
+
         loadQueue();
     }
 
-    function renderQueue(container, items) {
+    function renderStatusPill(el, status) {
+        var info = CrystalPrint.statusInfo(status);
+        el.innerHTML = '';
+        var dot = document.createElement('span');
+        dot.style.cssText = 'width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;background:' + info.color + ';';
+        el.appendChild(dot);
+        el.appendChild(document.createTextNode(info.label));
+    }
+
+    function renderQueue(container, items, mode, onStatusChange) {
         container.innerHTML = '';
 
         if (!items.length) {
             var empty = document.createElement('div');
             empty.style.cssText = 'color:#999;padding:4px 0;';
-            empty.textContent = 'Нет файлов, готовых к печати';
+            empty.textContent = mode === 'all' ? 'Нет активных заданий' : 'Нет файлов, готовых к печати';
             container.appendChild(empty);
             return;
         }
@@ -103,7 +195,7 @@
 
             var card = document.createElement('div');
             card.style.cssText =
-                'border:1px solid #e0e8f0;border-left:4px solid #2fc6f6;border-radius:10px;' +
+                'border:1px solid #e0e8f0;border-left:4px solid ' + CrystalPrint.statusInfo(item.status).color + ';border-radius:10px;' +
                 'margin-bottom:12px;overflow:hidden;background:#fff;';
 
             // === ШАПКА: бейджи + qty ===
@@ -124,8 +216,8 @@
             }
 
             var statusDot = document.createElement('span');
-            statusDot.style.cssText = 'padding:2px 10px;border-radius:20px;background:#e8f8f5;font-size:12px;color:#27ae60;display:flex;align-items:center;gap:4px;';
-            statusDot.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#27ae60;display:inline-block;flex-shrink:0;"></span>Готов к печати';
+            statusDot.style.cssText = 'padding:2px 10px;border-radius:20px;background:#f0f4f8;font-size:12px;color:#555;display:flex;align-items:center;gap:4px;';
+            renderStatusPill(statusDot, item.status);
             topRow.appendChild(statusDot);
 
             var topSpacer = document.createElement('div');
@@ -340,19 +432,42 @@
                 rightCol.appendChild(dlBtn);
             }
 
-            var printedBtn = document.createElement('button');
-            printedBtn.type = 'button';
-            printedBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
-            printedBtn.style.cssText = 'width:100%;';
-            printedBtn.textContent = 'Напечатано';
-            printedBtn.onclick = function () {
-                CrystalPrint.updatePrintStatus(item.id, 'printed').then(function () {
-                    card.style.opacity = '0.4';
-                    printedBtn.textContent = 'Готово ✓';
-                    printedBtn.disabled = true;
-                }).catch(function (e) { alert(e.message); });
-            };
-            rightCol.appendChild(printedBtn);
+            // Кнопка перехода на следующий статус — зависит от текущего статуса задания
+            var actionSlot = document.createElement('div');
+            actionSlot.style.display = 'contents';
+            rightCol.appendChild(actionSlot);
+
+            function renderAction() {
+                actionSlot.innerHTML = '';
+                var next = QUEUE_NEXT_STATUS[item.status];
+                if (!next) return;
+
+                var actionBtn = document.createElement('button');
+                actionBtn.type = 'button';
+                actionBtn.className = 'ui-btn ui-btn-light-border ui-btn-sm';
+                actionBtn.style.cssText = 'width:100%;';
+                actionBtn.textContent = next.label;
+                actionBtn.onclick = function () {
+                    actionBtn.disabled = true;
+                    CrystalPrint.updatePrintStatus(item.id, next.value).then(function () {
+                        item.status = next.value;
+                        onStatusChange();
+                        renderStatusPill(statusDot, item.status);
+                        card.style.borderLeftColor = CrystalPrint.statusInfo(item.status).color;
+                        if (mode === 'all') {
+                            renderAction();
+                        } else {
+                            card.style.opacity = '0.4';
+                            actionBtn.textContent = 'Готово ✓';
+                        }
+                    }).catch(function (e) {
+                        actionBtn.disabled = false;
+                        alert(e.message);
+                    });
+                };
+                actionSlot.appendChild(actionBtn);
+            }
+            renderAction();
 
             if (item.dealId) {
                 var dealLink = document.createElement('a');
