@@ -7,8 +7,8 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.ph
 \Bitrix\Main\Loader::includeModule("crm");
 
 // Отчёт «Анализ эффективности менеджеров» в Кристале: сырые данные за период.
-// Агрегация по менеджерам, перевод в гривну и проход из Вентуры — на стороне
-// Кристала; здесь только выборка из CRM, как в history-эндпоинтах.
+// Агрегация по менеджерам и перевод в гривну — на стороне Кристала; здесь только
+// выборка из CRM, как в history-эндпоинтах.
 
 // ── Авторизация ──────────────────────────────────────────────────────────────
 define('CRYSTAL_API_TOKEN', 'Legenda');
@@ -55,7 +55,33 @@ $CLIENT_TYPE_BY_ENUM = [
 ];
 
 $TOTAL_WITH_VAT_FIELD = 'UF_CRM_1728403359608'; // Общая сумма с НДС (в валюте CURRENCY_ID)
-$ZV_NUMBERS_FIELD     = 'UF_CRM_1736861473825'; // Номера заказа в ZV
+
+// «Проход <категория>» — заполняется в сделке по категориям, в гривне.
+// Проход сделки — их сумма.
+$PASS_FIELDS = [
+    'UF_CRM_1738248743869', // Контейнеры
+    'UF_CRM_1738248812670', // Чехлы
+    'UF_CRM_1738568381424', // Тележки
+    'UF_CRM_1738568412044', // Алюминий
+    'UF_CRM_1738568447882', // Сетка
+    'UF_CRM_1738568867342', // Стеллажи
+    'UF_CRM_1738568894666', // Сумки
+    'UF_CRM_1738568909962', // Мешки
+];
+
+// null — ни одна категория не заполнена: так Кристал отличит «не заполнено» от нуля.
+$passOf = function ($deal) use ($PASS_FIELDS) {
+    $sum = 0.0;
+    $filled = false;
+    foreach ($PASS_FIELDS as $f) {
+        $v = (float)$deal[$f];
+        if ($v != 0) {
+            $sum += $v;
+            $filled = true;
+        }
+    }
+    return $filled ? $sum : null;
+};
 
 // Задача на сделке, с которой заказ считается поступившим в работу.
 // Бывает «Запустить заказ в работу.» и «Запустить заказ в работу - Образцы (БЕСПЛАТНО)»:
@@ -151,14 +177,14 @@ if (!empty($taskDealIds)) {
     }
     $taskDealsRaw = \Bitrix\Crm\DealTable::getList([
         'filter' => $taskDealFilter,
-        'select' => ['ID', 'TITLE', 'ASSIGNED_BY_ID', $CLIENT_TYPE_FIELD, $ZV_NUMBERS_FIELD],
+        'select' => array_merge(['ID', 'TITLE', 'ASSIGNED_BY_ID', $CLIENT_TYPE_FIELD], $PASS_FIELDS),
     ])->fetchAll();
     foreach ($taskDealsRaw as $d) {
         $taskDeals[(int)$d['ID']] = $d;
     }
 }
 
-$taskRows = function (array $firstTasks) use ($taskDeals, $clientTypeOf, $ZV_NUMBERS_FIELD) {
+$taskRows = function (array $firstTasks) use ($taskDeals, $clientTypeOf, $passOf) {
     $rows = [];
     foreach ($firstTasks as $dealId => $t) {
         $d = $taskDeals[$dealId] ?? null;
@@ -169,7 +195,7 @@ $taskRows = function (array $firstTasks) use ($taskDeals, $clientTypeOf, $ZV_NUM
             'assigned_by_id' => (int)$d['ASSIGNED_BY_ID'],
             'client_type'    => $clientTypeOf($d),
             'task_created'   => $t['CREATED'] ? (string)$t['CREATED'] : null,
-            'zv_numbers'     => trim((string)$d[$ZV_NUMBERS_FIELD]),
+            'pass'           => $passOf($d),
         ];
     }
     return $rows;
