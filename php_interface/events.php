@@ -239,3 +239,7 @@ $eventManager->addEventHandler(
 	false,
 	10000
 );
+
+
+// Відкриті лінії (WhatsApp через Twilio) -> Crystal. Поки лише логування
+AddEventHandler("im", "OnAfterMessagesAdd", ['Messenger\OpenLinesHandler', 'onAfterMessagesAdd']);
