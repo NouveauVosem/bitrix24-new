@@ -12,7 +12,7 @@ require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.
 header('Content-Type: text/html; charset=utf-8');
 
 // Користувачі, яким доступ дозволено додатково до адміністраторів
-$allowedUserIds = [];
+$allowedUserIds = [19];
 
 global $USER;
 if (!$USER->IsAuthorized()) {
