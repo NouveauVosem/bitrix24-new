@@ -9,7 +9,8 @@ namespace Messenger;
  * відповідь оператора, автовідповідь) відправляється вебхуком у Crystal
  * (номер "WhatsApp (Битрикс)", /messengers/bitrix/webhook/<id>).
  * Адреса і секрет — у config.php поруч (не в git), його вміст береться
- * з екрана "Подключение" номера в Crystal.
+ * з екрана "Подключение" номера в Crystal. Тим самим секретом Crystal
+ * підписує зворотний напрямок — ajax/crystal/messenger/send.php.
  */
 class OpenLinesHandler
 {
@@ -114,6 +115,9 @@ class OpenLinesHandler
 			'text'       => (string)($fields['MESSAGE'] ?? ''),
 			'sentAt'     => date('c'),
 			'files'      => $files,
+			// Повідомлення, надіслане з Crystal (ajax/crystal/messenger/send.php):
+			// Crystal за цим id оновлює своє, а не створює дубль
+			'crystalId'  => isset($fields['PARAMS']['CRYSTAL_ID']) ? (string)$fields['PARAMS']['CRYSTAL_ID'] : null,
 		];
 	}
 
@@ -163,7 +167,7 @@ class OpenLinesHandler
 	}
 
 	/** config.php: ['webhook_url' => ..., 'secret' => ...]; null — інтеграцію не налаштовано */
-	private static function config()
+	public static function config()
 	{
 		static $config = false;
 		if ($config === false) {
@@ -175,7 +179,7 @@ class OpenLinesHandler
 		return $config;
 	}
 
-	private static function log($data)
+	public static function log($data)
 	{
 		$dir = $_SERVER['DOCUMENT_ROOT'] . self::LOG_DIR;
 		if (!is_dir($dir)) {
