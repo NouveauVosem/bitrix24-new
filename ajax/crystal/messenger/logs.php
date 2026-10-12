@@ -11,10 +11,18 @@ require($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_before.
 
 header('Content-Type: text/html; charset=utf-8');
 
+// Користувачі, яким доступ дозволено додатково до адміністраторів
+$allowedUserIds = [];
+
 global $USER;
-if (!$USER->IsAuthorized() || !$USER->IsAdmin()) {
+if (!$USER->IsAuthorized()) {
 	http_response_code(403);
-	echo 'Access denied';
+	echo 'Access denied: not authorized';
+	die();
+}
+if (!$USER->IsAdmin() && !in_array((int)$USER->GetID(), $allowedUserIds, true)) {
+	http_response_code(403);
+	echo 'Access denied: user ID ' . (int)$USER->GetID() . ' is not admin';
 	die();
 }
 
