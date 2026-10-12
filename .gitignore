@@ -8,3 +8,5 @@ js/crystal/product/data/План Чехлы 08-2026 - спр-к пуговиц.c
 js/crystal/product/data/План Чехлы 08-2026 - спр-к чехлы ВНУТР.csv
 js/crystal/product/data/План Чехлы 08-2026 - спр-к чехлы НАРУЖН.csv
 logs/
+php_interface/classes/Messenger/config.php
+php_interface/classes/Messenger/messages-logs.txt
