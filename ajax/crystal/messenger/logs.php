@@ -51,8 +51,8 @@ if ($date === '') {
 	if (!file_exists($file)) {
 		echo '<p>Файл не знайдено.</p>';
 	} else {
-		// Перший рядок — захисний "<?php exit; ?>"
-		$content = preg_replace('/^<\?php exit; \?>\n/', '', file_get_contents($file));
+		// Перший рядок — захисний php exit, прибираємо його з виводу
+		$content = preg_replace('/^[^\n]*\n/', '', file_get_contents($file));
 		echo '<pre>' . htmlspecialchars($content) . '</pre>';
 	}
 }
