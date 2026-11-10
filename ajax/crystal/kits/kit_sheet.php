@@ -1,7 +1,7 @@
 <?php
 // Сборочный лист сделки: собирает товары сделки (артикул + суммарное к-во)
 // и отправляет их в Crystal (/kits/sheet). Профили комплектации живут в Crystal.
-//   ?dealId=N             → JSON: {status, kitsCount, kits[], missing[]}
+//   ?dealId=N             → JSON: {status, kitsCount, kits[] (с drawings[]), missing[]}
 //   ?dealId=N&format=pdf  → PDF сборочного листа (отдаётся как есть из Crystal)
 define('NO_KEEP_STATISTIC', true);
 define('NO_AGENT_CHECK', true);
@@ -42,10 +42,26 @@ if (!$dealId) {
 
 $deal = \Bitrix\Crm\DealTable::getList([
     'filter' => ['=ID' => $dealId],
-    'select' => ['ID', 'TITLE'],
+    'select' => ['ID', 'TITLE', 'COMPANY_ID', 'CONTACT_ID'],
 ])->fetch();
 if (!$deal) {
     kitFail(404, 'Сделка не найдена', $format);
+}
+
+// ── Клиент для титула: компания, если нет — контакт ─────────────────────────
+$clientName = '';
+if ((int)$deal['COMPANY_ID'] > 0) {
+    $company = \CCrmCompany::GetByID((int)$deal['COMPANY_ID'], false);
+    $clientName = trim((string)($company['TITLE'] ?? ''));
+}
+if ($clientName === '' && (int)$deal['CONTACT_ID'] > 0) {
+    $contact = \CCrmContact::GetByID((int)$deal['CONTACT_ID'], false);
+    if ($contact) {
+        $clientName = trim((string)($contact['FULL_NAME'] ?? ''));
+        if ($clientName === '') {
+            $clientName = trim(($contact['NAME'] ?? '') . ' ' . ($contact['LAST_NAME'] ?? ''));
+        }
+    }
 }
 
 // ── Строки товаров сделки ────────────────────────────────────────────────────
@@ -62,6 +78,7 @@ if (empty($productRows)) {
 // ── Артикулы товаров каталога ────────────────────────────────────────────────
 // Как в get_product_article.php: ARTNUMBER, а если пуст — артикул из начала NAME.
 // trim() обязателен: Crystal ищет артикул точным совпадением строки.
+// Хвост Вентуры («11.1780.5 нв») срезаем — Crystal ждёт чистый артикул.
 $productIds = array_values(array_unique(array_filter(array_map('intval', array_column($productRows, 'PRODUCT_ID')))));
 $catalog = [];
 if (!empty($productIds)) {
@@ -70,7 +87,7 @@ if (!empty($productIds)) {
         $article = '';
         $dbProp = \CIBlockElement::GetProperty($el['IBLOCK_ID'], $el['ID'], [], ['CODE' => 'ARTNUMBER']);
         if ($prop = $dbProp->Fetch()) {
-            $article = trim((string)$prop['VALUE']);
+            $article = trim(preg_replace('/\s+нв\.?$/iu', '', trim((string)$prop['VALUE'])));
         }
         $catalog[(int)$el['ID']] = ['name' => $el['NAME'], 'article' => $article];
     }
@@ -100,11 +117,16 @@ foreach ($productRows as $r) {
     $rows[$key]['quantity'] += (float)$r['QUANTITY'];
 }
 
-$payload = json_encode([
+$payload = [
     'dealId'    => $dealId,
     'dealTitle' => $deal['TITLE'],
+    'cover'     => true,
     'rows'      => array_values($rows),
-], JSON_UNESCAPED_UNICODE);
+];
+if ($clientName !== '') {
+    $payload['clientName'] = $clientName;
+}
+$payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
 
 // ── Запрос в Crystal ─────────────────────────────────────────────────────────
 $ch = curl_init(CRYSTAL_KITS_URL . ($format === 'pdf' ? '/pdf' : ''));
@@ -139,7 +161,7 @@ if ($format === 'pdf') {
     die();
 }
 
-// Фронту нужна только сводка — сами позиции комплектов смотрят в PDF.
+// Фронту нужна сводка + ссылки на чертежи (в PDF их нет). Позиции комплектов смотрят в PDF.
 $sheet = json_decode($response, true);
 $kits = [];
 foreach ($sheet['blocks'] ?? [] as $b) {
@@ -148,6 +170,13 @@ foreach ($sheet['blocks'] ?? [] as $b) {
         'name'     => $b['row']['name'] ?? '',
         'quantity' => $b['row']['quantity'] ?? 0,
         'profile'  => $b['profile']['name'] ?? '',
+        'drawings' => array_values(array_filter(array_map(function ($d) {
+            return empty($d['url']) ? null : [
+                'name' => $d['originalName'] ?? 'чертёж',
+                'url'  => $d['url'],
+                'size' => (int)($d['size'] ?? 0),
+            ];
+        }, $b['drawings'] ?? []))),
     ];
 }
 $missing = [];

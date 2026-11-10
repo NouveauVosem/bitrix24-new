@@ -32,6 +32,19 @@ BX.ready(function () {
         if (data.kitsCount > 0) {
             html += '<div style="margin-bottom:6px;color:#2c9e4b;">✓ Комплектов в листе: ' + data.kitsCount + '</div>'
                 + '<a href="' + PDF_URL + '" target="_blank" style="font-size:12px;">📄 Открыть PDF</a>';
+
+            // Чертежей в PDF нет — даём прямые ссылки (открываются без авторизации).
+            var withDrawings = (data.kits || []).filter(function (k) { return k.drawings && k.drawings.length; });
+            if (withDrawings.length > 0) {
+                html += '<div style="margin-top:8px;font-weight:600;">Чертежи:</div>'
+                    + withDrawings.map(function (k) {
+                        return '<div style="margin-top:3px;">' + rowLabel(k) + '</div>'
+                            + k.drawings.map(function (d) {
+                                return '<div style="padding-left:10px;">📐 <a href="' + escapeHtml(d.url) + '" target="_blank">'
+                                    + escapeHtml(d.name) + '</a></div>';
+                            }).join('');
+                    }).join('');
+            }
         }
 
         if (data.missing && data.missing.length > 0) {
