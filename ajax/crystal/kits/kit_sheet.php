@@ -128,8 +128,12 @@ if ($clientName !== '') {
 }
 
 // ── Тексты для титула: рекомендация по упаковке и комментарий к сборке ──────
-// UF-поля читаем через CCrmDeal::GetByID — DealTable::getList их не отдаёт.
-$dealUf = \CCrmDeal::GetByID($dealId, false) ?: [];
+// UF-поля — только через USER_FIELD_MANAGER, как в get_deal_for_offer.php:
+// ни DealTable::getList, ни CCrmDeal::GetByID их в этой версии Битрикса не отдают.
+global $USER_FIELD_MANAGER;
+$dealUf = array_map(function ($f) {
+    return $f['VALUE'] ?? '';
+}, $USER_FIELD_MANAGER->GetUserFields('CRM_DEAL', $dealId) ?: []);
 $ufText = function ($value) {
     if (is_array($value)) {
         $value = implode("\n", array_filter(array_map('trim', array_map('strval', $value)), 'strlen'));
