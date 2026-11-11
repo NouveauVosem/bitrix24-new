@@ -126,6 +126,24 @@ $payload = [
 if ($clientName !== '') {
     $payload['clientName'] = $clientName;
 }
+
+// ── Тексты для титула: рекомендация по упаковке и комментарий к сборке ──────
+// UF-поля читаем через CCrmDeal::GetByID — DealTable::getList их не отдаёт.
+$dealUf = \CCrmDeal::GetByID($dealId, false) ?: [];
+$ufText = function ($value) {
+    if (is_array($value)) {
+        $value = implode("\n", array_filter(array_map('trim', array_map('strval', $value)), 'strlen'));
+    }
+    return trim((string)$value);
+};
+$packingRecommendation = $ufText($dealUf['UF_CRM_1793872168579'] ?? '');
+$assemblyComment       = $ufText($dealUf['UF_CRM_1793872179793'] ?? '');
+if ($packingRecommendation !== '') {
+    $payload['packingRecommendation'] = $packingRecommendation;
+}
+if ($assemblyComment !== '') {
+    $payload['assemblyComment'] = $assemblyComment;
+}
 $payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
 
 // ── Запрос в Crystal ─────────────────────────────────────────────────────────
