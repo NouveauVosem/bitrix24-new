@@ -39,8 +39,8 @@ function crystalStatsError($message)
 }
 
 // ── Авторизация ──────────────────────────────────────────────────────────────
-// В коде только SHA-256 токена: сам токен в git не попадает, он есть у Кристала.
-define('CRYSTAL_STATS_TOKEN_SHA256', '676771e54e79eb4bd63d77e8412e8d721d194e79abd1d0d25ba08d141d7f976d');
+// Тот же токен, что у history-эндпоинтов (Legenda); в коде хранится его SHA-256.
+define('CRYSTAL_STATS_TOKEN_SHA256', '61154f2a8bab2dfcb2aa6c0c0ea46874317214043ddb4af4c83858d4e736dd71');
 
 // IP сервера Кристала. Пусто — без ограничения по IP.
 define('CRYSTAL_STATS_ALLOWED_IPS', []);
