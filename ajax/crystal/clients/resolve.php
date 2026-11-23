@@ -12,7 +12,9 @@
 //   companies — компании: найденные напрямую + компании найденных контактов;
 //   leads     — лиды с этим телефоном/email (открытые первыми);
 //   deals     — открытые сделки найденных компаний и контактов;
-//   suggested — предложенная привязка {contact_id, company_id}, если она однозначна, иначе null.
+//   suggested — предложенная привязка {contact_id, company_id, lead_id}, если она однозначна, иначе null.
+//
+// В URL «+» надо кодировать как %2B (или передавать номер без плюса) — иначе он станет пробелом.
 //
 // Кристалл хранит у письма/звонка contact_id и company_id, остальное — через другие эндпоинты.
 require __DIR__ . '/_common.php';
@@ -272,7 +274,7 @@ foreach ($leadRows as $id => $l) {
     $leads[] = [
         'id'           => $id,
         'title'        => $l['TITLE'],
-        'name'         => trim($l['NAME'] . ' ' . $l['LAST_NAME']) ?: null,
+        'name'         => trim(preg_replace('/\s+/u', ' ', $l['NAME'] . ' ' . $l['LAST_NAME'])) ?: null,
         'company_title'=> trim((string)$l['COMPANY_TITLE']) ?: null,
         'status_id'    => $l['STATUS_ID'],
         'status_name'  => $leadStatusNames[$l['STATUS_ID']] ?? null,
@@ -308,6 +310,7 @@ foreach ($dealRows as $d) {
 // Однозначно: ровно один контакт (его компания — если она одна) или, без контактов,
 // ровно одна компания, найденная напрямую. Совпадение по домену — только компания.
 $suggested = null;
+$openLeads = array_values(array_filter($leads, function ($l) { return $l['status_semantic'] === 'open'; }));
 $exactContacts = array_keys(array_filter($found['CONTACT'], function ($m) { return $m !== 'domain'; }));
 $exactContacts = array_values(array_intersect($exactContacts, $contactIds));
 $directCompanies = array_values(array_intersect(array_keys($found['COMPANY']), $companyIds));
@@ -321,6 +324,14 @@ if (count($exactContacts) === 1) {
 } elseif (empty($exactContacts) && empty($directCompanies)) {
     // Только по домену: если все найденные контакты из одной компании — её и предлагаем.
     if (count($companyIds) === 1) $suggested = ['contact_id' => null, 'company_id' => $companyIds[0]];
+}
+
+// Лид: один открытый лид с этим телефоном/email — предлагаем и его
+// (без контакта и компании это единственная привязка, например звонок с нового номера).
+if (count($openLeads) === 1) {
+    $suggested = ($suggested ?? ['contact_id' => null, 'company_id' => null]) + ['lead_id' => $openLeads[0]['id']];
+} elseif ($suggested !== null) {
+    $suggested['lead_id'] = null;
 }
 
 crystalClientsRespond([
