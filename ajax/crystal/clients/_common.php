@@ -414,6 +414,13 @@ function crystalClientsDateParam($name, $endOfDay = false)
     return \Bitrix\Main\Type\DateTime::createFromPhp($dt);
 }
 
+// Название из CRM: Битрикс местами хранит его экранированным («GmbH &amp; Co. KG»).
+function crystalClientsTitle($s)
+{
+    $s = trim(html_entity_decode((string)$s, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    return $s !== '' ? $s : null;
+}
+
 // Дата-время из БД, где «нет срока» записано как 9999-12-31 → null.
 function crystalClientsDeadline($value)
 {
@@ -518,7 +525,7 @@ function crystalClientsOwnerInfo(array $pairs)
             'select' => ['ID', 'TITLE', 'COMPANY_ID'],
         ]);
         while ($r = $rows->fetch()) {
-            $out[$type][(int)$r['ID']] = ['title' => $r['TITLE'], 'company_id' => (int)$r['COMPANY_ID'] ?: null];
+            $out[$type][(int)$r['ID']] = ['title' => crystalClientsTitle($r['TITLE']), 'company_id' => (int)$r['COMPANY_ID'] ?: null];
         }
     }
 
@@ -551,7 +558,7 @@ function crystalClientsOwnerInfo(array $pairs)
             'select' => ['ID', 'TITLE'],
         ]);
         while ($r = $rows->fetch()) {
-            $out[\CCrmOwnerType::Company][(int)$r['ID']] = ['title' => $r['TITLE'], 'company_id' => (int)$r['ID']];
+            $out[\CCrmOwnerType::Company][(int)$r['ID']] = ['title' => crystalClientsTitle($r['TITLE']), 'company_id' => (int)$r['ID']];
         }
     }
     return $out;

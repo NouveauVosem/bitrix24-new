@@ -228,7 +228,7 @@ $userRef = function ($id) use ($users) {
     return ['assigned_by_id' => $id ?: null, 'assigned_by_name' => $users[$id] ?? null];
 };
 $companyTitle = function ($id) use ($companyRows) {
-    return isset($companyRows[$id]) ? $companyRows[$id]['TITLE'] : null;
+    return isset($companyRows[$id]) ? crystalClientsTitle($companyRows[$id]['TITLE']) : null;
 };
 
 // ── Ответ ────────────────────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ $contacts = [];
 foreach ($contactRows as $id => $c) {
     $companies = [];
     foreach ($contactCompanies[$id] ?? [] as $cid) {
-        if (isset($companyRows[$cid])) $companies[] = ['id' => $cid, 'title' => $companyRows[$cid]['TITLE']];
+        if (isset($companyRows[$cid])) $companies[] = ['id' => $cid, 'title' => crystalClientsTitle($companyRows[$cid]['TITLE'])];
     }
     $contacts[] = [
         'id'        => $id,
@@ -254,7 +254,7 @@ $companies = [];
 foreach ($companyRows as $id => $c) {
     $companies[] = [
         'id'      => $id,
-        'title'   => $c['TITLE'],
+        'title'   => crystalClientsTitle($c['TITLE']),
         'country' => crystalClientsCountry($c, null),
         'match'   => $companyVia[$id], // phone | email | domain | contact
         'phones'  => $companyMulti[$id]['phones'],
@@ -273,9 +273,9 @@ $leads = [];
 foreach ($leadRows as $id => $l) {
     $leads[] = [
         'id'           => $id,
-        'title'        => $l['TITLE'],
+        'title'        => crystalClientsTitle($l['TITLE']),
         'name'         => trim(preg_replace('/\s+/u', ' ', $l['NAME'] . ' ' . $l['LAST_NAME'])) ?: null,
-        'company_title'=> trim((string)$l['COMPANY_TITLE']) ?: null,
+        'company_title'=> crystalClientsTitle($l['COMPANY_TITLE']),
         'status_id'    => $l['STATUS_ID'],
         'status_name'  => $leadStatusNames[$l['STATUS_ID']] ?? null,
         'status_semantic' => $leadSemantic($l['STATUS_SEMANTIC_ID']),
@@ -293,7 +293,7 @@ foreach ($dealRows as $d) {
     $amount = (float)$d[CRYSTAL_CLIENTS_AMOUNT_FIELD] ?: (float)$d['OPPORTUNITY'];
     $deals[] = [
         'id'          => (int)$d['ID'],
-        'title'       => $d['TITLE'],
+        'title'       => crystalClientsTitle($d['TITLE']),
         'category_id' => (int)$d['CATEGORY_ID'],
         'stage_id'    => $d['STAGE_ID'],
         'stage_name'  => $stageNames[$d['STAGE_ID']] ?? null,
