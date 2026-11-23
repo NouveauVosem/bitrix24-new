@@ -112,7 +112,7 @@ if ($source !== 'tasks' && !$ownersEmpty) {
     if ($crmTotal > 0) {
         $rows = $conn->query(
             'SELECT a.ID, a.TYPE_ID, a.PROVIDER_ID, a.PROVIDER_TYPE_ID, a.SUBJECT, a.DESCRIPTION, a.COMPLETED,'
-            . ' a.RESPONSIBLE_ID, a.AUTHOR_ID, a.START_TIME, a.END_TIME, a.DEADLINE, a.CREATED, a.PRIORITY, a.DIRECTION'
+            . ' a.RESPONSIBLE_ID, a.AUTHOR_ID, a.START_TIME, a.END_TIME, a.DEADLINE, a.CREATED, a.LAST_UPDATED, a.PRIORITY, a.DIRECTION'
             . " FROM b_crm_act a WHERE $whereSql ORDER BY $orderSql LIMIT $window"
         );
         while ($r = $rows->fetch()) $crmItems[(int)$r['ID']] = $r;
@@ -177,7 +177,7 @@ if ($source !== 'crm' && $tasksAvailable && !$ownersEmpty && !(!empty($owners) &
         'filter'      => $filter,
         'select'      => [
             'ID', 'TITLE', 'DESCRIPTION', 'STATUS', 'PRIORITY', 'RESPONSIBLE_ID', 'CREATED_BY',
-            'DEADLINE', 'CREATED_DATE', 'CLOSED_DATE', 'START_DATE_PLAN', 'END_DATE_PLAN', 'GROUP_ID',
+            'DEADLINE', 'CREATED_DATE', 'CLOSED_DATE', 'ACTIVITY_DATE', 'START_DATE_PLAN', 'END_DATE_PLAN', 'GROUP_ID',
         ],
         'limit'       => $window,
         'count_total' => true,
@@ -297,6 +297,7 @@ foreach ($page as $p) {
             'start'       => crystalClientsDeadline($a['START_TIME']),
             'end'         => crystalClientsDeadline($a['END_TIME']),
             'created'     => $p['created'],
+            'updated'     => crystalClientsDateTime($a['LAST_UPDATED']),
             'closed'      => null,
             'important'   => (int)$a['PRIORITY'] === 3, // CCrmActivityPriority::High
             'direction'   => ['1' => 'in', '2' => 'out'][(string)$a['DIRECTION']] ?? null,
@@ -326,6 +327,7 @@ foreach ($page as $p) {
             'start'       => crystalClientsDeadline($t['START_DATE_PLAN']),
             'end'         => crystalClientsDeadline($t['END_DATE_PLAN']),
             'created'     => $p['created'],
+            'updated'     => crystalClientsDateTime($t['ACTIVITY_DATE']), // «Активность» в списке задач
             'closed'      => crystalClientsDateTime($t['CLOSED_DATE']),
             'important'   => (int)$t['PRIORITY'] === 2,
             'direction'   => null,
