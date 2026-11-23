@@ -394,3 +394,199 @@ function crystalClientsContactCompanies(array $contactIds)
     unset($list);
     return $out;
 }
+
+// ── Дата из параметра (пояс Киева) → объект Битрикса ─────────────────────────
+// Принимает 'YYYY-MM-DD' или 'YYYY-MM-DD HH:MM[:SS]'. Для $endOfDay дата без
+// времени означает конец дня (23:59:59). null, если параметр не передан.
+function crystalClientsDateParam($name, $endOfDay = false)
+{
+    $raw = str_replace('T', ' ', crystalClientsParam($name));
+    if ($raw === '') return null;
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+        $raw .= $endOfDay ? ' 23:59:59' : ' 00:00:00';
+    } elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $raw)) {
+        $raw .= ':00';
+    }
+    $dt = \DateTime::createFromFormat('Y-m-d H:i:s', $raw, new \DateTimeZone(CRYSTAL_CLIENTS_TZ));
+    if (!$dt || $dt->format('Y-m-d H:i:s') !== $raw) {
+        crystalClientsError("неверный $name: «{$raw}», нужно YYYY-MM-DD или YYYY-MM-DD HH:MM:SS");
+    }
+    return \Bitrix\Main\Type\DateTime::createFromPhp($dt);
+}
+
+// Дата-время из БД, где «нет срока» записано как 9999-12-31 → null.
+function crystalClientsDeadline($value)
+{
+    if ($value instanceof \Bitrix\Main\Type\Date) {
+        if ((int)$value->format('Y') >= 9999) return null;
+    } elseif (strpos((string)$value, '9999') === 0) {
+        return null;
+    }
+    return crystalClientsDateTime($value);
+}
+
+// Да/нет из параметра; null, если не передан.
+function crystalClientsFlag($name)
+{
+    $v = mb_strtolower(crystalClientsParam($name));
+    if ($v === '') return null;
+    return in_array($v, ['1', 'y', 'yes', 'true'], true);
+}
+
+// ── Сущности CRM из параметров ───────────────────────────────────────────────
+// lead_id, deal_id, contact_id, company_id — id или список через запятую.
+// expand=1: компания → её контакты, сделки и лиды; контакт → его сделки и лиды.
+// Возвращает [ownerTypeId => [id, …]] (1 лид, 2 сделка, 3 контакт, 4 компания);
+// пустой массив, если ни один параметр не передан.
+const CRYSTAL_CLIENTS_EXPAND_LIMIT = 5000;
+
+function crystalClientsOwnersFromParams()
+{
+    $owners = [
+        \CCrmOwnerType::Lead    => crystalClientsIdList('lead_id'),
+        \CCrmOwnerType::Deal    => crystalClientsIdList('deal_id'),
+        \CCrmOwnerType::Contact => crystalClientsIdList('contact_id'),
+        \CCrmOwnerType::Company => crystalClientsIdList('company_id'),
+    ];
+    if (empty(array_filter($owners))) return [];
+
+    if (crystalClientsFlag('expand')) {
+        $add = function ($type, array $ids) use (&$owners) {
+            $owners[$type] = array_values(array_unique(array_merge($owners[$type], $ids)));
+        };
+        $column = function ($class, array $filter, $field) {
+            $rows = $class::getList(['filter' => $filter, 'select' => [$field], 'limit' => CRYSTAL_CLIENTS_EXPAND_LIMIT]);
+            $ids = [];
+            while ($r = $rows->fetch()) $ids[] = (int)$r[$field];
+            return $ids;
+        };
+
+        $companyIds = $owners[\CCrmOwnerType::Company];
+        if (!empty($companyIds)) {
+            $add(\CCrmOwnerType::Contact, $column('\Bitrix\Crm\ContactTable', ['@COMPANY_ID' => $companyIds], 'ID'));
+            if (class_exists('\Bitrix\Crm\Binding\ContactCompanyTable')) {
+                $add(\CCrmOwnerType::Contact, $column('\Bitrix\Crm\Binding\ContactCompanyTable', ['@COMPANY_ID' => $companyIds], 'CONTACT_ID'));
+            }
+            $add(\CCrmOwnerType::Deal, $column('\Bitrix\Crm\DealTable', ['@COMPANY_ID' => $companyIds], 'ID'));
+            $add(\CCrmOwnerType::Lead, $column('\Bitrix\Crm\LeadTable', ['@COMPANY_ID' => $companyIds], 'ID'));
+        }
+
+        $contactIds = $owners[\CCrmOwnerType::Contact];
+        if (!empty($contactIds)) {
+            $add(\CCrmOwnerType::Deal, $column('\Bitrix\Crm\DealTable', ['@CONTACT_ID' => $contactIds], 'ID'));
+            if (class_exists('\Bitrix\Crm\Binding\DealContactTable')) {
+                $add(\CCrmOwnerType::Deal, $column('\Bitrix\Crm\Binding\DealContactTable', ['@CONTACT_ID' => $contactIds], 'DEAL_ID'));
+            }
+            $add(\CCrmOwnerType::Lead, $column('\Bitrix\Crm\LeadTable', ['@CONTACT_ID' => $contactIds], 'ID'));
+        }
+    }
+
+    foreach ($owners as $type => $ids) {
+        $ids = array_values(array_filter(array_unique(array_map('intval', $ids))));
+        if (empty($ids)) {
+            unset($owners[$type]);
+        } else {
+            $owners[$type] = $ids;
+        }
+    }
+    return $owners;
+}
+
+// SQL-условие «привязан к одной из сущностей» для таблиц вида b_crm_act_bind / b_crm_timeline_bind.
+function crystalClientsOwnersSql(array $owners, $typeColumn, $idColumn)
+{
+    $parts = [];
+    foreach ($owners as $type => $ids) {
+        $parts[] = "($typeColumn = " . (int)$type . " AND $idColumn IN (" . implode(',', array_map('intval', $ids)) . '))';
+    }
+    return '(' . implode(' OR ', $parts) . ')';
+}
+
+// ── Подписи привязок ─────────────────────────────────────────────────────────
+// $pairs — [[ownerTypeId, id], …] по всем элементам страницы.
+// Возвращает [ownerTypeId => [id => ['title' => …, 'company_id' => …]]], включая компании сделок, контактов и лидов.
+function crystalClientsOwnerInfo(array $pairs)
+{
+    $byType = [];
+    foreach ($pairs as $p) $byType[(int)$p[0]][(int)$p[1]] = true;
+    $out = [];
+
+    foreach ([\CCrmOwnerType::Lead => '\Bitrix\Crm\LeadTable', \CCrmOwnerType::Deal => '\Bitrix\Crm\DealTable'] as $type => $class) {
+        if (empty($byType[$type])) continue;
+        $rows = $class::getList([
+            'filter' => ['@ID' => array_keys($byType[$type])],
+            'select' => ['ID', 'TITLE', 'COMPANY_ID'],
+        ]);
+        while ($r = $rows->fetch()) {
+            $out[$type][(int)$r['ID']] = ['title' => $r['TITLE'], 'company_id' => (int)$r['COMPANY_ID'] ?: null];
+        }
+    }
+
+    if (!empty($byType[\CCrmOwnerType::Contact])) {
+        $ids = array_keys($byType[\CCrmOwnerType::Contact]);
+        $companies = crystalClientsContactCompanies($ids);
+        $rows = \Bitrix\Crm\ContactTable::getList([
+            'filter' => ['@ID' => $ids],
+            'select' => ['ID', 'NAME', 'LAST_NAME'],
+        ]);
+        while ($r = $rows->fetch()) {
+            $id = (int)$r['ID'];
+            $out[\CCrmOwnerType::Contact][$id] = [
+                'title'      => trim(preg_replace('/\s+/u', ' ', $r['NAME'] . ' ' . $r['LAST_NAME'])),
+                'company_id' => $companies[$id][0] ?? null,
+            ];
+        }
+    }
+
+    $companyIds = array_keys($byType[\CCrmOwnerType::Company] ?? []);
+    foreach ($out as $list) {
+        foreach ($list as $info) {
+            if ($info['company_id']) $companyIds[] = $info['company_id'];
+        }
+    }
+    $companyIds = array_values(array_unique($companyIds));
+    if (!empty($companyIds)) {
+        $rows = \Bitrix\Crm\CompanyTable::getList([
+            'filter' => ['@ID' => $companyIds],
+            'select' => ['ID', 'TITLE'],
+        ]);
+        while ($r = $rows->fetch()) {
+            $out[\CCrmOwnerType::Company][(int)$r['ID']] = ['title' => $r['TITLE'], 'company_id' => (int)$r['ID']];
+        }
+    }
+    return $out;
+}
+
+const CRYSTAL_CLIENTS_OWNER_NAMES = [1 => 'lead', 2 => 'deal', 3 => 'contact', 4 => 'company'];
+
+// Привязки одного элемента → ['bindings' => [...], 'company' => {id, title} | null].
+// Компания: привязанная напрямую, иначе компания сделки, контакта, лида.
+function crystalClientsBindings(array $pairs, array $info)
+{
+    $priority = [4 => 0, 2 => 1, 3 => 2, 1 => 3];
+    $bindings = [];
+    $companyId = null;
+    $best = 99;
+    foreach ($pairs as $p) {
+        $type = (int)$p[0];
+        $id = (int)$p[1];
+        $name = CRYSTAL_CLIENTS_OWNER_NAMES[$type] ?? null;
+        if ($name === null) continue; // смарт-процессы и прочее пока не отдаём
+        $i = $info[$type][$id] ?? null;
+        $bindings[] = [
+            'type'  => $name,
+            'id'    => $id,
+            'title' => $i['title'] ?? null,
+            'url'   => "/crm/$name/details/$id/",
+        ];
+        if (!empty($i['company_id']) && $priority[$type] < $best) {
+            $best = $priority[$type];
+            $companyId = $i['company_id'];
+        }
+    }
+    $company = null;
+    if ($companyId && isset($info[\CCrmOwnerType::Company][$companyId])) {
+        $company = ['id' => $companyId, 'title' => $info[\CCrmOwnerType::Company][$companyId]['title']];
+    }
+    return ['bindings' => $bindings, 'company' => $company];
+}
