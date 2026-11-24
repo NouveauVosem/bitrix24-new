@@ -23,9 +23,11 @@ if ($token !== CRYSTAL_API_TOKEN) {
 //   («11.1800.5 Контейнер …»). Под одной нормой в каталоге бывает несколько
 //   товаров — так попадают все, product_id каждой строки есть в ответе.
 // limit — сколько строк отдать: по умолчанию 20 (как раньше), «all» — все.
+// stages=1 — добавить к строкам историю стадий сделки (deal_stages).
 $productBitrixId = (int)($_GET['product_bitrix_id'] ?? $_POST['product_bitrix_id'] ?? 0);
 $article = trim((string)($_GET['article'] ?? $_POST['article'] ?? ''));
 $limitRaw = trim((string)($_GET['limit'] ?? $_POST['limit'] ?? ''));
+$withStages = (string)($_GET['stages'] ?? $_POST['stages'] ?? '') === '1';
 
 function productSalesHistoryError($message)
 {
@@ -164,6 +166,33 @@ if (!empty($dealsRaw)) {
     }
 
     $lastProducts = $limit === null ? $allProductsFlat : array_slice($allProductsFlat, 0, $limit);
+
+    // stages=1 — история стадий каждой сделки: [[STAGE_ID, 'YYYY-MM-DD HH:MM:SS'], …]
+    // по времени. Стадии пропускают, поэтому отдаём все переходы как есть,
+    // а «когда клиент подтвердил» решает Кристал.
+    if ($withStages && !empty($lastProducts)) {
+        $stageDealIds = array_values(array_unique(array_map('intval', array_column($lastProducts, 'deal_id'))));
+        $stagesByDeal = [];
+        if (class_exists('\Bitrix\Crm\History\Entity\DealStageHistoryTable')) {
+            foreach (array_chunk($stageDealIds, 500) as $chunk) {
+                $hist = \Bitrix\Crm\History\Entity\DealStageHistoryTable::getList([
+                    'filter' => ['@OWNER_ID' => $chunk],
+                    'select' => ['OWNER_ID', 'STAGE_ID', 'CREATED_TIME'],
+                    'order'  => ['CREATED_TIME' => 'ASC', 'ID' => 'ASC'],
+                ]);
+                while ($hRow = $hist->fetch()) {
+                    $stagesByDeal[(int)$hRow['OWNER_ID']][] = [
+                        $hRow['STAGE_ID'],
+                        $hRow['CREATED_TIME'] ? $hRow['CREATED_TIME']->format('Y-m-d H:i:s') : null,
+                    ];
+                }
+            }
+        }
+        foreach ($lastProducts as &$lp) {
+            $lp['deal_stages'] = $stagesByDeal[(int)$lp['deal_id']] ?? [];
+        }
+        unset($lp);
+    }
 }
 
 // ── Ответ ─────────────────────────────────────────────────────────────────────
