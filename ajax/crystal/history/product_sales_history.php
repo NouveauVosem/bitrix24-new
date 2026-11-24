@@ -18,12 +18,38 @@ if ($token !== CRYSTAL_API_TOKEN) {
 }
 
 // ── Входные данные ────────────────────────────────────────────────────────────
+// product_bitrix_id — один товар каталога (как раньше, для просчёта цен).
+// article — вместо ID: все строки сделок, чьё название начинается с артикула
+//   («11.1800.5 Контейнер …»). Под одной нормой в каталоге бывает несколько
+//   товаров — так попадают все, product_id каждой строки есть в ответе.
+// limit — сколько строк отдать: по умолчанию 20 (как раньше), «all» — все.
 $productBitrixId = (int)($_GET['product_bitrix_id'] ?? $_POST['product_bitrix_id'] ?? 0);
-if ($productBitrixId <= 0) {
+$article = trim((string)($_GET['article'] ?? $_POST['article'] ?? ''));
+$limitRaw = trim((string)($_GET['limit'] ?? $_POST['limit'] ?? ''));
+
+function productSalesHistoryError($message)
+{
     http_response_code(400);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['error' => 'product_bitrix_id is required']);
+    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE);
     die();
+}
+
+if ($productBitrixId <= 0 && $article === '') {
+    productSalesHistoryError('product_bitrix_id or article is required');
+}
+if ($article !== '' && !preg_match('/^[0-9A-Za-z][0-9A-Za-z.\-]{1,30}$/', $article)) {
+    productSalesHistoryError('invalid article');
+}
+
+if ($limitRaw === '') {
+    $limit = 20;
+} elseif ($limitRaw === 'all') {
+    $limit = null;
+} elseif (ctype_digit($limitRaw) && (int)$limitRaw > 0) {
+    $limit = (int)$limitRaw;
+} else {
+    productSalesHistoryError('invalid limit: number or "all"');
 }
 
 // ── Стадии с принятой ценой ───────────────────────────────────────────────────
@@ -37,19 +63,34 @@ $acceptedStages = [
 ];
 
 // ── Найти строки товара во всех сделках ───────────────────────────────────────
+$rowFilter = [
+    '=OWNER_TYPE' => 'D',
+    '>PRICE'      => 0,
+];
+if ($productBitrixId > 0) {
+    $rowFilter['=PRODUCT_ID'] = $productBitrixId;
+} else {
+    $rowFilter['=%PRODUCT_NAME'] = $article . '%'; // LIKE 'article%'
+}
+
 $productRowsRaw = \Bitrix\Crm\ProductRowTable::getList([
-    'filter' => [
-        '=PRODUCT_ID' => $productBitrixId,
-        '=OWNER_TYPE' => 'D',
-        '>PRICE'      => 0,
-    ],
+    'filter' => $rowFilter,
     'select' => ['OWNER_ID', 'PRODUCT_NAME', 'PRODUCT_ID', 'PRICE', 'PRICE_EXCLUSIVE', 'QUANTITY'],
 ])->fetchAll();
+
+// LIKE 'article%' ловит и «11.1800.55 …» — оставляем только точный артикул.
+if ($productBitrixId <= 0) {
+    $articleRe = '/^' . preg_quote($article, '/') . '(?![0-9A-Za-z.])/u';
+    $productRowsRaw = array_values(array_filter($productRowsRaw, function ($row) use ($articleRe) {
+        return preg_match($articleRe, trim((string)$row['PRODUCT_NAME'])) === 1;
+    }));
+}
 
 if (empty($productRowsRaw)) {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        'product_bitrix_id' => $productBitrixId,
+        'product_bitrix_id' => $productBitrixId ?: null,
+        'article'           => $article !== '' ? $article : null,
         'last_products'     => [],
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     die();
@@ -122,13 +163,14 @@ if (!empty($dealsRaw)) {
         }
     }
 
-    $lastProducts = array_slice($allProductsFlat, 0, 20);
+    $lastProducts = $limit === null ? $allProductsFlat : array_slice($allProductsFlat, 0, $limit);
 }
 
 // ── Ответ ─────────────────────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=utf-8');
 echo json_encode([
-    'product_bitrix_id' => $productBitrixId,
+    'product_bitrix_id' => $productBitrixId ?: null,
+    'article'           => $article !== '' ? $article : null,
     'last_products'     => $lastProducts,
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 die();
